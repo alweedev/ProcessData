@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ProcessData</title>
+    <!-- Pré-aplicação de tema para evitar FOUC -->
+    <script>try{const stored=localStorage.getItem('theme');const prefers=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;const mode= stored? stored : (prefers? 'dark':'light');document.documentElement.setAttribute('data-initial-theme',mode);document.addEventListener('DOMContentLoaded',()=>{document.body.setAttribute('data-bs-theme',mode);if(mode==='dark') document.body.classList.add('dark');});}catch(e){/* noop */}</script>
+    <!-- Tailwind (modo CDN apenas para utilities e @layer) -->
+    <script src="https://cdn.tailwindcss.com" defer></script>
+    <!-- Alpine.js para reatividade leve -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+      onload="this.rel='stylesheet'"
+      onerror="this.remove()"
+    />
+    <link rel="stylesheet" href="static/css/animations.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+      onload="this.rel='stylesheet'"
+      onerror="this.remove()"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css"
+      onload="this.rel='stylesheet'"
+      onerror="this.remove()"
+    />
+    <link rel="stylesheet" href="static/css/custom.css" />
+    <!-- XLSX will be lazy-loaded on demand -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+      defer
+    ></script>
+  </head>
+  <body class="bg-light transition-colors duration-300" data-bs-theme="light" x-data="{uploadedFileName:'', showClear:false}" x-init="()=>{const h=(f)=>{uploadedFileName=f;showClear=true};window.__signalUploadSuccess=h}">
+    <div class="container py-4" id="mainContent">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div id="brand" class="me-3 d-flex align-items-center">
+          <div id="brand-icon" class="brand-icon me-2" aria-hidden="true" title="Automação de Cadastro/Inativação">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <!-- Person head centered horizontally -->
+              <circle cx="12" cy="8" r="4" />
+              <!-- Torso/base curve -->
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 20c0-3.8 3.6-7 8-7s8 3.2 8 7" />
+              <!-- Spark automation badge (small star inside circle) -->
+              <circle cx="17" cy="15.5" r="3" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 13.7v1M17 17.3v1M15.7 15.5h1M18.3 15.5h1M16.1 14.4l.6.6M17.9 16.2l.6.6M16.1 16.6l.6-.6M17.9 14.8l.6-.6" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="h4 mb-0">ProcessData</h1>
+            <small id="brand-sub" class="text-muted">Interface local integrada com API</small>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button
+            id="apiStatusBtn"
+            class="btn btn-outline-secondary api-status-btn"
+            data-bs-toggle="tooltip"
+            data-bs-title="Status da API"
+            aria-label="Status da API"
+            disabled
+          >
+            <!-- Heroicon: check-circle (online) / x-circle (offline) -->
+            <svg id="apiStatusIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <!-- Initial icon will be replaced dynamically; shows network nodes -->
+              <circle cx="12" cy="12" r="9" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.5l4.5 2 4.5-2M12 10.5v5M8 15.5h8" />
+            </svg>
+            <span id="apiStatusText">API</span>
+          </button>
+          <button
+            id="themeToggle"
+            class="btn btn-dark"
+            data-bs-toggle="tooltip"
+            data-bs-title="Alternar tema"
+            aria-label="Alternar tema"
+            style="display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; padding: 0;"
+          >
+            <!-- Heroicon sun/moon morph container -->
+            <span id="themeIcon" class="theme-icon-wrapper" aria-hidden="true">
+              <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 theme-sun" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.657-6.343l1.414-1.414M4.929 19.071l1.414-1.414m0-11.314L4.93 4.93m13.657 13.657l1.414 1.414"/><circle cx="12" cy="12" r="4"/></svg>
+              <svg id="iconMoon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 theme-moon d-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+            </span>
+          </button>
+          <button
+            id="motionToggle"
+            class="btn btn-outline-secondary"
+            data-bs-toggle="tooltip"
+            data-bs-title="Reduzir movimentos"
+            aria-label="Reduzir movimentos"
+            style="display: inline-flex; align-items: center; gap: 0.5rem;"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true" style="flex-shrink: 0;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3C7.03 3 3 7.03 3 12c0 1.76.57 3.39 1.53 4.72L16.72 4.53A8.963 8.963 0 0012 3z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a8.963 8.963 0 00-1.53-4.72L7.28 19.47A8.963 8.963 0 0012 21c4.97 0 9-4.03 9-9z"/></svg>
+            <span>Animações: Ativas</span>
+          </button>
+          <!-- Botão Limpar premium (aparece após upload) -->
+          <button id="clearAllBtn" x-show="showClear" x-transition.opacity.duration.300ms class="btn btn-gradient-clear ms-2 d-none" aria-label="Limpar ficha, tabela e buscas" @click="showClear=false" data-clear-button>
+            <span class="clear-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </span>
+            Limpar
+          </button>
+        </div>
+      </div>
+
+      <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link active"
+            id="analise-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#analise"
+            type="button"
+            role="tab"
+            aria-controls="analise"
+            aria-selected="true"
+          >
+            Análise
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
+            id="cadastro-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#cadastro"
+            type="button"
+            role="tab"
+            aria-controls="cadastro"
+            aria-selected="false"
+          >
+            Cadastro
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
+            id="inativacao-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#inativacao"
+            type="button"
+            role="tab"
+            aria-controls="inativacao"
+            aria-selected="false"
+          >
+            Inativação
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
+            id="historico-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#historico"
+            type="button"
+            role="tab"
+            aria-controls="historico"
+            aria-selected="false"
+          >
+            Histórico
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+        <div
+          class="tab-pane fade show active"
+          id="analise"
+          role="tabpanel"
+          aria-labelledby="analise-tab"
+        >
+          <div class="card shadow-sm fade-in analise-shell-card">
+            <div class="card-body p-4">
+              <header class="analise-stage-header">
+                <div>
+                  <p class="text-uppercase small fw-semibold text-muted mb-1">Workspace Analítico</p>
+                  <h2 class="card-title h4 fw-bold mb-1 d-flex align-items-center gap-2">
+                    Análise de Ficha
+                    <span class="badge rounded-pill bg-gradient-analise">Beta</span>
+                  </h2>
+                  <p class="text-muted mb-0">Pipeline moderno com uploads resilientes, visualização fluida e preferências que acompanham seu fluxo de análise.</p>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                  <button id="analise_help_btn" class="btn btn-outline-info help-btn" type="button" title="Guia rápido da análise">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01"/><circle cx="12" cy="12" r="9"/></svg>
+                    Guia rápido
+                  </button>
+                  <button id="analise_resetBtn" class="btn btn-outline-secondary" type="button" title="Limpa arquivo, métricas e preferências">
+                    Resetar workspace
+                  </button>
+                </div>
+              </header>
+
+              <section class="analise-workspace" data-analise-root>
+                <aside class="analise-pane" aria-label="Upload e preferências">
+                  <div class="analise-dropcard" id="analise_dropTarget" tabindex="0" aria-label="Envie o Excel para iniciar a análise" title="Arraste ou clique para enviar a planilha">
+                    <div class="analise-drop-icon" aria-hidden="true"></div>
+                    <h3 class="h5 mb-1">Arraste o .xlsx aqui</h3>
+                    <p class="text-muted small mb-3">ou clique para escolher no explorador</p>
+                    <button class="btn btn-primary" type="button" id="analise_pickFile" title="Abrir seletor de arquivos">Selecionar arquivo</button>
+                    <input type="file" id="analise_uploadInput" accept=".xlsx,.xls" class="visually-hidden" />
+                    <div class="analise-drop-hint text-muted small mt-3">Suporte a até 200 mil linhas com streaming incremental.</div>
+                  </div>
+                  <div id="analise_uploadFeedback" class="analise-upload-feedback" aria-live="polite"></div>
+                  <div class="analise-progress" id="analise_progress" hidden>
+                    <div class="analise-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+                  </div>
+
+                  <div class="analise-summary-card" id="analise_summaryCard">
+                    <div class="analise-summary-head d-flex align-items-center justify-content-between mb-3">
+                      <div>
+                        <p class="text-uppercase small fw-semibold text-muted mb-0">Resumo</p>
+                        <span id="analise_summaryStatus" class="small text-muted">Nenhum arquivo processado</span>
+                      </div>
+                      <button class="btn btn-sm btn-outline-secondary" id="analise_pinSummary" type="button" aria-pressed="false" title="Fixar painel de resumo na tela">Fixar</button>
+                    </div>
+                    <div class="analise-stat-grid">
+                      <article class="analise-stat" aria-live="polite">
+                        <span class="label">Linhas</span>
+                        <strong id="analise_metricTotal">—</strong>
+                      </article>
+                      <article class="analise-stat" aria-live="polite">
+                        <span class="label">Colunas</span>
+                        <strong id="analise_metricColumns">—</strong>
+                      </article>
+                      <article class="analise-stat" aria-live="polite">
+                        <span class="label">Atualizado</span>
+                        <strong id="analise_metricUpdated">—</strong>
+                      </article>
+                    </div>
+                    <div class="analise-pref-stack mt-3">
+                      <button class="analise-pref" id="analise_pref_wrap" data-mode="wrap" type="button" title="Alternar para quebra automática de linhas">
+                        <span>Quebrar texto</span>
+                        <small>Melhor para nomes grandes</small>
+                      </button>
+                      <button class="analise-pref" id="analise_pref_nowrap" data-mode="nowrap" type="button" title="Manter cada linha em uma única faixa horizontal">
+                        <span>Texto contínuo</span>
+                        <small>Ideal para inspeção horizontal</small>
+                      </button>
+                      <button class="analise-pref" id="analise_pref_density" type="button" title="Reduz altura das linhas para ver mais registros">
+                        <span>Modo compacto</span>
+                        <small>Reduz espaçamento vertical</small>
+                      </button>
+                    </div>
+                  </div>
+                </aside>
+
+                <div class="analise-canvas" aria-live="polite">
+                  <div class="analise-toolbar" id="analise_toolbar" aria-hidden="true">
+                    <div class="analise-search">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35"/><circle cx="11" cy="11" r="7"/></svg>
+                      <input type="search" id="analise_searchInput" placeholder="Buscar em todas as colunas" spellcheck="false" autocomplete="off" title="Digite para filtrar linhas" />
+                    </div>
+                    <div class="analise-actions">
+                    </div>
+                  </div>
+
+                  <div class="analise-chip-tray" id="analise_chipTray" aria-live="polite"></div>
+
+                  <div class="analise-table-card" id="analise_tableCard">
+                    <div id="analise_emptyState" class="analise-empty">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+                      <p class="mb-0">Envie um Excel para começar. O renderizador otimizado só carrega o necessário.</p>
+                    </div>
+                    <div class="table-responsive" id="analise_tableViewport" hidden>
+                      <table class="table table-hover table-sm analise-table" id="analise_dataTable">
+                        <thead id="analise_tableHead"></thead>
+                        <tbody id="analise_tableBody"></tbody>
+                      </table>
+                    </div>
+                    <div class="analise-footer" id="analise_footer" hidden>
+                      <span id="analise_footerText" class="text-muted small"></span>
+                    </div>
+                  </div>
+                  <div id="analise_debug" class="mt-3 text-danger" aria-live="assertive"></div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="tab-pane fade"
+          id="cadastro"
+          role="tabpanel"
+          aria-labelledby="cadastro-tab"
+        >
+          <div class="card shadow-sm fade-in">
+            <div class="card-body">
+              <h2 class="card-title h4 fw-bold mb-3">
+                Carga Cadastro
+              </h2>
+              <div class="mb-2">
+                <button id="cadastro_help_btn" class="btn btn-outline-info help-btn" type="button" aria-label="Como usar o cadastro em lote" title="Guia do cadastro em lote">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="margin-right:0.375rem;"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01"/><circle cx="12" cy="12" r="9"/></svg>
+                  <span>Como usar</span>
+                </button>
+              </div>
+              <p class="text-muted mb-4">Carregue a planilha original, defina opções e gere em segundos o arquivo tratado para carga.</p>
+              <!-- Zona de upload do cadastro: tornada acessível via teclado -->
+              <div
+                class="border border-primary border-2 border-dashed rounded p-4 text-center upload_dropZone"
+                id="cadastro_uploadArea"
+                aria-live="polite"
+                tabindex="0"
+                role="button"
+                aria-label="Upload da base de cadastro. Pressione Enter para selecionar arquivo"
+              >
+                <svg
+                  class="upload_svg"
+                  width="60"
+                  height="60"
+                  aria-hidden="true"
+                >
+                  <use href="#icon-imageUpload"></use>
+                </svg>
+                <p class="text-muted mb-3">Arraste o Excel (.xlsx) ou pressione Enter para selecionar.</p>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  class="d-none"
+                  id="cadastro_files"
+                  multiple
+                  aria-label="Selecionar arquivos para cadastro"
+                  aria-hidden="true"
+                />
+                <button onclick="document.getElementById('cadastro_files').click()" class="btn btn-primary" title="Escolher arquivos da máquina">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 me-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V7m0 0l-4 4m4-4l4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M20 16.5A3.5 3.5 0 0016.5 13h-9A3.5 3.5 0 004 16.5 3.5 3.5 0 007.5 20h9a3.5 3.5 0 003.5-3.5z"/></svg>Selecionar
+                </button>
+                <button id="cadastro_clear_btn" type="button" class="btn btn-gradient-clear ms-2" title="Remover arquivos selecionados">
+                  <span class="clear-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </span>
+                  Limpar
+                </button>
+                <div id="cadastro_uploadFeedback" class="upload-success-banner mt-3" aria-live="polite"></div>
+              </div>
+              <div id="cadastro_fileNames" class="file-names mt-2"></div>
+              <div class="progress mt-3 d-none" id="cadastro_progress">
+                <div
+                  class="progress-bar progress-bar-striped progress-bar-animated"
+                  role="progressbar"
+                  style="width: 0%"
+                  aria-valuenow="0"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  id="cadastro_progressBar"
+                ></div>
+              </div>
+              <div class="mt-4">
+                <label class="form-label fw-bold" title="Configurações aplicadas à geração">Opções</label>
+                <select id="cadastro_login_choice" class="form-select mb-3" aria-label="Escolher tipo de login" title="Selecionar formato principal de acesso">
+                  <option value="CPF">CPF</option>
+                  <option value="EMAIL">E-MAIL</option>
+                </select>
+                <select id="cadastro_fluxo" class="form-select" aria-label="Escolher fluxo" title="Definir processo operacional (SELF ou FRONT)">
+                  <option value="SELF">SELF</option>
+                  <option value="FRONT">FRONT</option>
+                </select>
+              </div>
+              <div
+                class="d-flex justify-content-center my-4 d-none"
+                id="cadastro_loading"
+              >
+                <div
+                  class="spinner-border text-primary"
+                  role="status"
+                  aria-label="Carregando cadastro"
+                ></div>
+              </div>
+              <button id="cadastro_btn" class="btn btn-primary mt-4" aria-label="Gerar cadastro" title="Processar a planilha e gerar arquivo tratado">Gerar</button>
+              <div id="cadastro_status" class="mt-3" aria-live="polite"></div>
+              <div id="cadastro_debug" class="mt-3 text-danger" aria-live="assertive"></div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="tab-pane fade"
+          id="inativacao"
+          role="tabpanel"
+          aria-labelledby="inativacao-tab"
+        >
+          <div class="card shadow-sm fade-in">
+            <div class="card-body">
+              <h2 class="card-title h4 fw-bold mb-3">
+                Inativação
+              </h2>
+              <p class="text-muted mb-4">Envie a base de usuários, cole CPFs ou nomes completos e processe a inativação de forma guiada.</p>
+              <div class="mb-2">
+                <button id="inativacao_help_btn" class="btn btn-outline-info help-btn" type="button" aria-label="Como usar a inativação" title="Guia da inativação">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="margin-right:0.375rem;"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01"/><circle cx="12" cy="12" r="9"/></svg>
+                  <span>Como usar</span>
+                </button>
+              </div>
+              <!-- Zona de upload da base para inativação: keyboard-accessible -->
+              <div
+                class="border border-primary border-2 border-dashed rounded p-4 text-center upload_dropZone mb-4"
+                id="inativacao_base_uploadArea"
+                aria-live="polite"
+                tabindex="0"
+                role="button"
+                aria-label="Upload da base de inativacao. Pressione Enter para selecionar arquivo"
+              >
+                <svg
+                  class="upload_svg"
+                  width="60"
+                  height="60"
+                  aria-hidden="true"
+                >
+                  <use href="#icon-imageUpload"></use>
+                </svg>
+                <p class="text-muted mb-3">Arraste a base (.xlsx) ou pressione Enter para escolher.</p>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  class="d-none"
+                  id="inativacao_base"
+                  aria-label="Selecionar base para inativação"
+                  aria-hidden="true"
+                />
+                <button onclick="document.getElementById('inativacao_base').click()" class="btn btn-primary" title="Selecionar planilha base de usuários">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 me-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V7m0 0l-4 4m4-4l4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M20 16.5A3.5 3.5 0 0016.5 13h-9A3.5 3.5 0 004 16.5 3.5 3.5 0 007.5 20h9a3.5 3.5 0 003.5-3.5z"/></svg>Base
+                </button>
+                <button id="inativacao_clear_base_btn" type="button" class="btn btn-gradient-clear ms-2" title="Limpar base enviada">
+                  <span class="clear-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </span>
+                  Limpar Base
+                </button>
+                <div id="inativacao_base_feedback" class="upload-success-banner mt-3" aria-live="polite"></div>
+              </div>
+              <!-- Removido upload da lista: entrada apenas via textarea abaixo -->
+              <div class="mt-3">
+                <label for="lista_text" class="form-label fw-bold" title="Campo para entrada manual">Cole nomes completos, CPFs ou e-mails (um por linha)</label>
+                <textarea id="lista_text" class="form-control" rows="4" placeholder="Ex: João Silva\n12345678901\nMaria Souza\nusuario@example.com" aria-describedby="lista_valid_summary lista_duplicates_warning" title="Cole itens (nomes, CPFs ou e-mails) e eles serão validados automaticamente"></textarea>
+                <div class="form-text">Aceita nomes, CPFs (com ou sem máscara) e e-mails — um por linha. Duplicados e inválidos são indicados acima.</div>
+                <div id="lista_valid_summary" class="mt-2 small"></div>
+                <div id="lista_duplicates_warning" class="mt-1 text-warning small"></div>
+              </div>
+              <div class="progress mt-3 d-none" id="inativacao_progress">
+                <div
+                  class="progress-bar progress-bar-striped progress-bar-animated"
+                  role="progressbar"
+                  style="width: 0%"
+                  aria-valuenow="0"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  id="inativacao_progressBar"
+                ></div>
+              </div>
+              <div
+                class="d-flex justify-content-center my-4 d-none"
+                id="inativacao_loading"
+              >
+                <div
+                  class="spinner-border text-primary"
+                  role="status"
+                  aria-label="Carregando inativação"
+                ></div>
+              </div>
+              <div id="inativacao_fileNames" class="file-names mt-2"></div>
+              <button id="inativacao_btn" class="btn btn-primary mt-4" aria-label="Buscar usuários para inativação" title="Executar a busca de itens digitados na base">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 me-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35"/><circle cx="11" cy="11" r="7"/></svg>Buscar Usuários
+              </button>
+              <div id="inativacao_status" class="mt-3" aria-live="polite"></div>
+              <div id="inativacao_debug" class="mt-3 text-danger" aria-live="assertive"></div>
+
+              <!-- Resultados da busca -->
+              <div id="inativacao_results_controls" class="mt-4 d-none">
+                <div class="row g-2 align-items-center">
+                  <div class="col-12 col-md-6">
+                    <input id="result_search" class="form-control w-100" placeholder="Filtrar por nome ou CPF" aria-label="Filtrar resultados" />
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="d-flex justify-content-md-end">
+                      <button id="inativacao_generate_btn" class="btn btn-success d-none" aria-label="Gerar inativação" title="Processar e baixar o relatório final">
+                        Gerar Inativação
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="inativacao_results" class="table-responsive mt-3 d-none">
+                <table class="table table-hover table-bordered table-sticky" id="results_table">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col">Nome Completo</th>
+                      <th scope="col" style="white-space:nowrap;">CPF</th>
+                      <th scope="col">E-mail</th>
+                      <th scope="col">Status Atual</th>
+                    </tr>
+                  </thead>
+                  <tbody id="results_body"></tbody>
+                </table>
+              </div>
+              <div id="results_pagination" class="d-flex justify-content-between align-items-center d-none">
+                <button id="page_prev" class="btn btn-sm btn-outline-secondary">Anterior</button>
+                <span id="page_info" class="small text-muted">Página 1</span>
+                <button id="page_next" class="btn btn-sm btn-outline-secondary">Próxima</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="tab-pane fade"
+          id="historico"
+          role="tabpanel"
+          aria-labelledby="historico-tab"
+        >
+          <div class="card shadow-sm fade-in">
+            <div class="card-body">
+              <h2 class="card-title h4 fw-bold mb-3">
+                Histórico
+              </h2>
+              <p class="text-muted mb-3">Painel cronológico das últimas operações realizadas no navegador.</p>
+              <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                <div class="flex-grow-1 position-relative" style="min-width:220px;">
+                  <input id="historico_search" class="form-control" type="search" placeholder="Filtrar por texto" aria-label="Filtrar histórico" />
+                </div>
+                <button id="historico_export_csv" class="btn btn-outline-primary btn-sm" type="button" title="Baixar itens visíveis em CSV">Exportar CSV</button>
+                <button id="historico_export_json" class="btn btn-outline-secondary btn-sm" type="button" title="Baixar itens visíveis em JSON">Exportar JSON</button>
+                <button id="clearHistoryBtn" class="btn btn-gradient-clear btn-sm" aria-label="Limpar histórico" title="Remover todos os itens">
+                  <span class="clear-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></span>
+                  Limpar
+                </button>
+              </div>
+              <div id="historico_summary" class="small text-muted mb-2" aria-live="polite"></div>
+              <div class="table-responsive" id="historico_table_wrap">
+                <table class="table table-sm table-hover historico-table align-middle mb-0" id="historico_table" aria-describedby="historico_summary">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col" style="white-space:nowrap;">Data/Hora</th>
+                      <th scope="col">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historico_tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Container de toasts: aria-live para anunciar mensagens a leitores de tela -->
+    <div
+      id="toastContainer"
+      class="position-fixed bottom-0 end-0 p-3"
+      style="z-index: 1100"
+      aria-live="polite"
+      aria-atomic="false"
+    ></div>
+    <svg style="display: none">
+      <defs>
+        <symbol id="icon-imageUpload" clip-rule="evenodd" viewBox="0 0 96 96">
+          <path
+            d="M47 6a21 21 0 0 0-12.3 3.8c-2.7 2.1-4.4 5-4.7 7.1-5.8 1.2-10.3 5.6-10.3 10.6 0 6 5.8 11 13 11h12.6V22.7l-7.1 6.8c-.4.3-.9.5-1.4.5-1 0-2-.8-2-1.7 0-.4.3-.9.6-1.2l10.3-8.8c.3-.4.8-.6 1.3-.6.6 0 1 .2 1.4.6l10.2 8.8c.4.3.6.8.6 1.2 0 1-.9 1.7-2 1.7-.5 0-1-.2-1.3-.5l-7.2-6.8v15.6h14.4c6.1 0 11.2-4.1 11.2-9.4 0-5-4-8.8-9.5-9.4C63.8 11.8 56 5.8 47 6Zm-1.7 42.7V38.4h3.4v10.3c0 .8-.7 1.5-1.7 1.5s-1.7-.7-1.7-1.5Z M27 49c-4 0-7 2-7 6v29c0 3 3 6 6 6h42c3 0 6-3 6-6V55c0-4-3-6-7-6H28Zm41 3c1 0 3 1 3 3v19l-13-6a2 2 0 0 0-2 0L44 79l-10-5a2 2 0 0 0-2 0l-9 7V55c0-2 2-3 4-3h41Z M40 62c0 2-2 4-5 4s-5-2-5-4 2-4 5-4 5 2 5 4Z"
+          />
+        </symbol>
+      </defs>
+    </svg>
+    <script src="static/js/app.v2.js" defer></script>
+    <script src="static/js/inativacao/index.js" defer></script>
+  </body>
+</html>

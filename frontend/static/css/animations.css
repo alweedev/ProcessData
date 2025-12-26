@@ -1,0 +1,497 @@
+/* Small animations and brand icon styles */
+/*
+  Theme variables and small animation helpers.
+  Centralize colors via tokens. Sync with custom.css variables to keep
+  dark/light modes consistent and meet WCAG contrast.
+*/
+:root {
+  /* Brand colors (used in header/brand-icon) */
+  --brand-color: #0d6efd;
+  --brand-accent: #6610f2;
+
+  /* Light theme surface and text */
+  --surface-bg: var(--app-surface, #ffffff);
+  --surface-on: var(--app-text, #0b0e13);
+
+  /* Dark theme surfaces */
+  --dark-surface: var(--app-surface, #0f1720);
+  --dark-surface-2: #0b0f14;
+  --muted-on-dark: var(--app-text-muted, rgba(230, 238, 248, 0.68));
+}
+.brand-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand-color), var(--brand-accent));
+  box-shadow: 0 6px 18px rgba(13, 110, 253, 0.18),
+    inset 0 -4px 10px rgba(255, 255, 255, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transform-origin: center;
+  animation: float 3s ease-in-out infinite;
+  overflow: hidden;
+}
+.brand-icon svg {
+  width: 32px;
+  height: 32px;
+  stroke: #fff;
+  stroke-width: 1.6;
+  fill: none;
+  display: block;
+  /* Fine visual centering tweak */
+  transform: translateY(1px);
+}
+@keyframes float {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-6deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+.animated-icon {
+  display: inline-block;
+}
+.pulse {
+  animation: pulse 2s infinite;
+}
+/* Lazy pulse: somente adicionada via IntersectionObserver quando visível */
+.lazy-pulse {
+  opacity: 0.85;
+}
+.spin {
+  transform-origin: center;
+}
+/* Desabilita rotação em hover para qualquer ícone com classe .spin */
+.animated-icon.spin:hover {
+  animation: none !important;
+}
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+.spin-rotating {
+  animation: spin 1.6s linear infinite;
+}
+
+/* Preferências de movimento reduzido (sistema) */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition-duration: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* Preferências de movimento reduzido (controle do usuário) */
+body.reduce-motion * {
+  animation: none !important;
+  transition-duration: 0ms !important;
+  scroll-behavior: auto !important;
+}
+body.reduce-motion .brand-icon {
+  animation: none !important;
+}
+body.reduce-motion .animated-icon.pulse {
+  animation: none !important;
+}
+body.reduce-motion .spin-rotating {
+  animation: none !important;
+}
+
+/* Dark mode cohesive overrides */
+body.dark,
+body[data-bs-theme="dark"] {
+  background-color: var(--app-bg, #0b0e13) !important;
+  color: var(--app-text, #e6eef8) !important;
+}
+
+/* Cards and panels */
+body.dark .card,
+body[data-bs-theme="dark"] .card {
+  background-color: var(--app-surface, #0f1720);
+  border-color: var(--app-border, rgba(255, 255, 255, 0.06));
+  color: var(--app-text, #e6eef8);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+/* Upload drop zones */
+body.dark .upload_dropZone,
+body[data-bs-theme="dark"] .upload_dropZone {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.01),
+    rgba(255, 255, 255, 0.02)
+  );
+  border-color: var(--app-border, rgba(255, 255, 255, 0.06));
+  color: var(--app-text, #e6eef8);
+}
+
+/* Inputs, textarea, selects */
+body.dark input,
+body.dark textarea,
+body.dark select,
+body[data-bs-theme="dark"] input,
+body[data-bs-theme="dark"] textarea,
+body[data-bs-theme="dark"] select {
+  background-color: var(--app-surface, #0b0f14) !important;
+  color: var(--app-text, #e6eef8) !important;
+  border-color: var(--app-border, rgba(255, 255, 255, 0.06)) !important;
+}
+
+/* Progress bars */
+body.dark .progress,
+body[data-bs-theme="dark"] .progress {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+body.dark .progress-bar,
+body[data-bs-theme="dark"] .progress-bar {
+  background-image: linear-gradient(90deg, var(--app-info, #31a0ff), #7b61ff);
+}
+
+/* Tables */
+body.dark table,
+body[data-bs-theme="dark"] table {
+  color: var(--app-text, #e6eef8);
+}
+body.dark thead,
+body[data-bs-theme="dark"] thead {
+  background-color: var(--app-table-header-bg, rgba(255, 255, 255, 0.02));
+  color: var(--app-table-header-text, #cfe7ff);
+}
+body.dark tbody tr,
+body[data-bs-theme="dark"] tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Buttons */
+body.dark .btn,
+body[data-bs-theme="dark"] .btn {
+  color: var(--app-text, #e6eef8);
+}
+body.dark .btn-primary,
+body[data-bs-theme="dark"] .btn-primary {
+  background-image: linear-gradient(
+    90deg,
+    var(--app-accent, #0d6efd),
+    var(--brand-accent)
+  );
+  border-color: transparent;
+}
+
+/* Toasts */
+body.dark .toast {
+  background-color: var(--app-surface, #0f1720) !important;
+  color: var(--app-text, #e6eef8) !important;
+  border-color: var(--app-border, rgba(255, 255, 255, 0.04)) !important;
+}
+
+/* Small text and muted */
+body.dark .text-muted,
+body[data-bs-theme="dark"] .text-muted {
+  color: var(--app-text-muted, rgba(230, 238, 248, 0.68)) !important;
+}
+
+/* Ensure icons have proper contrast */
+body.dark .bi {
+  color: rgba(230, 238, 248, 0.95);
+}
+
+/* Focus states */
+body.dark .form-control:focus,
+body[data-bs-theme="dark"] .form-control:focus {
+  box-shadow: 0 0 0 0.15rem var(--app-focus-ring, rgba(220, 222, 224, 0.18));
+}
+
+/* Ensure SVG icons inherit color and are visible on dark backgrounds */
+body.dark svg,
+body[data-bs-theme="dark"] svg {
+  filter: none !important;
+}
+body.dark svg [fill],
+body[data-bs-theme="dark"] svg [fill] {
+  fill: currentColor !important;
+}
+
+/* Upload area specific icons (ensure white) */
+body.dark .upload_dropZone,
+body[data-bs-theme="dark"] .upload_dropZone {
+  color: #ffffff !important;
+}
+body.dark .upload_dropZone .upload_svg,
+body[data-bs-theme="dark"] .upload_dropZone .upload_svg {
+  color: #ffffff !important;
+}
+/* Force SVG elements inside upload areas to inherit white color */
+body.dark .upload_dropZone svg,
+body[data-bs-theme="dark"] .upload_dropZone svg,
+body.dark .upload_dropZone svg *,
+body[data-bs-theme="dark"] .upload_dropZone svg * {
+  fill: currentColor !important;
+  stroke: currentColor !important;
+  color: #ffffff !important;
+}
+/* some upload SVGs use <use>, force the referenced symbol to inherit color */
+body.dark .upload_svg use,
+body[data-bs-theme="dark"] .upload_svg use {
+  fill: currentColor !important;
+}
+
+/* Make Bootstrap Icons and other icons fully white in dark theme */
+body.dark .bi,
+body[data-bs-theme="dark"] .bi,
+body.dark .animated-icon,
+body[data-bs-theme="dark"] .animated-icon {
+  color: #ffffff !important;
+}
+
+/* Placeholder color */
+body.dark ::placeholder,
+body[data-bs-theme="dark"] ::placeholder {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* Inativação textarea and helper text must be white in dark mode */
+body.dark #lista_text,
+body[data-bs-theme="dark"] #lista_text {
+  /* Softer textarea background to visually match cards but not appear fully black */
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  padding: 0.6rem !important;
+  border-radius: 0.375rem !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+body.dark #lista_text::placeholder,
+body[data-bs-theme="dark"] #lista_text::placeholder {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+body.dark #lista_text + .form-text,
+body[data-bs-theme="dark"] #lista_text + .form-text {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* Smooth theme transitions */
+body,
+.card,
+.btn,
+.form-control,
+textarea,
+select,
+table {
+  transition: background-color var(--app-transition, 180ms ease),
+    color var(--app-transition, 180ms ease),
+    border-color var(--app-transition, 180ms ease);
+}
+
+/* If some images/icons are dark bitmaps, allow invert utility */
+.icon-invert-dark {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Brand icon tweak for dark */
+body.dark .brand-icon,
+body[data-bs-theme="dark"] .brand-icon {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.file-names {
+  font-size: 0.9rem;
+  color: #444;
+}
+.file-names {
+  transition: color 160ms ease;
+}
+body.dark .file-names,
+body[data-bs-theme="dark"] .file-names {
+  color: rgba(255, 255, 255, 0.85);
+}
+.btn-processing {
+  opacity: 0.7;
+  pointer-events: none;
+}
+.preview-stats {
+  font-size: 0.9rem;
+}
+
+/* Estilos para badges/legenda do preview de inativação
+   Essas classes são usadas pelo JS ao renderizar `preview.stats`.
+   Comentários em português para facilitar alterações futuras. */
+.preview-badge {
+  font-size: 0.82rem;
+  padding: 0.28rem 0.45rem;
+  border-radius: 0.35rem;
+  display: inline-block;
+}
+/* Ajuste de tema para badges em dark */
+body.dark .preview-badge,
+body[data-bs-theme="dark"] .preview-badge {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+/* Microinteraction: states de botão e foco para melhor usabilidade */
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:focus {
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.14);
+  outline: none;
+}
+.upload_dropZone.dragover {
+  box-shadow: inset 0 0 0 2px rgba(13, 110, 253, 0.08);
+}
+
+/* Styles para modal de preview maior e para a listagem de inativos
+   Aumenta a largura/altura do popup do SweetAlert2, adiciona rolagem
+   e garante que as tabelas internas possam crescer até um limite
+   confortável para revisão. */
+.swal2-large-modal.swal2-popup {
+  max-width: 95vw !important;
+  width: 95vw !important;
+  height: 85vh !important;
+  overflow: auto !important;
+}
+.swal2-large-modal .swal2-content {
+  /* Limita a área de conteúdo deixando espaço para título/botoes */
+  max-height: calc(85vh - 160px);
+  overflow: auto;
+  padding-right: 8px; /* evitar que o scroll esconda o conteúdo */
+}
+
+/* SweetAlert2 theming with app tokens (light/dark via variables) */
+.swal2-popup {
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+  border: 1px solid var(--app-border) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28) !important;
+}
+.swal2-title {
+  color: var(--app-text) !important;
+}
+.swal2-html-container {
+  color: var(--app-text) !important;
+}
+.swal2-close {
+  color: var(--app-text-muted) !important;
+}
+.swal2-close:hover {
+  color: var(--app-accent) !important;
+}
+
+.swal2-styled:focus {
+  box-shadow: 0 0 0 0.2rem var(--app-focus-ring) !important;
+  outline: none !important;
+}
+.swal2-styled.swal2-confirm {
+  background: var(--app-accent) !important;
+  color: #fff !important;
+  border: none !important;
+}
+.swal2-styled.swal2-confirm:hover {
+  background: var(--app-accent-hover) !important;
+}
+.swal2-styled.swal2-cancel {
+  background: transparent !important;
+  color: var(--app-text) !important;
+  border: 1px solid var(--app-border) !important;
+}
+.swal2-styled.swal2-cancel:hover {
+  background: var(--app-surface-alt) !important;
+}
+
+/* Inputs/selects inside Swal should match app controls */
+.swal2-input,
+.swal2-textarea,
+.swal2-select {
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+  border: 1px solid var(--app-border) !important;
+}
+.swal2-input::placeholder,
+.swal2-textarea::placeholder {
+  color: var(--app-text-muted) !important;
+}
+
+/* Icon ring contrast adjustments while keeping semantic colors */
+.swal2-icon {
+  border-color: var(--app-border) !important;
+}
+
+/* Wrapper para tabelas de inativos — permite rolagem independente e
+   visual maior (útil para revisões). */
+.inativos-table-wrapper {
+  max-height: 60vh;
+  overflow: auto;
+  padding-right: 8px;
+  margin-bottom: 0.5rem;
+}
+.inativos-table-wrapper table {
+  width: 100%;
+}
+.inativos-table-wrapper .table-sm td,
+.inativos-table-wrapper .table-sm th {
+  font-size: 0.88rem; /* ligeiramente maior que o table-sm padrão para legibilidade */
+  padding: 0.35rem 0.45rem;
+}
+.inativos-table-wrapper .small.text-muted {
+  display: block;
+  margin-top: 6px;
+}
+
+/* Accordion styles for grupos de inativos */
+.inativos-accordion .accordion-button {
+  font-weight: 600;
+}
+.inativos-accordion .accordion-header {
+  padding: 0.25rem 0.5rem;
+}
+.inativos-accordion .accordion-item {
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  margin-bottom: 0.5rem;
+}
+.inativos-accordion .accordion-body {
+  padding: 0.5rem;
+}
+
+/* Quando um painel é expandido para revisão completa, aumenta a altura do wrapper */
+.inativos-table-wrapper.expanded {
+  max-height: 75vh;
+}
+.inativos-table-wrapper.expanded table {
+  font-size: 0.95rem;
+}
+
+/* Botões auxiliares para ações rápidas dentro do modal */
+.inativos-controls {
+  margin-bottom: 0.5rem;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.inativos-controls .btn {
+  padding: 0.28rem 0.5rem;
+  font-size: 0.85rem;
+}
