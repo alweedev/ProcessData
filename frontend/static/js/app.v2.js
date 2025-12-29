@@ -367,26 +367,40 @@ document.addEventListener("DOMContentLoaded", function () {
   async function pingApi(manual = false) {
     if (!apiStatusBtn || !apiStatusIcon) return;
     setApiStatusVisual("checking");
-    const controller = window.AbortController ? new AbortController() : null;
-    const timeoutId = controller
-      ? setTimeout(() => controller.abort(), 5000)
-      : null;
-    const baseUrl = window.API_BASE
-      ? window.API_BASE.replace(/\/$/, "")
-      : ""; // same-origin
-    const healthUrl = `${baseUrl}/health`;
-    try {
-      const response = await fetch(healthUrl, {
-        method: "HEAD",
-        signal: controller?.signal,
-      });
-      if (timeoutId) clearTimeout(timeoutId);
-      if (!response.ok) throw new Error(`Status ${response.status}`);
-      handleApiResult(true, manual);
-    } catch (error) {
-      if (timeoutId) clearTimeout(timeoutId);
-      handleApiResult(false, manual);
+
+    const base = window.API_BASE ? window.API_BASE.replace(/\/$/, "") : "";
+
+    const candidates = [
+      `${base}/health`,
+      `${base}/api/health`,
+      base ? `${base}/` : "/",
+    ];
+
+    async function tryFetch(url) {
+      const controller = window.AbortController ? new AbortController() : null;
+      const timeoutId = controller ? setTimeout(() => controller.abort(), 6000) : null;
+      try {
+        const res = await fetch(url, { method: "GET", signal: controller?.signal });
+        if (timeoutId) clearTimeout(timeoutId);
+        return res.ok;
+      } catch (e) {
+        if (timeoutId) clearTimeout(timeoutId);
+        return false;
+      }
     }
+
+    for (const url of candidates) {
+      // Skip duplicate URLs
+      if (!url || (typeof url === "string" && url.endsWith("//"))) continue;
+      // If one succeeds, mark online and stop
+      /* eslint-disable no-await-in-loop */
+      const ok = await tryFetch(url);
+      if (ok) {
+        handleApiResult(true, manual);
+        return;
+      }
+    }
+    handleApiResult(false, manual);
   }
 
   function handleApiResult(isOnline, notify) {

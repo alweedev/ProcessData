@@ -356,18 +356,26 @@ document.addEventListener("DOMContentLoaded", function () {
   if (apiStatusBtn) {
     apiStatusBtn.addEventListener("click", async () => {
       apiStatusIcon?.classList.add("spin-rotating");
-      try {
-        const healthUrl = window.API_BASE
-          ? window.API_BASE + "/health"
-          : "/health";
-        await fetch(healthUrl, {
-          method: "HEAD",
-          timeout: 2000,
-        });
-        showToast("API Online", "success");
-      } catch (error) {
-        showToast("API Offline", "danger");
+      const base = window.API_BASE ? window.API_BASE.replace(/\/$/, "") : "";
+      const urls = [
+        `${base}/health`,
+        `${base}/api/health`,
+        base ? `${base}/` : "/",
+      ];
+      async function tryGet(u) {
+        try {
+          const r = await fetch(u, { method: "GET" });
+          return r.ok;
+        } catch (_) {
+          return false;
+        }
       }
+      let ok = false;
+      for (const u of urls) {
+        /* eslint-disable no-await-in-loop */
+        if (await tryGet(u)) { ok = true; break; }
+      }
+      showToast(ok ? "API Online" : "API Offline", ok ? "success" : "danger");
       apiStatusIcon?.classList.remove("spin-rotating");
     });
   }
