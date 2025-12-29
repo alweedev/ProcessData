@@ -14,10 +14,10 @@ class Settings:
     UPLOAD_FOLDER: str = os.path.join(BACKEND_DIR, 'tmp_uploads')
     MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024
 
-    # Server
-    DEBUG: bool = True
-    HOST: str = '0.0.0.0'
-    PORT: int = 5000
+    # Server (can be overridden by environment variables)
+    DEBUG: bool = os.getenv('DEBUG', 'false').lower() in ('1', 'true', 'yes')
+    HOST: str = os.getenv('HOST', '0.0.0.0')
+    PORT: int = int(os.getenv('PORT', '5000'))
 
     def ensure_dirs(self):
         os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)

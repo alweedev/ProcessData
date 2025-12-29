@@ -131,6 +131,47 @@ Esses testes fazem verificações rápidas dos fluxos de cadastro, inativação 
 
 ---
 
+## Deploy na Railway
+
+Este projeto está preparado para deploy na Railway usando Nixpacks e Gunicorn.
+
+### O que já está configurado
+
+- Procfile na raiz com comando web: `gunicorn backend.app:app --workers 2 --threads 8 --bind 0.0.0.0:$PORT`.
+- railway.toml com `start` equivalente (opcional; a Railway pode usar o Procfile).
+- requirements.txt inclui `gunicorn` e dependências do Flask.
+- O backend lê `PORT`, `HOST` e `DEBUG` de variáveis de ambiente (veja `backend/core/config.py`).
+
+### Passo a passo
+
+1. Crie um projeto na Railway e conecte este repositório (GitHub).
+2. A Railway detectará Python e instalará as dependências via `requirements.txt`.
+3. O serviço web iniciará com Gunicorn usando o Procfile.
+4. A URL pública servirá tanto a API quanto o frontend (o blueprint `frontend` entrega `frontend/index.html`).
+
+### Variáveis de ambiente
+
+- PORT: definida pela Railway automaticamente.
+- HOST: opcional (padrão `0.0.0.0`).
+- DEBUG: opcional (`true`/`false`). Em produção, deixe `false`.
+
+### Health check
+
+- Endpoint: `/health` (retorna 200 com `{status: "OK"}` ou 204 em HEAD).
+
+### Teste local com Gunicorn (opcional)
+
+Com o `venv` ativo na raiz:
+
+```powershell
+pip install -r requirements.txt
+gunicorn backend.app:app --workers 2 --threads 8 --bind 0.0.0.0:5000
+```
+
+Abra no navegador: `http://127.0.0.1:5000`.
+
+---
+
 ## Problemas comuns
 
 - **405 Method Not Allowed**
