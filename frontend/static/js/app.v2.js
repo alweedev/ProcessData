@@ -373,8 +373,8 @@ document.addEventListener("DOMContentLoaded", function () {
       : null;
     const baseUrl = window.API_BASE
       ? window.API_BASE.replace(/\/$/, "")
-      : "http://127.0.0.1:5000";
-    const healthUrl = `${baseUrl}/`;
+      : ""; // same-origin
+    const healthUrl = `${baseUrl}/health`;
     try {
       const response = await fetch(healthUrl, {
         method: "HEAD",

@@ -23,7 +23,7 @@ if PARENT not in sys.path:
 
 from backend.core.config import settings
 from backend.core.logging import get_logger
-from backend.api import inativacao_bp, frontend_bp, cadastro_bp
+from backend.api import inativacao_bp, frontend_bp, cadastro_bp, health_bp
 
 logger = get_logger()
 
@@ -39,6 +39,7 @@ def create_app() -> Flask:
     app.register_blueprint(inativacao_bp)
     app.register_blueprint(cadastro_bp)
     app.register_blueprint(frontend_bp)
+    app.register_blueprint(health_bp)
 
     logger.info('Aplicação Flask criada e blueprints registrados.')
     return app

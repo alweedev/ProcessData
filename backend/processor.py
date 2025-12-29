@@ -281,6 +281,17 @@ def processar_registros_from_files(paths: list, login_choice: str = "CPF", fluxo
             else:
                 df_final[col] = df_final[col].fillna('').astype(str).apply(lambda v: sanitize_output_text(v, None))
 
+    # Descartar linhas em branco (apenas espaços) sem dados críticos
+    def _drop_blank_rows(df: pd.DataFrame) -> pd.DataFrame:
+        critical = [c for c in ["Login", "NomeCompleto", "CPF", "Email"] if c in df.columns]
+        if not critical:
+            return df
+        trimmed = df[critical].apply(lambda s: s.astype(str).str.strip())
+        mask_blank = trimmed.eq("").all(axis=1)
+        return df.loc[~mask_blank].copy()
+
+    df_final = _drop_blank_rows(df_final)
+
     df_final = df_final[MODEL_COLS]
 
     return errors, df_final

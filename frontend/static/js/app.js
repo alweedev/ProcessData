@@ -358,8 +358,8 @@ document.addEventListener("DOMContentLoaded", function () {
       apiStatusIcon?.classList.add("spin-rotating");
       try {
         const healthUrl = window.API_BASE
-          ? window.API_BASE + "/"
-          : "http://127.0.0.1:5000/";
+          ? window.API_BASE + "/health"
+          : "/health";
         await fetch(healthUrl, {
           method: "HEAD",
           timeout: 2000,
