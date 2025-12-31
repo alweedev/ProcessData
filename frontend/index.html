@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ProcessData</title>
+    <!-- Favicon / Site icon -->
+    <link rel="shortcut icon" type="image/x-icon" href="img/favicon.ico?v=3" />
+    <link rel="icon" type="image/x-icon" href="img/favicon.ico?v=3" />
+    <!-- Removed SVG logo reference -->
+    <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png?v=3" />
+    <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png?v=3" />
+    <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png?v=3" />
+    <link rel="manifest" href="site.webmanifest?v=3" />
     <!-- Pré-aplicação de tema para evitar FOUC -->
     <script>try{const stored=localStorage.getItem('theme');const prefers=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;const mode= stored? stored : (prefers? 'dark':'light');document.documentElement.setAttribute('data-initial-theme',mode);document.addEventListener('DOMContentLoaded',()=>{document.body.setAttribute('data-bs-theme',mode);if(mode==='dark') document.body.classList.add('dark');});}catch(e){/* noop */}</script>
     <!-- Tailwind (modo CDN apenas para utilities e @layer) -->
@@ -45,20 +53,23 @@
     <div class="container py-4" id="mainContent">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div id="brand" class="me-3 d-flex align-items-center">
-          <div id="brand-icon" class="brand-icon me-2" aria-hidden="true" title="Automação de Cadastro/Inativação">
+          <div id="brand-icon" class="brand-icon me-2" aria-hidden="true" title="Processamento de Planilhas">
+            <!-- Spreadsheet + Processing icon -->
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <!-- Person head centered horizontally -->
-              <circle cx="12" cy="8" r="4" />
-              <!-- Torso/base curve -->
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 20c0-3.8 3.6-7 8-7s8 3.2 8 7" />
-              <!-- Spark automation badge (small star inside circle) -->
-              <circle cx="17" cy="15.5" r="3" />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M17 13.7v1M17 17.3v1M15.7 15.5h1M18.3 15.5h1M16.1 14.4l.6.6M17.9 16.2l.6.6M16.1 16.6l.6-.6M17.9 14.8l.6-.6" />
+              <!-- Sheet outline -->
+              <rect x="4" y="4" width="12" height="16" rx="2" ry="2"/>
+              <!-- Grid lines -->
+              <path stroke-linecap="round" d="M8 8h6M8 11h6M8 14h6"/>
+              <path stroke-linecap="round" d="M6 10v8M12 10v8"/>
+              <!-- Processing gear overlay (animated) -->
+              <g class="brand-gear">
+                <circle cx="18" cy="16" r="3"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18 12.8v1M18 18.2v1M15.8 16h1M19.2 16h1M16.7 14.7l.7.7M19.3 17.3l.7.7M16.7 17.3l.7-.7M19.3 14.7l.7-.7"/>
+              </g>
             </svg>
           </div>
           <div>
             <h1 class="h4 mb-0">ProcessData</h1>
-            <small id="brand-sub" class="text-muted">Interface local integrada com API</small>
           </div>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -186,7 +197,6 @@
                   <p class="text-uppercase small fw-semibold text-muted mb-1">Workspace Analítico</p>
                   <h2 class="card-title h4 fw-bold mb-1 d-flex align-items-center gap-2">
                     Análise de Ficha
-                    <span class="badge rounded-pill bg-gradient-analise">Beta</span>
                   </h2>
                   <p class="text-muted mb-0">Pipeline moderno com uploads resilientes, visualização fluida e preferências que acompanham seu fluxo de análise.</p>
                 </div>
@@ -209,9 +219,7 @@
                     <p class="text-muted small mb-3">ou clique para escolher no explorador</p>
                     <button class="btn btn-primary" type="button" id="analise_pickFile" title="Abrir seletor de arquivos">Selecionar arquivo</button>
                     <input type="file" id="analise_uploadInput" accept=".xlsx,.xls" class="visually-hidden" />
-                    <div class="analise-drop-hint text-muted small mt-3">Suporte a até 200 mil linhas com streaming incremental.</div>
                   </div>
-                  <div id="analise_uploadFeedback" class="analise-upload-feedback" aria-live="polite"></div>
                   <div class="analise-progress" id="analise_progress" hidden>
                     <div class="analise-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
                   </div>
@@ -298,7 +306,7 @@
           <div class="card shadow-sm fade-in">
             <div class="card-body">
               <h2 class="card-title h4 fw-bold mb-3">
-                Carga Cadastro
+                Cadastro Carga
               </h2>
               <div class="mb-2">
                 <button id="cadastro_help_btn" class="btn btn-outline-info help-btn" type="button" aria-label="Como usar o cadastro em lote" title="Guia do cadastro em lote">
@@ -306,7 +314,7 @@
                   <span>Como usar</span>
                 </button>
               </div>
-              <p class="text-muted mb-4">Carregue a planilha original, defina opções e gere em segundos o arquivo tratado para carga.</p>
+              <p class="text-muted mb-4">Faça upload da planilha preenchida. Processamos e geramos o arquivo pronto para carga.</p>
               <!-- Zona de upload do cadastro: tornada acessível via teclado -->
               <div
                 class="border border-primary border-2 border-dashed rounded p-4 text-center upload_dropZone"
@@ -396,7 +404,7 @@
               <h2 class="card-title h4 fw-bold mb-3">
                 Inativação
               </h2>
-              <p class="text-muted mb-4">Envie a base de usuários, cole CPFs ou nomes completos e processe a inativação de forma guiada.</p>
+              <p class="text-muted mb-2">Envie a base de usuários, cole CPFs ou nomes completos e processe a inativação de forma guiada.</p>
               <div class="mb-2">
                 <button id="inativacao_help_btn" class="btn btn-outline-info help-btn" type="button" aria-label="Como usar a inativação" title="Guia da inativação">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="margin-right:0.375rem;"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01"/><circle cx="12" cy="12" r="9"/></svg>
@@ -522,8 +530,10 @@
         >
           <div class="card shadow-sm fade-in">
             <div class="card-body">
-              <h2 class="card-title h4 fw-bold mb-3">
+              <h2 class="card-title h4 fw-bold mb-3 d-flex align-items-center gap-2">
                 Histórico
+                <span class="badge rounded-pill bg-gradient-analise">Beta</span>
+                <small class="text-muted">Em desenvolvimento</small>
               </h2>
               <p class="text-muted mb-3">Painel cronológico das últimas operações realizadas no navegador.</p>
               <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
