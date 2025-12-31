@@ -43,6 +43,13 @@
   /* Fine visual centering tweak */
   transform: translateY(1px);
 }
+/* Logo image inside brand icon */
+.brand-icon img {
+  width: 32px;
+  height: 32px;
+  display: block;
+  object-fit: contain;
+}
 @keyframes float {
   0% {
     transform: translateY(0) rotate(0deg);

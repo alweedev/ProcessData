@@ -1303,3 +1303,36 @@ body[data-bs-theme="dark"] .status-inativo .status-cell,
 body.dark .status-inativo .status-cell {
   color: #ff9ca8; /* vermelho mais claro no escuro */
 }
+
+/* Header icon animation: rotate gear gently; respects reduced motion */
+.brand-icon .brand-gear {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: brandGearRotate 6s linear infinite;
+}
+@keyframes brandGearRotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+/* Faster on hover, disabled when reduced motion is active */
+.brand-icon:hover .brand-gear { animation-duration: 3s; }
+body.reduce-motion .brand-icon .brand-gear { animation: none; }
+
+/* ===== Header brand icon: flat style + adjusted size ===== */
+#brand-icon {
+  margin-right: 0.25rem !important;
+}
+.brand-icon {
+  background: transparent !important;
+  box-shadow: none !important;
+  animation: none !important;
+  color: var(--app-text);
+}
+.brand-icon svg {
+  width: 36px !important;
+  height: 36px !important;
+  stroke: currentColor !important;
+  stroke-width: 1.8;
+  fill: none;
+  display: block;
+}

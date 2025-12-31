@@ -1776,17 +1776,17 @@ document.addEventListener("DOMContentLoaded", function () {
     btn.addEventListener("click", () => {
       const html = `
         <div class="text-start">
-          <p class="mb-2 fw-semibold">Como preparar o cadastro em lote</p>
+          <p class="mb-2 fw-semibold">Como usar o cadastro em lote</p>
           <ol class="ps-3 small">
-            <li>Faça <strong>upload</strong> da planilha original em formato Excel (.xlsx).</li>
-            <li>Defina o <strong>tipo de login</strong> e o <strong>fluxo</strong> (SELF ou FRONT).</li>
-            <li>Clique em <em>Gerar</em> para produzir a planilha tratada.</li>
-            <li>Use o <strong>histórico</strong> para consultar as últimas execuções rapidamente.</li>
+            <li>Carregue a planilha Excel (<strong>.xlsx/.xls</strong>) já preenchida.</li>
+            <li>Escolha o <strong>tipo de login</strong> (CPF ou E-mail) e o <strong>fluxo</strong> (SELF ou FRONT).</li>
+            <li>Clique em <em>Gerar</em> para processar e obter o arquivo pronto para carga.</li>
+            <li>Acompanhe e recupere execuções no <strong>Histórico</strong> quando precisar.</li>
           </ol>
-          <p class="small text-muted mb-0">Revisar antes de enviar evita retrabalho e agiliza a carga.</p>
+          <p class="small text-muted mb-0">Dica: revise os dados antes de enviar para evitar retrabalho.</p>
         </div>`;
       if (window.Swal?.fire) {
-        Swal.fire({ title: "Cadastro em Lote", html, confirmButtonText: "Fechar", width: 500 });
+        Swal.fire({ title: "Carga cadastro", html, confirmButtonText: "Fechar", width: 500 });
       } else {
         alert("Envie a base, escolha login e fluxo, e gere o arquivo.");
       }
