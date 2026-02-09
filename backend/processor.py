@@ -33,15 +33,20 @@ def extract_digits_only(v: str) -> str:
 
 
 def sanitize_output_text(v: str, maxlen: int | None = None) -> str:
-    """Remove acentos e caracteres especiais, mantém letras, números e espaços.
-    Retorna em MAIÚSCULAS. Opcionalmente trunca para maxlen.
+    """Normaliza texto para saída:
+
+    - Remove acentos (via upper_no_accents)
+    - Mantém letras, números, espaços, hífens, parênteses e barras
+      (para suportar descrições como "COM AQUISICAO SFB (CO/N/NE)")
+    - Retorna em MAIÚSCULAS
+    - Opcionalmente trunca para maxlen
     """
     if v is None:
         return ""
     s = str(v)
     s = upper_no_accents(s)
-    # manter apenas letras, dígitos e espaços
-    s = re.sub(r"[^A-Z0-9 \-]", "", s.upper())
+    # manter apenas letras, dígitos, espaços, hífen, parênteses e barras
+    s = re.sub(r"[^A-Z0-9 \-/()]", "", s.upper())
     s = re.sub(r"\s+", " ", s).strip()
     if maxlen:
         return s[:maxlen]
@@ -230,6 +235,10 @@ def processar_registros_from_files(paths: list, login_choice: str = "CPF", fluxo
                 df_final[c] = df_final[c].apply(lambda v: sanitize_output_text(v, 20))
             elif c == 'NomeCompleto':
                 df_final[c] = df_final[c].apply(lambda v: sanitize_output_text(v, None))
+            elif c == 'DescricaoCCustoEmpresa':
+                # Para DescricaoCCustoEmpresa, manter como na ficha,
+                # apenas removendo acentos (sem remover parênteses, barras, etc.)
+                df_final[c] = df_final[c].apply(lambda v: upper_no_accents(v))
             else:
                 df_final[c] = df_final[c].apply(lambda v: sanitize_output_text(v, None))
 
@@ -271,11 +280,18 @@ def processar_registros_from_files(paths: list, login_choice: str = "CPF", fluxo
         df_final['NroMatricula'] = df_final['NroMatricula'].fillna('').apply(lambda v: extract_digits_only(v))
 
     # Sanitizar restante das colunas de texto para saída (uppercase, sem acentos, colapso de espaços)
-    # EXCEÇÃO: manter acentos e caracteres especiais em 'Email' e 'Telefone' (apenas trim + uppercase)
+    # EXCEÇÕES:
+    #  - 'Email' e 'Telefone': manter acentos e caracteres especiais (apenas trim + uppercase)
+    #  - 'Login' quando login_choice == 'EMAIL': preservar formato de e-mail (apenas trim + uppercase)
+    #  - 'DescricaoCCustoEmpresa': preservar caracteres da ficha, apenas removendo acentos
     for col in df_final.columns:
         if df_final[col].dtype == object:
             if col in ("Email", "Telefone"):
                 df_final[col] = df_final[col].fillna('').astype(str).apply(lambda v: v.strip().upper())
+            elif col == "Login" and login_choice == "EMAIL":
+                df_final[col] = df_final[col].fillna('').astype(str).apply(lambda v: v.strip().upper())
+            elif col == 'DescricaoCCustoEmpresa':
+                df_final[col] = df_final[col].fillna('').astype(str).apply(lambda v: upper_no_accents(v))
             elif col == 'NroMatricula':
                 df_final[col] = df_final[col].fillna('').apply(lambda v: extract_digits_only(v))
             else:
