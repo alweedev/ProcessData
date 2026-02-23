@@ -1,21 +1,7 @@
-/* custom.css */
-/* =============================================================
-   Global Theming Variables (Light + Dark)
-   -------------------------------------------------------------
-   We centralize all color definitions to ensure consistent
-   light/dark theming, easier WCAG contrast adjustments, and to
-   eliminate hardcoded hex values scattered in component rules.
-   Contrast targets (WCAG AA):
-     Body text vs background ≥ 4.5:1
-     Muted text still ≥ 3:1 for readability
-     Buttons (primary) foreground vs fill ≥ 4.5:1
-   Adjust palette tokens below if future audits require tweaks.
-   ============================================================= */
-
 :root {
   /* Primary brand gradient + semantic accents */
   --colorPrimaryNormal: linear-gradient(135deg, #00b3bb, #00cdd7);
-  --colorPrimaryDark: #00979f; /* contrast on light bg ≈ 4.9:1 */
+  --colorPrimaryDark: #000101;
   --colorPrimaryGlare: #00e6f0;
   --colorPrimaryHalf: #80d9dd;
   --colorPrimaryQuarter: #bfecee;
@@ -135,9 +121,7 @@ body.dark .btn-dark:hover {
 #mainContent {
   margin-left: auto;
   margin-right: auto;
-  padding-left: clamp(1rem, 2vw, 2rem);
-  padding-right: clamp(1rem, 2vw, 2rem);
-}
+  }
 @media (min-width: 1400px) {
   #mainContent {
     max-width: 1320px;
@@ -286,15 +270,12 @@ body.analise-wrap #analise_dataTable td {
   background: rgba(0, 205, 215, 0.08);
 }
 .analise-drop-icon {
-  width: 64px;
-  height: 64px;
   margin: 0 auto 0.75rem;
-  border-radius: 16px;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 205, 215, 0.2),
-    rgba(59, 130, 246, 0.2)
-  );
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border-radius: 0;
 }
 .analise-upload-feedback {
   min-height: 2.25rem;
@@ -645,23 +626,96 @@ body.dark .nav-tabs .nav-link:hover {
 }
 
 .upload_dropZone {
-  color: #0f3c4b;
-  background: var(--colorPrimaryEighth);
-  outline: 2px dashed var(--colorPrimaryHalf);
-  outline-offset: -12px;
-  transition: outline-offset 0.2s ease-out, outline-color 0.3s ease-in-out,
-    background-color 0.2s ease-out;
+  color: var(--app-text);
+  background: linear-gradient(135deg, rgba(0, 205, 215, 0.08), rgba(59, 130, 246, 0.06));
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background-clip: padding-box;
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 200px;
-  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  overflow: hidden;
 }
-.upload_dropZone.highlight {
-  outline-offset: -4px;
-  outline-color: var(--colorPrimaryNormal);
-  background: var(--colorPrimaryQuarter);
+
+/* Borda com gradiente sutil */
+.upload_dropZone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0, 205, 215, 0.4), rgba(59, 130, 246, 0.3));
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: xor;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+  transition: background 0.3s ease;
+}
+
+@keyframes uploadShine {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.upload_dropZone:hover::after {
+  opacity: 1;
+}
+
+.upload_dropZone:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 205, 215, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.upload_dropZone:hover::before {
+  background: linear-gradient(135deg, rgba(0, 205, 215, 0.6), rgba(59, 130, 246, 0.5));
+}
+
+.upload_dropZone:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 3px;
+}
+
+.upload_dropZone.highlight,
+.upload_dropZone.dragover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 20px 50px rgba(0, 205, 215, 0.25), 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.upload_dropZone.highlight::before,
+.upload_dropZone.dragover::before {
+  background: linear-gradient(135deg, rgba(0, 205, 215, 0.8), rgba(59, 130, 246, 0.7));
+}
+
+/* Dark mode */
+body.dark .upload_dropZone,
+body[data-bs-theme="dark"] .upload_dropZone {
+  background: linear-gradient(135deg, rgba(0, 205, 215, 0.06), rgba(59, 130, 246, 0.04));
+}
+
+body.dark .upload_dropZone::before,
+body[data-bs-theme="dark"] .upload_dropZone::before {
+  background: linear-gradient(135deg, rgba(0, 205, 215, 0.3), rgba(59, 130, 246, 0.25));
+}
+
+body.dark .upload_dropZone:hover::before,
+body[data-bs-theme="dark"] .upload_dropZone:hover::before {
+  background: linear-gradient(135deg, rgba(0, 205, 215, 0.5), rgba(59, 130, 246, 0.4));
+}
+
+body.dark .upload_dropZone:hover,
+body[data-bs-theme="dark"] .upload_dropZone:hover {
+  box-shadow: 0 12px 40px rgba(0, 205, 215, 0.12), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+body.dark .upload_dropZone.highlight,
+body.dark .upload_dropZone.dragover,
+body[data-bs-theme="dark"] .upload_dropZone.highlight,
+body[data-bs-theme="dark"] .upload_dropZone.dragover {
+  box-shadow: 0 20px 50px rgba(0, 205, 215, 0.2), 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* Ensure upload action buttons stay inside the drop zone and are centered */
@@ -672,31 +726,87 @@ body.dark .nav-tabs .nav-link:hover {
   align-items: center !important;
   justify-content: center !important;
   white-space: nowrap;
+  position: relative;
+  z-index: 1;
 }
 .upload_dropZone .btn svg {
   margin-right: 0.5rem;
   flex-shrink: 0;
+}
+
+/* Textos dentro da área de upload */
+.upload_dropZone p {
+  position: relative;
+  z-index: 1;
+  transition: color 0.3s ease;
+}
+
+.upload_dropZone:hover p.text-muted {
+  color: var(--app-text) !important;
+}
+
+/* Botão primário dentro do upload - estilo moderno */
+.upload_dropZone .btn-primary {
+  background: linear-gradient(135deg, #00b3bb, #3b82f6);
+  border: none;
+  border-radius: 12px;
+  padding: 0.6rem 1.25rem;
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(0, 179, 187, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.upload_dropZone .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 179, 187, 0.35);
+  background: linear-gradient(135deg, #00cdd7, #5b8ef8);
+}
+
+.upload_dropZone .btn-primary:active {
+  transform: translateY(0);
 }
 .upload_dropZone .file-names {
   width: 100%;
   text-align: center;
   margin-top: 0.5rem;
 }
-.upload_dropZone.dragover::after {
-  content: "Solte aqui!";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #fff;
-  background: rgba(0, 179, 187, 0.8);
-  padding: 0.5rem 1rem;
-  border-radius: 5px;
-  font-weight: bold;
+
+/* Overlay animado quando arrastar */
+.upload_dropZone.dragover .dragover-overlay {
+  opacity: 1;
 }
 
 .upload_svg {
-  fill: var(--colorPrimaryNormal);
+  font-size: 3.2rem;
+  color: var(--app-accent);
+  transition: transform 0.3s ease, color 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.upload_dropZone:hover .upload_svg {
+  transform: scale(1.1) translateY(-4px);
+  color: #00cdd7;
+}
+
+.upload_dropZone.dragover .upload_svg {
+  animation: uploadBounce 0.6s ease infinite;
+  color: #00e6f0;
+}
+
+@keyframes uploadBounce {
+  0%, 100% { transform: translateY(0) scale(1.1); }
+  50% { transform: translateY(-8px) scale(1.15); }
+}
+
+body.dark .upload_svg,
+body[data-bs-theme="dark"] .upload_svg {
+  color: #3b82f6;
+}
+
+body.dark .upload_dropZone:hover .upload_svg,
+body[data-bs-theme="dark"] .upload_dropZone:hover .upload_svg {
+  color: #00cdd7;
 }
 .btn-primary {
   background: var(--colorButtonNormal);
@@ -812,33 +922,89 @@ body.dark .btn-gradient-clear:hover {
   }
 }
 
-/* Morfologia ícone sun/moon */
+/* Morfologia ícone sun/moon - Design Moderno */
 #themeToggle {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 999px;
+  width: 2.50rem;
+  height: 2.50rem;
+  border-radius: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: 1px solid var(--app-border);
-  background: var(--app-surface);
-  color: var(--app-text);
-  transition: background var(--app-transition),
-    border-color var(--app-transition), color var(--app-transition),
-    box-shadow var(--app-transition);
+  background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+  color: #f59e0b;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Efeito de brilho interno */
+#themeToggle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4), transparent 60%);
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+/* Raios de sol animados */
+#themeToggle::after {
+  content: '';
+  position: absolute;
+  width: 150%;
+  height: 150%;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(251, 191, 36, 0.2) 30deg, transparent 60deg);
+  animation: sunRays 10s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes sunRays {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 #themeToggle:hover {
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  transform: scale(1.08) rotate(15deg);
+  box-shadow: 0 8px 25px rgba(251, 191, 36, 0.35), 0 0 0 3px rgba(251, 191, 36, 0.15);
 }
+
+#themeToggle:active {
+  transform: scale(0.95);
+}
+
+/* Dark mode - Estilo Lua/Noite */
 body.dark #themeToggle {
-  background: var(--app-surface-alt);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: var(--app-text);
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
 }
+
+body.dark #themeToggle::before {
+  background: radial-gradient(circle at 70% 30%, rgba(165, 180, 252, 0.3), transparent 50%);
+}
+
+body.dark #themeToggle::after {
+  background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+              radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+              radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  animation: twinkle 3s ease-in-out infinite;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
 body.dark #themeToggle:hover {
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+  transform: scale(1.08) rotate(-15deg);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3), 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
+
 .theme-icon-wrapper {
   display: inline-flex;
   align-items: center;
@@ -846,25 +1012,34 @@ body.dark #themeToggle:hover {
   width: 1.25rem;
   height: 1.25rem;
   position: relative;
+  z-index: 1;
 }
 .theme-icon-wrapper svg {
   position: absolute;
-  inset: 0;
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1.25rem;
+  height: 1.25rem;
+  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 .theme-icon-wrapper .theme-sun {
   opacity: 1;
+  transform: translate(-50%, -50%) scale(1) rotate(0deg);
 }
 .theme-icon-wrapper .theme-moon {
   opacity: 0;
+  transform: translate(-50%, -50%) scale(0.5) rotate(-90deg);
 }
 body.dark .theme-icon-wrapper .theme-sun {
   opacity: 0;
-  transform: scale(0.5) rotate(45deg);
+  transform: translate(-50%, -50%) scale(0.5) rotate(90deg);
 }
 body.dark .theme-icon-wrapper .theme-moon {
   opacity: 1;
-  transform: scale(1) rotate(0deg);
+  transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  filter: drop-shadow(0 0 8px rgba(165, 180, 252, 0.5));
 }
 
 .progress {
@@ -964,13 +1139,6 @@ body.dark .analise-fullscreen {
   background: var(--app-surface);
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.8) inset;
 }
-.analise-fullscreen table {
-  font-size: 0.85rem;
-}
-.analise-fullscreen #analise_tableBody td,
-.analise-fullscreen #analise_tableHead th {
-  white-space: nowrap;
-}
 
 /* Exit button inside fullscreen container */
 .analise-exit-btn {
@@ -985,10 +1153,6 @@ body.dark .analise-fullscreen {
 .analise-exit-btn {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
 }
-.analise-fullscreen {
-  position: fixed !important;
-}
-
 /* Prevent the document body from scrolling while a fullscreen analise is active */
 body.analise-fullscreen-active {
   overflow: hidden;
@@ -1075,7 +1239,6 @@ h2[tabindex="-1"]:focus,
 
 .bi {
   vertical-align: base;
-  transition: transform 0.3s ease, color 0.3s ease;
 }
 .btn:hover .bi,
 .nav-link:hover .bi {
@@ -1151,18 +1314,32 @@ body.dark .nav-link:hover .bi {
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.85rem;
+  color: var(--app-text);
 }
 .historico-table thead th {
   position: sticky;
   top: 0;
   background: var(--app-table-header-bg);
+  color: var(--app-table-header-text);
   z-index: 1;
   font-weight: 600;
+}
+.historico-table tbody td {
+  color: var(--app-text);
 }
 .historico-table tbody tr:hover td {
   background: var(--colorPrimaryEighth);
 }
-body.dark .historico-table tbody tr:hover td {
+body.dark .historico-table,
+body[data-bs-theme="dark"] .historico-table {
+  color: var(--app-text);
+}
+body.dark .historico-table tbody td,
+body[data-bs-theme="dark"] .historico-table tbody td {
+  color: var(--app-text) !important;
+}
+body.dark .historico-table tbody tr:hover td,
+body[data-bs-theme="dark"] .historico-table tbody tr:hover td {
   background: rgba(59, 130, 246, 0.15);
 }
 .historico-table td,
@@ -1211,75 +1388,165 @@ html {
   grid-column: span 1;
 }
 
-/* API Status Button */
+/* API Status Button - Design Moderno */
 .api-status-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.3s ease;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.85rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+  background: var(--app-surface);
+}
+
+/* Indicador de pulso animado */
+.api-status-btn::before {
+  content: '';
+  position: absolute;
+  left: 0.75rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
 }
 
 .api-status-btn.api-online {
-  border-color: var(--app-success);
-  color: var(--app-success);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(34, 197, 94, 0.02));
+  padding-left: 2rem;
+}
+
+.api-status-btn.api-online::before {
+  background: #22c55e;
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+  animation: apiPulse 2s ease-in-out infinite;
+}
+
+@keyframes apiPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
 }
 
 .api-status-btn.api-online:hover {
-  background-color: rgba(25, 135, 84, 0.1);
-  border-color: var(--app-success);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+  border-color: rgba(34, 197, 94, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
 }
 
 .api-status-btn.api-offline {
-  border-color: var(--app-danger);
-  color: var(--app-danger);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.02));
+  padding-left: 2rem;
+}
+
+.api-status-btn.api-offline::before {
+  background: #ef4444;
+  animation: apiPulseError 1.5s ease-in-out infinite;
+}
+
+@keyframes apiPulseError {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .api-status-btn.api-offline:hover {
-  background-color: rgba(220, 53, 69, 0.1);
-  border-color: var(--app-danger);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+  border-color: rgba(239, 68, 68, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
 
 .api-status-btn #apiStatusIcon {
   flex-shrink: 0;
   transition: transform 0.3s ease;
+  display: none; /* Esconder ícone, usar apenas o indicador de pulso */
 }
 
-.api-status-btn.api-checking #apiStatusIcon {
-  animation: spin 1s linear infinite;
+.api-status-btn.api-checking {
+  padding-left: 2rem;
+  color: var(--app-text-muted);
+  border-color: var(--app-border);
+}
+
+.api-status-btn.api-checking::before {
+  background: var(--app-accent);
+  animation: apiCheckingSpin 1s linear infinite;
+  border-radius: 2px;
+  width: 10px;
+  height: 10px;
+}
+
+@keyframes apiCheckingSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .api-status-btn #apiStatusText {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 /* Dark mode adjustments for API status */
-body.dark .api-status-btn.api-online {
-  border-color: #51cf66;
-  color: #51cf66;
+body.dark .api-status-btn,
+body[data-bs-theme="dark"] .api-status-btn {
+  background: var(--app-surface-alt);
 }
 
-body.dark .api-status-btn.api-online:hover {
-  background-color: rgba(81, 207, 102, 0.15);
+body.dark .api-status-btn.api-online,
+body[data-bs-theme="dark"] .api-status-btn.api-online {
+  border-color: rgba(74, 222, 128, 0.3);
+  color: #4ade80;
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.1), rgba(74, 222, 128, 0.02));
 }
 
-body.dark .api-status-btn.api-offline {
-  border-color: #ff6b6b;
-  color: #ff6b6b;
+body.dark .api-status-btn.api-online::before,
+body[data-bs-theme="dark"] .api-status-btn.api-online::before {
+  background: #4ade80;
+  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.5);
 }
 
-body.dark .api-status-btn.api-offline:hover {
-  background-color: rgba(255, 107, 107, 0.15);
+body.dark .api-status-btn.api-online:hover,
+body[data-bs-theme="dark"] .api-status-btn.api-online:hover {
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.18), rgba(74, 222, 128, 0.05));
+  border-color: rgba(74, 222, 128, 0.5);
+  box-shadow: 0 4px 16px rgba(74, 222, 128, 0.15);
+}
+
+body.dark .api-status-btn.api-offline,
+body[data-bs-theme="dark"] .api-status-btn.api-offline {
+  border-color: rgba(248, 113, 113, 0.3);
+  color: #f87171;
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.1), rgba(248, 113, 113, 0.02));
+}
+
+body.dark .api-status-btn.api-offline::before,
+body[data-bs-theme="dark"] .api-status-btn.api-offline::before {
+  background: #f87171;
+}
+
+body.dark .api-status-btn.api-offline:hover,
+body[data-bs-theme="dark"] .api-status-btn.api-offline:hover {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.18), rgba(248, 113, 113, 0.05));
+  border-color: rgba(248, 113, 113, 0.5);
+  box-shadow: 0 4px 16px rgba(248, 113, 113, 0.15);
 }
 
 /* ===== Inativação: destaque visual para status ATIVO/INATIVO ===== */
@@ -1325,14 +1592,256 @@ body.reduce-motion .brand-icon .brand-gear { animation: none; }
 .brand-icon {
   background: transparent !important;
   box-shadow: none !important;
-  animation: none !important;
   color: var(--app-text);
 }
-.brand-icon svg {
-  width: 36px !important;
-  height: 36px !important;
-  stroke: currentColor !important;
-  stroke-width: 1.8;
-  fill: none;
+.brand-icon svg,
+.brand-icon i {
+  width: auto !important;
+  height: auto !important;
+  font-size: 2.5rem;
   display: block;
+}
+
+/* ===== Estruturas de Aprovação: destaque para linhas sem aprovador (dark mode) ===== */
+/* Override Bootstrap table-warning para modo escuro - cor âmbar mais sutil e legível */
+body.dark .table-warning,
+body[data-bs-theme="dark"] .table-warning {
+  --bs-table-bg: rgba(251, 191, 36, 0.15);
+  --bs-table-border-color: rgba(251, 191, 36, 0.25);
+  --bs-table-color: var(--app-text);
+  background-color: var(--bs-table-bg) !important;
+  border-color: var(--bs-table-border-color) !important;
+}
+
+body.dark .table-warning > td,
+body.dark .table-warning > th,
+body[data-bs-theme="dark"] .table-warning > td,
+body[data-bs-theme="dark"] .table-warning > th {
+  background-color: rgba(251, 191, 36, 0.15) !important;
+  color: var(--app-text) !important;
+  border-color: rgba(251, 191, 36, 0.25) !important;
+}
+
+/* Hover state para linha warning no dark mode */
+body.dark .table-warning:hover > td,
+body.dark .table-warning:hover > th,
+body[data-bs-theme="dark"] .table-warning:hover > td,
+body[data-bs-theme="dark"] .table-warning:hover > th {
+  background-color: rgba(251, 191, 36, 0.22) !important;
+}
+
+/* Impedir que o hover padrão do Bootstrap sobreponha o estilo warning */
+body.dark tr.table-warning:hover,
+body[data-bs-theme="dark"] tr.table-warning:hover {
+  --bs-table-hover-bg: rgba(251, 191, 36, 0.22) !important;
+  --bs-table-accent-bg: rgba(251, 191, 36, 0.22) !important;
+}
+
+/* Ícone de aviso (triângulo) mais visível no dark mode */
+body.dark .text-warning,
+body[data-bs-theme="dark"] .text-warning {
+  color: #fbbf24 !important; /* Amber 400 - excelente contraste */
+}
+
+/* ===== Upload Feedback com ícone de limpar sutil ===== */
+.upload-feedback-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  background: rgba(25, 135, 84, 0.1);
+  color: var(--app-text);
+  border: 1px solid rgba(25, 135, 84, 0.3);
+  border-radius: 10px;
+  padding: 0.4rem 0.75rem;
+  box-shadow: 0 4px 10px rgba(25, 135, 84, 0.12);
+  line-height: 1.2;
+  box-sizing: border-box;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+}
+
+.upload-feedback-wrapper.has-file {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.upload-feedback-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Ícone de limpar sutil - aparece junto ao feedback */
+.upload-clear-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(220, 53, 69, 0.15);
+  color: #dc3545;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.upload-clear-icon:hover {
+  background: rgba(220, 53, 69, 0.3);
+  transform: scale(1.1);
+  color: #c82333;
+}
+
+.upload-clear-icon:active {
+  transform: scale(0.95);
+}
+
+body.dark .upload-feedback-wrapper,
+body[data-bs-theme="dark"] .upload-feedback-wrapper {
+  background: rgba(74, 222, 128, 0.1);
+  border-color: rgba(74, 222, 128, 0.25);
+}
+
+body.dark .upload-clear-icon,
+body[data-bs-theme="dark"] .upload-clear-icon {
+  background: rgba(255, 100, 109, 0.2);
+  color: #ff646d;
+}
+
+body.dark .upload-clear-icon:hover,
+body[data-bs-theme="dark"] .upload-clear-icon:hover {
+  background: rgba(255, 100, 109, 0.35);
+  color: #ff4752;
+}
+
+/* ============================================
+   FOOTER STICKY
+   ============================================ */
+.app-footer {
+  position: relative;
+  margin-top: auto;
+  width: 100%;
+  padding: 1.25rem 1rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 0 1.5rem;
+  flex-wrap: wrap;
+}
+
+.footer-copyright {
+  font-weight: 600;
+  color: #334155;
+  font-size: 0.95rem;
+}
+
+.footer-version {
+  display: flex;
+  align-items: center;
+}
+
+.version-badge {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4f46e5;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: all 0.3s ease;
+}
+
+.version-badge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+}
+
+.footer-author {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.footer-link {
+  color: #6366f1;
+  text-decoration: none;
+  font-weight: 600;
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.footer-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.footer-link:hover {
+  color: #8b5cf6;
+}
+
+.footer-link:hover::after {
+  width: 100%;
+}
+
+/* Dark mode footer */
+body.dark .app-footer,
+body[data-bs-theme="dark"] .app-footer {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+  border-top-color: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
+
+body.dark .footer-copyright,
+body[data-bs-theme="dark"] .footer-copyright {
+  color: #cbd5e1;
+}
+
+body.dark .version-badge,
+body[data-bs-theme="dark"] .version-badge {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+  color: #a5b4fc;
+}
+
+body.dark .footer-link,
+body[data-bs-theme="dark"] .footer-link {
+  color: #a5b4fc;
+}
+
+body.dark .footer-link:hover,
+body[data-bs-theme="dark"] .footer-link:hover {
+  color: #c4b5fd;
+}
+
+/* Layout para sticky footer */
+html, body {
+  min-height: 100vh;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
 }

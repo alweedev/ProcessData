@@ -1753,12 +1753,12 @@ document.addEventListener("DOMContentLoaded", function () {
       const html = `
         <div class="text-start">
           <p class="mb-2 fw-semibold">Guia rápido do workspace</p>
-          <ol class="ps-3 small">
-            <li><strong>Envie</strong> a planilha arrastando ou clicando em <em>Selecionar arquivo</em>.</li>
-            <li>O processamento é incremental: você pode navegar enquanto carrega.</li>
-            <li>A <strong>busca</strong> filtra qualquer coluna instantaneamente.</li>
-            <li>Ajuste <strong>quebra de texto</strong>, <strong>densidade</strong> e <strong>fixe</strong> o resumo conforme sua preferência.</li>
-            <li>O <strong>CSV exportado</strong> respeita filtros ativos e aplica limites para manter a performance.</li>
+          <ol class="ps-2 small">
+            <li><strong>1º Passo:</strong> envie a planilha arrastando ou clicando em <em>Selecionar arquivo</em>.</li>
+            <li><strong>2º Passo:</strong> acompanhe o processamento incremental e já navegue pela ficha enquanto carrega.</li>
+            <li><strong>3º Passo:</strong> use a <strong>busca</strong> para filtrar qualquer coluna instantaneamente.</li>
+            <li><strong>4º Passo:</strong> ajuste <strong>quebra de texto</strong>, <strong>densidade</strong> e fixe o resumo conforme sua preferência.</li>
+            <li><strong>5º Passo:</strong> exporte o <strong>CSV</strong>, que respeita filtros ativos e limitações para manter a performance.</li>
           </ol>
           <p class="small text-muted mb-0">Tudo acontece no navegador – nenhum dado sensível sai da sua máquina.</p>
         </div>`;
@@ -1776,17 +1776,16 @@ document.addEventListener("DOMContentLoaded", function () {
     btn.addEventListener("click", () => {
       const html = `
         <div class="text-start">
-          <p class="mb-2 fw-semibold">Como usar o cadastro em lote</p>
-          <ol class="ps-3 small">
-            <li>Carregue a planilha Excel (<strong>.xlsx/.xls</strong>) já preenchida.</li>
-            <li>Escolha o <strong>tipo de login</strong> (CPF ou E-mail) e o <strong>fluxo</strong> (SELF ou FRONT).</li>
-            <li>Clique em <em>Gerar</em> para processar e obter o arquivo pronto para carga.</li>
-            <li>Acompanhe e recupere execuções no <strong>Histórico</strong> quando precisar.</li>
+          <ol class="ps-2 small">
+            <li><strong>1º Passo:</strong> carregue a planilha Excel (<strong>.xlsx/.xls</strong>) já preenchida.</li>
+            <li><strong>2º Passo:</strong> escolha o <strong>tipo de login</strong> (CPF ou e-mail) e o <strong>fluxo</strong> (SELF ou FRONT).</li>
+            <li><strong>3º Passo:</strong> clique em <em>Gerar</em> para processar e obter o arquivo pronto para carga.</li>
+            <li><strong>4º Passo:</strong> acompanhe e recupere execuções no <strong>Histórico</strong> quando precisar.</li>
           </ol>
           <p class="small text-muted mb-0">Dica: revise os dados antes de enviar para evitar retrabalho.</p>
         </div>`;
       if (window.Swal?.fire) {
-        Swal.fire({ title: "Carga cadastro", html, confirmButtonText: "Fechar", width: 500 });
+        Swal.fire({ title: "Como usar carga cadastro", html, confirmButtonText: "Fechar", width: 500 });
       } else {
         alert("Envie a base, escolha login e fluxo, e gere o arquivo.");
       }
@@ -1800,13 +1799,12 @@ document.addEventListener("DOMContentLoaded", function () {
       const html = `
         <div class="text-start">
           <p class="mb-2 fw-semibold">Passos para inativação rápida</p>
-          <ol class="ps-3 small">
-            <li><strong>Envie</strong> a base de usuários em Excel (.xlsx).</li>
-            <li>Cole <strong>CPFs</strong> (com ou sem máscara), <strong>nomes completos</strong> ou <strong>e-mails</strong> – um por linha.</li>
-            <li>Use <em>Buscar</em> para conferir quem será afetado e estados atuais.</li>
-            <li>Finalize em <strong>Gerar</strong> para baixar o relatório da inativação.</li>
+          <ol class="ps-2 small">
+            <li><strong>1º Passo:</strong> envie a base de usuários em Excel (.xlsx).</li>
+            <li><strong>2º Passo:</strong> cole <strong>CPFs</strong>, <strong>nomes completos</strong> ou <strong>e-mails</strong>, um por linha.</li>
+            <li><strong>3º Passo:</strong> use <em>Buscar</em> para conferir quem será afetado e os status atuais.</li>
+            <li><strong>4º Passo:</strong> finalize em <strong>Gerar</strong> para baixar o relatório da inativação.</li>
           </ol>
-          <p class="small text-muted mb-0">Atalho: Ctrl+Enter no campo dispara a busca imediatamente. Suporte completo a e-mail para localizar usuários pelo endereço eletrônico.</p>
         </div>`;
       if (window.Swal?.fire) {
         Swal.fire({ title: "Inativação", html, confirmButtonText: "Fechar", width: 520 });
@@ -1821,23 +1819,44 @@ document.addEventListener("DOMContentLoaded", function () {
   wireCadastroHelp();
   wireInativacaoHelp();
 
-  // Cadastro: botão Limpar seleção de arquivos
+  // Cadastro: feedback de upload com ícone X sutil
   try {
     const clearCadastroBtn = document.getElementById('cadastro_clear_btn');
     const cadastroFiles = document.getElementById('cadastro_files');
     const cadastroFeedback = document.getElementById('cadastro_uploadFeedback');
-    if (cadastroFiles && cadastroFeedback) {
-      cadastroFiles.addEventListener('change', () => {
-        if (cadastroFiles.files && cadastroFiles.files.length) {
-          const names = Array.from(cadastroFiles.files).map(f => f.name).join(', ');
-          setBannerContent(cadastroFeedback, `<span class="upload-check" aria-hidden="true"><i class="bi bi-check-lg text-success" style="font-size:1.15rem; line-height:1; display:inline-block;"></i></span>${names}`);
-        } else {
-          clearBanner(cadastroFeedback);
+    
+    function updateCadastroFeedback() {
+      if (!cadastroFeedback) return;
+      const contentEl = cadastroFeedback.querySelector('.upload-feedback-content');
+      if (cadastroFiles && cadastroFiles.files && cadastroFiles.files.length) {
+        const names = Array.from(cadastroFiles.files).map(f => f.name).join(', ');
+        if (contentEl) {
+          contentEl.innerHTML = `<i class="bi bi-check-lg text-success" style="font-size:1.15rem; line-height:1;"></i><span>${escapeHtml(names)}</span>`;
         }
-      });
+        cadastroFeedback.classList.add('has-file');
+        if (clearCadastroBtn) clearCadastroBtn.classList.remove('d-none');
+      } else {
+        if (contentEl) contentEl.innerHTML = '';
+        cadastroFeedback.classList.remove('has-file');
+        if (clearCadastroBtn) clearCadastroBtn.classList.add('d-none');
+      }
     }
+    
+    function clearCadastroFeedback() {
+      if (!cadastroFeedback) return;
+      const contentEl = cadastroFeedback.querySelector('.upload-feedback-content');
+      if (contentEl) contentEl.innerHTML = '';
+      cadastroFeedback.classList.remove('has-file');
+      if (clearCadastroBtn) clearCadastroBtn.classList.add('d-none');
+    }
+    
+    if (cadastroFiles) {
+      cadastroFiles.addEventListener('change', updateCadastroFeedback);
+    }
+    
     if (clearCadastroBtn) {
-      clearCadastroBtn.addEventListener('click', () => {
+      clearCadastroBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const files = document.getElementById('cadastro_files');
         const names = document.getElementById('cadastro_fileNames');
         const status = document.getElementById('cadastro_status');
@@ -1852,7 +1871,7 @@ document.addEventListener("DOMContentLoaded", function () {
         try { if (loading) loading.classList.add('d-none'); } catch(_) {}
         try { if (progress) progress.classList.add('d-none'); } catch(_) {}
         try { if (progressBar) { progressBar.style.width = '0%'; progressBar.textContent = ''; progressBar.setAttribute('aria-valuenow','0'); } } catch(_) {}
-        try { if (cadastroFeedback) clearBanner(cadastroFeedback); } catch(_) {}
+        clearCadastroFeedback();
         showToast('Seleção de cadastro limpa.', 'info');
       });
     }
@@ -1924,6 +1943,580 @@ document.addEventListener("DOMContentLoaded", function () {
         cadastroInProgress = false;
         const progressBar = document.getElementById('cadastro_progressBar');
         if (progressBar) { progressBar.style.width = '0%'; progressBar.textContent = ''; progressBar.setAttribute('aria-valuenow','0'); }
+      });
+    }
+
+    // Estruturas de aprovação: Remover aprovador por CPF
+    const aprovUsersInput = document.getElementById('aprovacao_users_file');
+    const aprovUsersPickBtn = document.getElementById('aprovacao_users_pick');
+    const aprovUsersName = document.getElementById('aprovacao_users_name');
+    const aprovUsersDrop = document.getElementById('aprovacao_users_uploadArea');
+    const aprovUsersFeedback = document.getElementById('aprovacao_users_feedback');
+    const aprovUsersClearBtn = document.getElementById('aprovacao_users_clear_btn');
+
+    const aprovBaseInput = document.getElementById('aprovacao_base_file');
+    const aprovBasePickBtn = document.getElementById('aprovacao_base_pick');
+    const aprovBaseName = document.getElementById('aprovacao_base_name');
+    const aprovBaseDrop = document.getElementById('aprovacao_base_uploadArea');
+    const aprovBaseFeedback = document.getElementById('aprovacao_base_feedback');
+    const aprovBaseClearBtn = document.getElementById('aprovacao_base_clear_btn');
+
+    const aprovCpfInput = document.getElementById('aprovacao_cpf');
+    const aprovPreviewBtn = document.getElementById('aprovacao_preview_btn');
+    const aprovRemoveAllBtn = document.getElementById('aprovacao_remove_all_btn');
+    const aprovRemoveSelectedBtn = document.getElementById('aprovacao_remove_selected_btn');
+    const aprovRemoveSecondLevel = document.getElementById('aprovacao_remove_second_level');
+
+    const aprovStatus = document.getElementById('aprovacao_status');
+    const aprovPanel = document.getElementById('aprovacao_preview_panel');
+    const aprovApproverName = document.getElementById('aprovacao_approver_name');
+    const aprovApproverCpf = document.getElementById('aprovacao_approver_cpf');
+    const aprovSummaryEstruturas = document.getElementById('aprovacao_summary_estruturas');
+    const aprovSummaryOcorrencias = document.getElementById('aprovacao_summary_ocorrencias');
+    const aprovSummaryTipos = document.getElementById('aprovacao_summary_tipos');
+    const aprovTableWrap = document.getElementById('aprovacao_table_wrap');
+    const aprovTableBody = document.getElementById('aprovacao_table_body');
+    const aprovCheckAll = document.getElementById('aprovacao_check_all');
+    const aprovSelectedBadge = document.getElementById('aprovacao_selected_badge');
+    const aprovSelectedCount = document.getElementById('aprovacao_selected_count');
+
+    let aprovCurrentItems = [];
+
+    function setAprovStatus(message, isError = false) {
+      if (!aprovStatus) return;
+      aprovStatus.textContent = message || '';
+      aprovStatus.classList.toggle('text-danger', !!isError);
+      aprovStatus.classList.toggle('text-muted', !isError);
+    }
+
+    function updateAprovReadinessHint() {
+      if (!aprovStatus) return;
+      const hasUsers = !!(aprovUsersInput && aprovUsersInput.files && aprovUsersInput.files[0]);
+      const hasBase = !!(aprovBaseInput && aprovBaseInput.files && aprovBaseInput.files[0]);
+
+      if (!hasUsers && !hasBase) {
+        setAprovStatus('Envie a base de usuários e a base de aprovação para começar.', false);
+        return;
+      }
+      if (hasUsers && !hasBase) {
+        setAprovStatus('Base de usuários selecionada. Agora selecione a base de aprovação.', false);
+        return;
+      }
+      if (!hasUsers && hasBase) {
+        setAprovStatus('Base de aprovação selecionada. Agora selecione a base de usuários.', false);
+        return;
+      }
+      setAprovStatus('Bases prontas. Informe o CPF e clique em Verificar.', false);
+    }
+
+    function normalizeCpf(value) {
+      if (!value) return '';
+      return String(value).replace(/\D/g, '');
+    }
+
+    function updateAprovSelectedCount() {
+      if (!aprovTableBody || !aprovSelectedBadge || !aprovSelectedCount) return;
+      const checkboxes = aprovTableBody.querySelectorAll('input.aprov-row-check');
+      let selected = 0;
+      checkboxes.forEach((cb) => { if (cb.checked) selected += 1; });
+      aprovSelectedCount.textContent = String(selected);
+      aprovSelectedBadge.style.display = selected > 0 ? 'inline-flex' : 'none';
+      if (aprovRemoveSelectedBtn) aprovRemoveSelectedBtn.disabled = selected === 0;
+    }
+
+    function renderAprovSummary(data) {
+      if (!aprovPanel) return;
+      aprovPanel.classList.remove('d-none');
+
+      if (aprovApproverName) aprovApproverName.textContent = data?.approver?.nomeCompleto || '—';
+      if (aprovApproverCpf) aprovApproverCpf.textContent = data?.approver?.cpf ? `CPF: ${data.approver.cpf}` : '';
+      if (aprovSummaryEstruturas) aprovSummaryEstruturas.textContent = String(data?.summary?.estruturasAfetadas ?? 0);
+      if (aprovSummaryOcorrencias) aprovSummaryOcorrencias.textContent = String(data?.summary?.ocorrenciasTotal ?? 0);
+
+      if (aprovSummaryTipos) {
+        aprovSummaryTipos.innerHTML = '';
+        const map = data?.summary?.porAprovacaoPor || {};
+        Object.entries(map).forEach(([k, v]) => {
+          const span = document.createElement('span');
+          span.className = 'badge bg-light text-body border me-1';
+          span.textContent = `${k}: ${v}`;
+          aprovSummaryTipos.appendChild(span);
+        });
+      }
+    }
+
+    function renderAprovTable(items) {
+      if (!aprovTableBody || !aprovTableWrap) return;
+      aprovTableBody.innerHTML = '';
+
+      if (!items || !items.length) {
+        aprovTableWrap.classList.add('d-none');
+        if (aprovRemoveAllBtn) aprovRemoveAllBtn.disabled = true;
+        if (aprovRemoveSelectedBtn) aprovRemoveSelectedBtn.disabled = true;
+        if (aprovCheckAll) aprovCheckAll.checked = false;
+        updateAprovSelectedCount();
+        return;
+      }
+
+      items.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        const aprovacaoId = item.aprovacaoId ?? '';
+        const aprovacaoPor = item.aprovacaoPor ?? '';
+        
+        // Destacar linha que ficará sem aprovador
+        if (item.ficaraSemAprovador) {
+          tr.className = 'table-warning';
+        }
+        
+        const contexto = (() => {
+          if (aprovacaoPor === 'VIAJANTE' && item.viajanteNomeCompleto) {
+            return item.viajanteNomeCompleto;
+          }
+          if (aprovacaoPor === 'CCEMPRESA') {
+            const cod = item.ccCodigo || '';
+            const desc = item.ccDescricao || '';
+            if (cod && desc) return `${cod} - ${desc}`;
+            return cod || desc || '';
+          }
+          const cod = item.ccCodigo || '';
+          const desc = item.ccDescricao || '';
+          if (cod && desc) return `${cod} - ${desc}`;
+          if (item.viajanteNomeCompleto) return item.viajanteNomeCompleto;
+          return cod || desc || '';
+        })();
+
+        const posicoesStr = (item.posicoes || []).length
+          ? (item.posicoes || []).join(', ')
+          : '—';
+        const segundoNivelStr = item.segundoNivel ? 'Sim' : 'Não';
+        
+        // Ícone de aviso se ficará sem aprovador
+        const warningIcon = item.ficaraSemAprovador 
+          ? '<i class="bi bi-exclamation-triangle-fill text-warning ms-1" title="Esta estrutura ficará sem aprovadores"></i>' 
+          : '';
+
+        tr.innerHTML = `
+          <td>
+            <input type="checkbox" class="form-check-input aprov-row-check" data-id="${escapeHtml(String(aprovacaoId))}" checked />
+          </td>
+          <td>${escapeHtml(String(aprovacaoId || ''))}${warningIcon}</td>
+          <td>${escapeHtml(String(aprovacaoPor || ''))}</td>
+          <td>${escapeHtml(String(item.aprovacao ?? ''))}</td>
+          <td>${escapeHtml(String(item.tipo ?? ''))}</td>
+          <td>${escapeHtml(String(item.valor ?? ''))}</td>
+          <td>${escapeHtml(String(contexto || ''))}</td>
+          <td>${escapeHtml(posicoesStr)}</td>
+          <td>${escapeHtml(segundoNivelStr)}</td>
+        `;
+        aprovTableBody.appendChild(tr);
+      });
+
+      aprovTableWrap.classList.remove('d-none');
+      if (aprovRemoveAllBtn) aprovRemoveAllBtn.disabled = false;
+      if (aprovCheckAll) aprovCheckAll.checked = true;
+
+      // Listener de seleção por linha
+      aprovTableBody.querySelectorAll('input.aprov-row-check').forEach((cb) => {
+        cb.addEventListener('change', () => {
+          updateAprovSelectedCount();
+        });
+      });
+
+      updateAprovSelectedCount();
+    }
+
+    if (aprovCheckAll && aprovTableBody) {
+      aprovCheckAll.addEventListener('change', () => {
+        const checked = aprovCheckAll.checked;
+        aprovTableBody.querySelectorAll('input.aprov-row-check').forEach((cb) => {
+          cb.checked = checked;
+        });
+        updateAprovSelectedCount();
+      });
+    }
+
+    function handleFileChange(input, labelEl, feedbackWrapper, clearBtn, toastLabel) {
+      if (!input) return;
+      const file = input.files && input.files[0];
+      if (labelEl) {
+        labelEl.textContent = file ? file.name : '';
+      }
+      
+      // Novo formato: wrapper com conteúdo + botão de limpar
+      if (feedbackWrapper) {
+        const contentEl = feedbackWrapper.querySelector('.upload-feedback-content');
+        if (file) {
+          if (contentEl) {
+            contentEl.innerHTML = `<i class="bi bi-check-lg text-success" style="font-size:1.15rem; line-height:1;"></i><span>${escapeHtml(file.name)}</span>`;
+          }
+          feedbackWrapper.classList.add('has-file');
+          if (clearBtn) clearBtn.classList.remove('d-none');
+        } else {
+          if (contentEl) contentEl.innerHTML = '';
+          feedbackWrapper.classList.remove('has-file');
+          if (clearBtn) clearBtn.classList.add('d-none');
+        }
+      }
+      
+      if (file && toastLabel) {
+        showToast(`${toastLabel} carregada com sucesso.`, 'success');
+      }
+      updateAprovReadinessHint();
+    }
+
+    function clearUploadFeedback(feedbackWrapper, clearBtn) {
+      if (feedbackWrapper) {
+        const contentEl = feedbackWrapper.querySelector('.upload-feedback-content');
+        if (contentEl) contentEl.innerHTML = '';
+        feedbackWrapper.classList.remove('has-file');
+      }
+      if (clearBtn) clearBtn.classList.add('d-none');
+    }
+
+    if (aprovUsersPickBtn && aprovUsersInput) {
+      aprovUsersPickBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        aprovUsersInput.click();
+      });
+    }
+    if (aprovUsersInput) {
+      aprovUsersInput.addEventListener('change', () => handleFileChange(aprovUsersInput, aprovUsersName, aprovUsersFeedback, aprovUsersClearBtn, 'Base de usuários'));
+    }
+    if (aprovUsersDrop && aprovUsersInput) {
+      aprovUsersDrop.addEventListener('click', (e) => {
+        // Ignorar cliques em botões ou inputs para evitar duplo disparo
+        if (e.target.closest('button') || e.target.closest('input')) return;
+        aprovUsersInput.click();
+      });
+    }
+
+    if (aprovBasePickBtn && aprovBaseInput) {
+      aprovBasePickBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        aprovBaseInput.click();
+      });
+    }
+    if (aprovBaseInput) {
+      aprovBaseInput.addEventListener('change', () => handleFileChange(aprovBaseInput, aprovBaseName, aprovBaseFeedback, aprovBaseClearBtn, 'Base de aprovação'));
+    }
+    if (aprovBaseDrop && aprovBaseInput) {
+      aprovBaseDrop.addEventListener('click', (e) => {
+        // Ignorar cliques em botões ou inputs para evitar duplo disparo
+        if (e.target.closest('button') || e.target.closest('input')) return;
+        aprovBaseInput.click();
+      });
+    }
+
+    if (aprovUsersClearBtn) {
+      aprovUsersClearBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        try { if (aprovUsersInput) aprovUsersInput.value = ''; } catch (_) {}
+        if (aprovUsersName) aprovUsersName.textContent = '';
+        clearUploadFeedback(aprovUsersFeedback, aprovUsersClearBtn);
+        updateAprovReadinessHint();
+        showToast('Base de usuários limpa.', 'info');
+      });
+    }
+
+    if (aprovBaseClearBtn) {
+      aprovBaseClearBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        try { if (aprovBaseInput) aprovBaseInput.value = ''; } catch (_) {}
+        if (aprovBaseName) aprovBaseName.textContent = '';
+        clearUploadFeedback(aprovBaseFeedback, aprovBaseClearBtn);
+        updateAprovReadinessHint();
+        showToast('Base de aprovação limpa.', 'info');
+      });
+    }
+
+    // Botão Limpar Tudo: Estruturas de Aprovação
+    const aprovClearAllBtn = document.getElementById('aprovacao_clear_all_btn');
+    if (aprovClearAllBtn) {
+      aprovClearAllBtn.addEventListener('click', async () => {
+        // Adiciona animação de execução ao botão
+        aprovClearAllBtn.classList.add('executing');
+        
+        // Anima o painel de preview antes de limpar (se visível)
+        if (aprovPanel && !aprovPanel.classList.contains('d-none')) {
+          aprovPanel.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+          aprovPanel.style.opacity = '0';
+          aprovPanel.style.transform = 'translateY(-10px) scale(0.98)';
+          await new Promise(r => setTimeout(r, 350));
+        }
+
+        // Limpar inputs de arquivo
+        try { if (aprovUsersInput) aprovUsersInput.value = ''; } catch (_) {}
+        try { if (aprovBaseInput) aprovBaseInput.value = ''; } catch (_) {}
+        
+        // Limpar feedbacks visuais
+        if (aprovUsersName) aprovUsersName.textContent = '';
+        if (aprovBaseName) aprovBaseName.textContent = '';
+        clearUploadFeedback(aprovUsersFeedback, aprovUsersClearBtn);
+        clearUploadFeedback(aprovBaseFeedback, aprovBaseClearBtn);
+        
+        // Limpar CPF
+        if (aprovCpfInput) aprovCpfInput.value = '';
+        
+        // Limpar dados internos
+        aprovCurrentItems = [];
+        
+        // Limpar tabela
+        if (aprovTableBody) aprovTableBody.innerHTML = '';
+        if (aprovTableWrap) aprovTableWrap.classList.add('d-none');
+        if (aprovCheckAll) aprovCheckAll.checked = false;
+        
+        // Limpar sumário
+        if (aprovApproverName) aprovApproverName.innerHTML = '&nbsp;';
+        if (aprovApproverCpf) aprovApproverCpf.innerHTML = '&nbsp;';
+        if (aprovSummaryEstruturas) aprovSummaryEstruturas.textContent = '0';
+        if (aprovSummaryOcorrencias) aprovSummaryOcorrencias.textContent = '0';
+        if (aprovSummaryTipos) aprovSummaryTipos.innerHTML = '';
+        
+        // Limpar alertas
+        const alertContainer = document.getElementById('aprovacao_alert_container');
+        if (alertContainer) alertContainer.innerHTML = '';
+        
+        // Esconder painel e resetar botões
+        if (aprovPanel) {
+          aprovPanel.classList.add('d-none');
+          aprovPanel.style.opacity = '';
+          aprovPanel.style.transform = '';
+          aprovPanel.style.transition = '';
+        }
+        if (aprovRemoveAllBtn) aprovRemoveAllBtn.disabled = true;
+        if (aprovRemoveSelectedBtn) aprovRemoveSelectedBtn.disabled = true;
+        if (aprovSelectedBadge) aprovSelectedBadge.style.display = 'none';
+        
+        // Atualizar status
+        updateAprovReadinessHint();
+        
+        // Remove animação do botão
+        setTimeout(() => {
+          aprovClearAllBtn.classList.remove('executing');
+        }, 600);
+        
+        showToast('Todos os dados foram limpos.', 'info');
+      });
+    }
+
+    async function callAprovPreview() {
+      if (!aprovUsersInput || !aprovBaseInput) return;
+
+      const usersFile = aprovUsersInput.files && aprovUsersInput.files[0];
+      const baseFile = aprovBaseInput.files && aprovBaseInput.files[0];
+      const rawCpf = aprovCpfInput ? aprovCpfInput.value : '';
+      const cpfDigits = normalizeCpf(rawCpf);
+
+      if (!usersFile || !baseFile) {
+        setAprovStatus('Envie a base de usuários e a base de aprovação.', true);
+        showToast('Envie a base de usuários e a base de aprovação.', 'danger');
+        return;
+      }
+
+      if (!cpfDigits || cpfDigits.length !== 11) {
+        setAprovStatus('CPF inválido. Informe 11 dígitos.', true);
+        showToast('CPF inválido. Informe 11 dígitos.', 'danger');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('users_file', usersFile);
+      formData.append('base_file', baseFile);
+      formData.append('cpf', rawCpf);
+
+      if (aprovPreviewBtn) aprovPreviewBtn.disabled = true;
+      if (aprovRemoveAllBtn) aprovRemoveAllBtn.disabled = true;
+      if (aprovRemoveSelectedBtn) aprovRemoveSelectedBtn.disabled = true;
+      setAprovStatus('Verificando estruturas...', false);
+
+      try {
+        const response = await fetch('/api/aprovacao/remover/preview', { method: 'POST', body: formData });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          const msg = data?.error || 'Erro ao obter preview.';
+          setAprovStatus(msg, true);
+          showToast(msg, 'danger');
+          aprovCurrentItems = [];
+          renderAprovTable(aprovCurrentItems);
+          return;
+        }
+
+        aprovCurrentItems = data.items || [];
+        if (!aprovCurrentItems.length) {
+          setAprovStatus('Nenhuma estrutura encontrada para o CPF informado.', true);
+          showToast('Nenhuma estrutura encontrada para o CPF informado.', 'info');
+        } else {
+          setAprovStatus(`Encontradas ${aprovCurrentItems.length} estrutura(s) contendo o aprovador.`, false);
+        }
+
+        renderAprovSummary(data);
+        renderAprovTable(aprovCurrentItems);
+      } catch (err) {
+        const msg = 'Erro ao contatar o servidor de aprovação.';
+        setAprovStatus(msg, true);
+        showToast(msg, 'danger');
+      } finally {
+        if (aprovPreviewBtn) aprovPreviewBtn.disabled = false;
+      }
+    }
+
+    if (aprovPreviewBtn) {
+      aprovPreviewBtn.addEventListener('click', () => {
+        callAprovPreview();
+      });
+    }
+
+    function getSelectedAprovacaoIds() {
+      if (!aprovTableBody) return [];
+      const ids = [];
+      aprovTableBody.querySelectorAll('input.aprov-row-check').forEach((cb) => {
+        if (cb.checked) {
+          const id = cb.getAttribute('data-id');
+          if (id) ids.push(id);
+        }
+      });
+      return ids;
+    }
+
+    async function callAprovExport(mode, ignoreEmptyWarning = false) {
+      if (!aprovUsersInput || !aprovBaseInput) return;
+      const usersFile = aprovUsersInput.files && aprovUsersInput.files[0];
+      const baseFile = aprovBaseInput.files && aprovBaseInput.files[0];
+      const rawCpf = aprovCpfInput ? aprovCpfInput.value : '';
+      const cpfDigits = normalizeCpf(rawCpf);
+
+      if (!aprovCurrentItems || !aprovCurrentItems.length) {
+        setAprovStatus('Realize primeiro a verificação do CPF antes de remover.', true);
+        showToast('Realize primeiro a verificação do CPF.', 'warning');
+        return;
+      }
+
+      if (!usersFile || !baseFile) {
+        setAprovStatus('Envie novamente a base de usuários e a base de aprovação.', true);
+        showToast('Envie novamente a base de usuários e a base de aprovação.', 'danger');
+        return;
+      }
+
+      if (!cpfDigits || cpfDigits.length !== 11) {
+        setAprovStatus('CPF inválido. Informe 11 dígitos.', true);
+        showToast('CPF inválido. Informe 11 dígitos.', 'danger');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('users_file', usersFile);
+      formData.append('base_file', baseFile);
+      formData.append('cpf', rawCpf);
+      formData.append('mode', mode);
+
+      if (aprovRemoveSecondLevel && aprovRemoveSecondLevel.checked) {
+        formData.append('remove_second_level', '1');
+      }
+      
+      if (ignoreEmptyWarning) {
+        formData.append('ignore_empty_warning', '1');
+      }
+
+      if (mode === 'selected') {
+        const selectedIds = getSelectedAprovacaoIds();
+        if (!selectedIds.length) {
+          setAprovStatus('Nenhuma estrutura selecionada. Marque pelo menos uma linha.', true);
+          showToast('Nenhuma estrutura selecionada.', 'warning');
+          return;
+        }
+        selectedIds.forEach((id) => formData.append('selected_aprovacao_ids[]', id));
+      }
+
+      if (aprovRemoveAllBtn) aprovRemoveAllBtn.disabled = true;
+      if (aprovRemoveSelectedBtn) aprovRemoveSelectedBtn.disabled = true;
+      if (aprovPreviewBtn) aprovPreviewBtn.disabled = true;
+      setAprovStatus('Gerando base de aprovação atualizada...', false);
+
+      try {
+        const response = await fetch('/api/aprovacao/remover/export', { method: 'POST', body: formData });
+        
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          
+          // Check if this is a warning about structures without approvers
+          if (errData.warning && errData.estruturasSemAprovador && errData.estruturasSemAprovador.length > 0) {
+            const estruturas = errData.estruturasSemAprovador;
+            const listaHtml = estruturas.map(e => `<li>AprovacaoId: <strong>${escapeHtml(String(e.aprovacaoId))}</strong></li>`).join('');
+            
+            const result = await Swal.fire({
+              title: 'Atenção!',
+              html: `
+                <p>${escapeHtml(errData.message || '')}</p>
+                <p>As seguintes estruturas ficarão <strong>sem nenhum aprovador</strong>:</p>
+                <ul class="text-start" style="max-height: 200px; overflow-y: auto;">${listaHtml}</ul>
+                <p class="text-danger fw-bold">Deseja continuar mesmo assim?</p>
+              `,
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#d33',
+              cancelButtonColor: '#6c757d',
+              confirmButtonText: 'Sim, continuar',
+              cancelButtonText: 'Cancelar'
+            });
+            
+            if (result.isConfirmed) {
+              // Re-enable buttons and retry with ignore_empty_warning flag
+              if (aprovRemoveAllBtn) aprovRemoveAllBtn.disabled = false;
+              if (aprovRemoveSelectedBtn) aprovRemoveSelectedBtn.disabled = false;
+              if (aprovPreviewBtn) aprovPreviewBtn.disabled = false;
+              return callAprovExport(mode, true);
+            } else {
+              setAprovStatus('Exportação cancelada pelo usuário.', false);
+              showToast('Exportação cancelada.', 'info');
+              return;
+            }
+          }
+          
+          const msg = errData?.error || 'Erro ao gerar base de aprovação atualizada.';
+          setAprovStatus(msg, true);
+          showToast(msg, 'danger');
+          return;
+        }
+
+        const blob = await response.blob();
+        if (!blob || !blob.size) {
+          const msg = 'Arquivo retornado vazio ou inválido.';
+          setAprovStatus(msg, true);
+          showToast(msg, 'danger');
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'base_aprovacao_atualizada.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+
+        setAprovStatus('Base de aprovação atualizada gerada com sucesso.', false);
+        showToast('Base de aprovação atualizada gerada com sucesso.', 'success');
+      } catch (err) {
+        const msg = 'Erro ao baixar a base de aprovação atualizada.';
+        setAprovStatus(msg, true);
+        showToast(msg, 'danger');
+      } finally {
+        if (aprovRemoveAllBtn) aprovRemoveAllBtn.disabled = false;
+        if (aprovRemoveSelectedBtn) aprovRemoveSelectedBtn.disabled = false;
+        if (aprovPreviewBtn) aprovPreviewBtn.disabled = false;
+      }
+    }
+
+    if (aprovRemoveAllBtn) {
+      aprovRemoveAllBtn.addEventListener('click', () => {
+        callAprovExport('all');
+      });
+    }
+    if (aprovRemoveSelectedBtn) {
+      aprovRemoveSelectedBtn.addEventListener('click', () => {
+        callAprovExport('selected');
       });
     }
   } catch (e) {

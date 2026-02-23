@@ -3,4 +3,4 @@ flask-cors
 pandas
 openpyxl
 python-docx
-xlrd
+xlrd>=2.0.1

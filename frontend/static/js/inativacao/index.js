@@ -6,26 +6,30 @@
   const showToast = (msg, type='info') => {
     try { window.showToast && window.showToast(msg, type); } catch(_) { console.log(msg); }
   };
-  function setBannerContent(elem, html){
-    if(!elem) return;
-    elem.classList.remove('upload-animate-out');
-    if(html){
-      elem.innerHTML = html;
-      elem.classList.remove('upload-animate-in');
-      void elem.offsetWidth;
-      elem.classList.add('upload-animate-in');
-      const end = (e)=>{ if(e.animationName==='bannerIn'){ elem.classList.remove('upload-animate-in'); elem.removeEventListener('animationend', end);} };
-      elem.addEventListener('animationend', end);
+  
+  // Funções de feedback com ícone X sutil
+  function updateInativacaoFeedback(feedbackEl, clearBtn, fileName) {
+    if (!feedbackEl) return;
+    const contentEl = feedbackEl.querySelector('.upload-feedback-content');
+    if (fileName) {
+      if (contentEl) {
+        contentEl.innerHTML = `<i class="bi bi-check-lg text-success" style="font-size:1.15rem; line-height:1;"></i><span>${escapeHtml(fileName)}</span>`;
+      }
+      feedbackEl.classList.add('has-file');
+      if (clearBtn) clearBtn.classList.remove('d-none');
     } else {
-      elem.innerHTML='';
+      if (contentEl) contentEl.innerHTML = '';
+      feedbackEl.classList.remove('has-file');
+      if (clearBtn) clearBtn.classList.add('d-none');
     }
   }
-  function clearBanner(elem){
-    if(!elem || !elem.innerHTML) return;
-    elem.classList.remove('upload-animate-in');
-    elem.classList.add('upload-animate-out');
-    const end = (e)=>{ if(e.animationName==='bannerOut'){ elem.innerHTML=''; elem.classList.remove('upload-animate-out'); elem.removeEventListener('animationend', end);} };
-    elem.addEventListener('animationend', end);
+  
+  function clearInativacaoFeedback(feedbackEl, clearBtn) {
+    if (!feedbackEl) return;
+    const contentEl = feedbackEl.querySelector('.upload-feedback-content');
+    if (contentEl) contentEl.innerHTML = '';
+    feedbackEl.classList.remove('has-file');
+    if (clearBtn) clearBtn.classList.add('d-none');
   }
 
   // (Lista via upload removida) – sem necessidade de carregar XLSX aqui
@@ -138,15 +142,18 @@
     baseInput?.addEventListener('change', ()=>{ runBtn.disabled = !(state.validCpfs.length || state.validNames.length || state.validEmails.length) || !baseInput.files[0]; });
     baseInput?.addEventListener('change', ()=>{
       if (baseInput.files && baseInput.files[0]) {
-        if (baseFeedback) setBannerContent(baseFeedback, `<span class="upload-check" aria-hidden="true"><i class="bi bi-check-lg text-success" style="font-size:1.15rem; line-height:1; display:inline-block;"></i></span>${escapeHtml(baseInput.files[0].name)}`);
-      } else if (baseFeedback) clearBanner(baseFeedback);
+        updateInativacaoFeedback(baseFeedback, clearBaseBtn, baseInput.files[0].name);
+      } else {
+        clearInativacaoFeedback(baseFeedback, clearBaseBtn);
+      }
     });
 
     // Clear buttons for attachments
-    clearBaseBtn && clearBaseBtn.addEventListener('click', ()=>{
+    clearBaseBtn && clearBaseBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
       try {
         if (baseInput) baseInput.value = '';
-        if (baseFeedback) clearBanner(baseFeedback);
+        clearInativacaoFeedback(baseFeedback, clearBaseBtn);
         // Reset results UI if based on wrong base
         resultsWrap?.classList.add('d-none');
         resultsControls?.classList.add('d-none');

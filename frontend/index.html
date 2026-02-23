@@ -52,26 +52,17 @@
   <body class="bg-light transition-colors duration-300" data-bs-theme="light" x-data="{uploadedFileName:'', showClear:false}" x-init="()=>{const h=(f)=>{uploadedFileName=f;showClear=true};window.__signalUploadSuccess=h}">
     <div class="container py-4" id="mainContent">
       <div class="d-flex justify-content-between align-items-center mb-4">
-        <div id="brand" class="me-3 d-flex align-items-center">
-          <div id="brand-icon" class="brand-icon me-2" aria-hidden="true" title="Processamento de Planilhas">
-            <!-- Spreadsheet + Processing icon -->
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <!-- Sheet outline -->
-              <rect x="4" y="4" width="12" height="16" rx="2" ry="2"/>
-              <!-- Grid lines -->
-              <path stroke-linecap="round" d="M8 8h6M8 11h6M8 14h6"/>
-              <path stroke-linecap="round" d="M6 10v8M12 10v8"/>
-              <!-- Processing gear overlay (animated) -->
-              <g class="brand-gear">
-                <circle cx="18" cy="16" r="3"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M18 12.8v1M18 18.2v1M15.8 16h1M19.2 16h1M16.7 14.7l.7.7M19.3 17.3l.7.7M16.7 17.3l.7-.7M19.3 14.7l.7-.7"/>
-              </g>
-            </svg>
+        <a id="brand" class="me-3 d-flex align-items-center text-decoration-none" href="#" onclick="document.querySelector('#analise-tab').click(); return false;">
+          <div id="brand-icon" class="brand-icon me-2" aria-hidden="true" title="ProcessData">
+            <div class="brand-icon-inner">
+              <i class="bi bi-robot" aria-hidden="true"></i>
+            </div>
+            <div class="brand-icon-ring"></div>
           </div>
-          <div>
-            <h1 class="h4 mb-0">ProcessData</h1>
+          <div class="brand-title-wrapper">
+            <h1 class="h4 mb-0 brand-title">ProcessData</h1>
           </div>
-        </div>
+        </a>
         <div class="d-flex align-items-center gap-2">
           <button
             id="apiStatusBtn"
@@ -95,7 +86,6 @@
             data-bs-toggle="tooltip"
             data-bs-title="Alternar tema"
             aria-label="Alternar tema"
-            style="display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; padding: 0;"
           >
             <!-- Heroicon sun/moon morph container -->
             <span id="themeIcon" class="theme-icon-wrapper" aria-hidden="true">
@@ -124,7 +114,7 @@
         </div>
       </div>
 
-      <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+      <ul class="nav nav-tabs mb-1" id="myTab" role="tablist">
         <li class="nav-item" role="presentation">
           <button
             class="nav-link active"
@@ -170,6 +160,20 @@
         <li class="nav-item" role="presentation">
           <button
             class="nav-link"
+            id="estruturas-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#estruturas"
+            type="button"
+            role="tab"
+            aria-controls="estruturas"
+            aria-selected="false"
+          >
+            Estruturas de aprovação
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
             id="historico-tab"
             data-bs-toggle="tab"
             data-bs-target="#historico"
@@ -198,7 +202,6 @@
                   <h2 class="card-title h4 fw-bold mb-1 d-flex align-items-center gap-2">
                     Análise de Ficha
                   </h2>
-                  <p class="text-muted mb-0">Pipeline moderno com uploads resilientes, visualização fluida e preferências que acompanham seu fluxo de análise.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                   <button id="analise_help_btn" class="btn btn-outline-info help-btn" type="button" title="Guia rápido da análise">
@@ -214,7 +217,7 @@
               <section class="analise-workspace" data-analise-root>
                 <aside class="analise-pane" aria-label="Upload e preferências">
                   <div class="analise-dropcard" id="analise_dropTarget" tabindex="0" aria-label="Envie o Excel para iniciar a análise" title="Arraste ou clique para enviar a planilha">
-                    <div class="analise-drop-icon" aria-hidden="true"></div>
+                    <i class="bi bi-file-earmark-excel analise-drop-icon upload_svg" aria-hidden="true"></i>
                     <h3 class="h5 mb-1">Arraste o .xlsx aqui</h3>
                     <p class="text-muted small mb-3">ou clique para escolher no explorador</p>
                     <button class="btn btn-primary" type="button" id="analise_pickFile" title="Abrir seletor de arquivos">Selecionar arquivo</button>
@@ -230,7 +233,6 @@
                         <p class="text-uppercase small fw-semibold text-muted mb-0">Resumo</p>
                         <span id="analise_summaryStatus" class="small text-muted">Nenhum arquivo processado</span>
                       </div>
-                      <button class="btn btn-sm btn-outline-secondary" id="analise_pinSummary" type="button" aria-pressed="false" title="Fixar painel de resumo na tela">Fixar</button>
                     </div>
                     <div class="analise-stat-grid">
                       <article class="analise-stat" aria-live="polite">
@@ -309,12 +311,11 @@
                 Cadastro Carga
               </h2>
               <div class="mb-2">
-                <button id="cadastro_help_btn" class="btn btn-outline-info help-btn" type="button" aria-label="Como usar o cadastro em lote" title="Guia do cadastro em lote">
+                <button id="cadastro_help_btn" class="btn btn-outline-info help-btn" type="button" aria-label="Como usar o cadastro em " title="Guia do cadastro em lote">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="margin-right:0.375rem;"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01"/><circle cx="12" cy="12" r="9"/></svg>
                   <span>Como usar</span>
                 </button>
               </div>
-              <p class="text-muted mb-4">Faça upload da planilha preenchida. Processamos e geramos o arquivo pronto para carga.</p>
               <!-- Zona de upload do cadastro: tornada acessível via teclado -->
               <div
                 class="border border-primary border-2 border-dashed rounded p-4 text-center upload_dropZone"
@@ -322,17 +323,10 @@
                 aria-live="polite"
                 tabindex="0"
                 role="button"
-                aria-label="Upload da base de cadastro. Pressione Enter para selecionar arquivo"
+                aria-label="Upload da base de cadastro. Pressione para selecionar arquivo"
               >
-                <svg
-                  class="upload_svg"
-                  width="60"
-                  height="60"
-                  aria-hidden="true"
-                >
-                  <use href="#icon-imageUpload"></use>
-                </svg>
-                <p class="text-muted mb-3">Arraste o Excel (.xlsx) ou pressione Enter para selecionar.</p>
+                <i class="bi bi-file-earmark-excel upload_svg" aria-hidden="true"></i>
+                <p class="text-muted mb-3">Arraste o Excel (.xlsx) ou pressione para selecionar.</p>
                 <input
                   type="file"
                   accept=".xlsx,.xls"
@@ -345,13 +339,12 @@
                 <button onclick="document.getElementById('cadastro_files').click()" class="btn btn-primary" title="Escolher arquivos da máquina">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 me-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V7m0 0l-4 4m4-4l4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M20 16.5A3.5 3.5 0 0016.5 13h-9A3.5 3.5 0 004 16.5 3.5 3.5 0 007.5 20h9a3.5 3.5 0 003.5-3.5z"/></svg>Selecionar
                 </button>
-                <button id="cadastro_clear_btn" type="button" class="btn btn-gradient-clear ms-2" title="Remover arquivos selecionados">
-                  <span class="clear-icon" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                  </span>
-                  Limpar
-                </button>
-                <div id="cadastro_uploadFeedback" class="upload-success-banner mt-3" aria-live="polite"></div>
+                <div id="cadastro_uploadFeedback" class="upload-feedback-wrapper mt-3" aria-live="polite">
+                  <span class="upload-feedback-content"></span>
+                  <button id="cadastro_clear_btn" type="button" class="upload-clear-icon d-none" title="Remover arquivos" aria-label="Limpar seleção de arquivos">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </div>
               </div>
               <div id="cadastro_fileNames" class="file-names mt-2"></div>
               <div class="progress mt-3 d-none" id="cadastro_progress">
@@ -404,7 +397,6 @@
               <h2 class="card-title h4 fw-bold mb-3">
                 Inativação
               </h2>
-              <p class="text-muted mb-2">Envie a base de usuários, cole CPFs ou nomes completos e processe a inativação de forma guiada.</p>
               <div class="mb-2">
                 <button id="inativacao_help_btn" class="btn btn-outline-info help-btn" type="button" aria-label="Como usar a inativação" title="Guia da inativação">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="margin-right:0.375rem;"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01"/><circle cx="12" cy="12" r="9"/></svg>
@@ -418,19 +410,12 @@
                 aria-live="polite"
                 tabindex="0"
                 role="button"
-                aria-label="Upload da base de inativacao. Pressione Enter para selecionar arquivo"
+                aria-label="Upload da base de inativacao. Pressione para selecionar arquivo"
               >
-                <svg
-                  class="upload_svg"
-                  width="60"
-                  height="60"
-                  aria-hidden="true"
-                >
-                  <use href="#icon-imageUpload"></use>
-                </svg>
-                <p class="text-muted mb-3">Arraste a base (.xlsx) ou pressione Enter para escolher.</p>
+                <i class="bi bi-file-earmark-excel upload_svg" aria-hidden="true"></i>
+                <p class="text-muted mb-3">Arraste a base (.xlsx) ou Selecione o arquivo.</p>
                 <input
-                  type="file"
+                  type="file" 
                   accept=".xlsx,.xls"
                   class="d-none"
                   id="inativacao_base"
@@ -438,21 +423,19 @@
                   aria-hidden="true"
                 />
                 <button onclick="document.getElementById('inativacao_base').click()" class="btn btn-primary" title="Selecionar planilha base de usuários">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 me-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V7m0 0l-4 4m4-4l4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M20 16.5A3.5 3.5 0 0016.5 13h-9A3.5 3.5 0 004 16.5 3.5 3.5 0 007.5 20h9a3.5 3.5 0 003.5-3.5z"/></svg>Base
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 me-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V7m0 0l-4 4m4-4l4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M20 16.5A3.5 3.5 0 0016.5 13h-9A3.5 3.5 0 004 16.5 3.5 3.5 0 007.5 20h9a3.5 3.5 0 003.5-3.5z"/></svg>Selecionar
                 </button>
-                <button id="inativacao_clear_base_btn" type="button" class="btn btn-gradient-clear ms-2" title="Limpar base enviada">
-                  <span class="clear-icon" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                  </span>
-                  Limpar Base
-                </button>
-                <div id="inativacao_base_feedback" class="upload-success-banner mt-3" aria-live="polite"></div>
+                <div id="inativacao_base_feedback" class="upload-feedback-wrapper mt-3" aria-live="polite">
+                  <span class="upload-feedback-content"></span>
+                  <button id="inativacao_clear_base_btn" type="button" class="upload-clear-icon d-none" title="Remover base" aria-label="Limpar base enviada">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </div>
               </div>
               <!-- Removido upload da lista: entrada apenas via textarea abaixo -->
               <div class="mt-3">
-                <label for="lista_text" class="form-label fw-bold" title="Campo para entrada manual">Cole nomes completos, CPFs ou e-mails (um por linha)</label>
-                <textarea id="lista_text" class="form-control" rows="4" placeholder="Ex: João Silva\n12345678901\nMaria Souza\nusuario@example.com" aria-describedby="lista_valid_summary lista_duplicates_warning" title="Cole itens (nomes, CPFs ou e-mails) e eles serão validados automaticamente"></textarea>
-                <div class="form-text">Aceita nomes, CPFs (com ou sem máscara) e e-mails — um por linha. Duplicados e inválidos são indicados acima.</div>
+                <label for="lista_text" class="form-label fw-bold" title="Campo para entrada manual">Informe abaixo como deseja localizar os usuários.</label>
+                <textarea id="lista_text" class="form-control" rows="4" placeholder="Ex: João Silva\12345678901\usuario@example.com" aria-describedby="lista_valid_summary lista_duplicates_warning" title="Insira (nomes, CPFs ou e-mails) e eles serão validados automaticamente"></textarea>
                 <div id="lista_valid_summary" class="mt-2 small"></div>
                 <div id="lista_duplicates_warning" class="mt-1 text-warning small"></div>
               </div>
@@ -524,6 +507,178 @@
 
         <div
           class="tab-pane fade"
+          id="estruturas"
+          role="tabpanel"
+          aria-labelledby="estruturas-tab"
+        >
+          <div class="card shadow-sm fade-in">
+            <div class="card-body">
+              <h2 class="card-title h4 fw-bold mb-3">
+                Estruturas de aprovação
+              </h2>
+              <p class="text-muted mb-3">Remova um aprovador específico de estruturas de aprovação a partir do CPF.</p>
+
+              <div class="row g-4 mb-3">
+                <div class="col-12 col-md-6">
+                  <div
+                    class="border border-primary border-2 border-dashed rounded p-4 text-center upload_dropZone"
+                    id="aprovacao_users_uploadArea"
+                    aria-live="polite"
+                    tabindex="0"
+                    role="button"
+                    aria-label="Upload da base de usuários. Pressione para selecionar arquivo"
+                  >
+                    <i class="bi bi-file-earmark-excel upload_svg" aria-hidden="true"></i>
+                    <p class="text-muted mb-2">Base de Usuários (.xlsx/.xls)</p>
+                    <p class="text-muted small mb-3">Arraste o Excel ou pressione para selecionar.</p>
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      class="d-none"
+                      id="aprovacao_users_file"
+                      aria-label="Selecionar base de usuários"
+                      aria-hidden="true"
+                    />
+                    <button type="button" class="btn btn-primary" id="aprovacao_users_pick" title="Escolher base de usuários">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 me-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V7m0 0l-4 4m4-4l4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M20 16.5A3.5 3.5 0 0016.5 13h-9A3.5 3.5 0 004 16.5 3.5 3.5 0 007.5 20h9a3.5 3.5 0 003.5-3.5z"/></svg>Selecionar
+                    </button>
+                    <div id="aprovacao_users_feedback" class="upload-feedback-wrapper mt-3" aria-live="polite">
+                      <span class="upload-feedback-content"></span>
+                      <button id="aprovacao_users_clear_btn" type="button" class="upload-clear-icon d-none" title="Remover arquivo" aria-label="Remover base de usuários">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div
+                    class="border border-primary border-2 border-dashed rounded p-4 text-center upload_dropZone"
+                    id="aprovacao_base_uploadArea"
+                    aria-live="polite"
+                    tabindex="0"
+                    role="button"
+                    aria-label="Upload da base de aprovação. Pressione para selecionar arquivo"
+                  >
+                    <i class="bi bi-file-earmark-excel upload_svg" aria-hidden="true"></i>
+                    <p class="text-muted mb-2">Base de Carga Aprovação (.xlsx/.xls)</p>
+                    <p class="text-muted small mb-3">Arraste o Excel ou pressione para selecionar.</p>
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      class="d-none"
+                      id="aprovacao_base_file"
+                      aria-label="Selecionar base de aprovação"
+                      aria-hidden="true"
+                    />
+                    <button type="button" class="btn btn-primary" id="aprovacao_base_pick" title="Escolher base de aprovação">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 me-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V7m0 0l-4 4m4-4l4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M20 16.5A3.5 3.5 0 0016.5 13h-9A3.5 3.5 0 004 16.5 3.5 3.5 0 007.5 20h9a3.5 3.5 0 003.5-3.5z"/></svg>Selecionar
+                    </button>
+                    <div id="aprovacao_base_feedback" class="upload-feedback-wrapper mt-3" aria-live="polite">
+                      <span class="upload-feedback-content"></span>
+                      <button id="aprovacao_base_clear_btn" type="button" class="upload-clear-icon d-none" title="Remover arquivo" aria-label="Remover base de aprovação">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3 align-items-end mb-3">
+                <div class="col-12 col-md-4">
+                  <label for="aprovacao_cpf" class="form-label fw-bold">CPF do aprovador</label>
+                  <input
+                    type="text"
+                    id="aprovacao_cpf"
+                    class="form-control"
+                    placeholder="Digite o CPF"
+                    aria-describedby="aprovacao_cpf_help"
+                  />
+                  <div id="aprovacao_cpf_help" class="form-text">Ex: 123.456.789-00 ou 12345678900.</div>
+                </div>
+                <div class="col-12 col-md-4 d-flex align-items-center gap-2">
+                  <button type="button" class="btn btn-primary mt-3 mt-md-0" id="aprovacao_preview_btn">
+                    Verificar
+                  </button>
+                  <div class="form-check ms-1 mt-3 mt-md-0">
+                    <input class="form-check-input" type="checkbox" value="1" id="aprovacao_remove_second_level">
+                    <label class="form-check-label small" for="aprovacao_remove_second_level">
+                      Remover também do segundo nível
+                    </label>
+                  </div>
+                </div>
+                <div class="col-12 col-md-4">
+                  <div id="aprovacao_status" class="small text-muted" aria-live="polite"></div>
+                </div>
+              </div>
+
+              <div id="aprovacao_preview_panel" class="border rounded p-3 mb-3 d-none">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+                  <div>
+                    <p class="mb-1 small text-uppercase text-muted">Aprovador localizado</p>
+                    <div class="fw-semibold" id="aprovacao_approver_name">&nbsp;</div>
+                    <div class="small text-muted" id="aprovacao_approver_cpf">&nbsp;</div>
+                  </div>
+                  <div class="text-end small">
+                    <div>
+                      <span class="text-muted">Estruturas afetadas:</span>
+                      <span class="fw-semibold" id="aprovacao_summary_estruturas">0</span>
+                    </div>
+                    <div>
+                      <span class="text-muted">Ocorrências totais:</span>
+                      <span class="fw-semibold" id="aprovacao_summary_ocorrencias">0</span>
+                    </div>
+                    <div id="aprovacao_summary_tipos" class="mt-1"></div>
+                  </div>
+                </div>
+                <!-- Container para alertas de estruturas sem aprovador -->
+                <div id="aprovacao_alert_container"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                  <span class="badge bg-secondary" id="aprovacao_selected_badge" style="display:none;">
+                    Selecionados: <span id="aprovacao_selected_count">0</span>
+                  </span>
+                  <button type="button" class="btn btn-outline-danger btn-sm" id="aprovacao_remove_all_btn" disabled>
+                    Remover de todas
+                  </button>
+                  <button type="button" class="btn btn-danger btn-sm" id="aprovacao_remove_selected_btn" disabled>
+                    Remover selecionadas
+                  </button>
+                </div>
+                <div id="aprovacao_table_wrap" class="table-responsive d-none">
+                  <table class="table table-sm table-hover align-middle">
+                    <thead class="">
+                      <tr>
+                        <th scope="col" style="width:32px;">
+                          <input type="checkbox" class="form-check-input" id="aprovacao_check_all" aria-label="Selecionar todas as estruturas" />
+                        </th>
+                        <th scope="col">AprovacaoId</th>
+                        <th scope="col">AprovacaoPor</th>
+                        <th scope="col">Aprovacao</th>
+                        <th scope="col">Tipo</th>
+                        <th scope="col">Valor</th>
+                        <th scope="col">Descrição</th>
+                        <th scope="col">Posições</th>
+                        <th scope="col">Segundo nível</th>
+                      </tr>
+                    </thead>
+                    <tbody id="aprovacao_table_body"></tbody>
+                  </table>
+                </div>
+                <!-- Botão Limpar Tudo - aparece apenas quando há dados -->
+                <div class="d-flex justify-content-end mt-3">
+                  <button type="button" class="btn btn-gradient-clear" id="aprovacao_clear_all_btn" title="Limpar todos os dados e resetar">
+                    <span class="clear-icon" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </span>
+                    Limpar Tudo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="tab-pane fade"
           id="historico"
           role="tabpanel"
           aria-labelledby="historico-tab"
@@ -581,6 +736,24 @@
         </symbol>
       </defs>
     </svg>
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-content">
+        <span class="footer-copyright">
+          © 2026 ProcessData
+        </span>
+        <span class="footer-version">
+          <span class="version-badge">v1.0.0</span>
+        </span>
+        <span class="footer-author">
+          Desenvolvido por
+          <a href="https://www.linkedin.com/in/alejandro-gabriel/" target="_blank" rel="noopener noreferrer" class="footer-link">
+            Alejandro Gabriel
+          </a>
+        </span>
+      </div>
+    </footer>
+
     <script src="static/js/app.v2.js" defer></script>
     <script src="static/js/inativacao/index.js" defer></script>
   </body>
