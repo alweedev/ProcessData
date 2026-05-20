@@ -9,7 +9,7 @@ from flask import Blueprint, request, jsonify, send_file
 from backend.core.config import settings
 from backend.core.logging import get_logger
 from backend.processor import processar_inativacao_from_paths, processar_registros_from_files, MODEL_COLS
-from backend.utils import upper_no_accents
+from backend.utils import upper_no_accents, validar_extensao_arquivo
 
 logger = get_logger()
 
@@ -69,6 +69,12 @@ def api_inativacao_buscar():
         base_file = request.files.get("base")
         if not base_file:
             return jsonify({"error": "Envie a base (arquivo Excel)"}), 400
+        
+        # Validar extensão do arquivo
+        is_valid, error_msg = validar_extensao_arquivo(base_file.filename)
+        if not is_valid:
+            return jsonify({"error": error_msg}), 400
+        
         ext = os.path.splitext(base_file.filename)[1]
         base_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{ext}")
         base_file.save(base_path)
@@ -94,6 +100,11 @@ def api_inativacao_buscar():
             lista_file = request.files.get("lista")
             lista_text = request.form.get("lista_text", "")
             if lista_file:
+                # Validar extensão do arquivo
+                is_valid, error_msg = validar_extensao_arquivo(lista_file.filename)
+                if not is_valid:
+                    return jsonify({"error": error_msg}), 400
+                
                 lista_ext = os.path.splitext(lista_file.filename)[1]
                 lista_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{lista_ext}")
                 lista_file.save(lista_path)
@@ -308,12 +319,22 @@ def api_process_inativacao():
             logger.error("Nenhum arquivo 'lista' ou texto enviado")
             return jsonify({"error": "Envie a lista ou insira os nomes/CPFs"}), 400
 
+        # Validar extensão do arquivo base
+        is_valid, error_msg = validar_extensao_arquivo(base_file.filename)
+        if not is_valid:
+            return jsonify({"error": error_msg}), 400
+
         ext = os.path.splitext(base_file.filename)[1]
         base_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{ext}")
         base_file.save(base_path)
         logger.info(f"Arquivo base salvo em: {base_path}")
 
         if lista_file:
+            # Validar extensão do arquivo lista
+            is_valid, error_msg = validar_extensao_arquivo(lista_file.filename)
+            if not is_valid:
+                return jsonify({"error": error_msg}), 400
+            
             lista_ext = os.path.splitext(lista_file.filename)[1]
             lista_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{lista_ext}")
             lista_file.save(lista_path)
@@ -420,11 +441,21 @@ def api_preview_inativacao():
         if not base_file:
             return jsonify({"error": "Envie a base"}), 400
 
+        # Validar extensão do arquivo base
+        is_valid, error_msg = validar_extensao_arquivo(base_file.filename)
+        if not is_valid:
+            return jsonify({"error": error_msg}), 400
+
         ext = os.path.splitext(base_file.filename)[1]
         base_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{ext}")
         base_file.save(base_path)
 
         if lista_file:
+            # Validar extensão do arquivo lista
+            is_valid, error_msg = validar_extensao_arquivo(lista_file.filename)
+            if not is_valid:
+                return jsonify({"error": error_msg}), 400
+            
             lista_ext = os.path.splitext(lista_file.filename)[1]
             lista_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{lista_ext}")
             lista_file.save(lista_path)

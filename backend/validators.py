@@ -1,7 +1,7 @@
 # backend/validators.py
-import logging
 from typing import List, Dict
 from .utils import limpar_cpf_raw, format_cpf_for_output, upper_no_accents
+from .core.logging import get_logger
 
 MODEL_COLS = [
     "Operacao","UserId","Login","CodigoCCustoCliente","DescricaoCCustoCliente",
@@ -9,10 +9,10 @@ MODEL_COLS = [
     "NroMatricula","Nome","SobreNome","NomeCompleto","Email","Telefone","Cargo","Departamento","Nivel",
     "Endereco","Cidade","Estado","CEP","Solicitante","Vip","ViajanteMasterNacional",
     "ViajanteMasterInternacional","SolicitanteMaster","MasterAdiantamento","MasterReembolso","Terceiro",
-    "CodigoIntegracao","Status","Observacoes"
+    "CodigoIntegracao","Status"
 ]
 
-logger = logging.getLogger("robo_backend")
+logger = get_logger()
 
 def validar_linha(reg):
     """

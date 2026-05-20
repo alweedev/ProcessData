@@ -1,15 +1,12 @@
 import os
 import re
-import logging
 import pandas as pd
 from docx import Document
 from .utils import upper_no_accents, limpar_cpf_raw, format_cpf_for_output, separar_nome_sobrenome
 from .validators import validar_linha
+from .core.logging import get_logger
 
-
-# Configurar logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("robo_backend")
+logger = get_logger()
 
 MODEL_COLS = [
     "Operacao", "UserId", "Login", "CodigoCCustoCliente", "DescricaoCCustoCliente",
@@ -82,16 +79,14 @@ FICHA_MAP = {
     "EMPRESA (DO GRUPO)": "NomeEmpresa",
     "Empresa": "NomeEmpresa",
     "Centro de custo": "CodigoCCustoEmpresa",
-    # Suportes com underscore conforme pedido
     "Centro_de_Custo": "CodigoCCustoEmpresa",
     "CODIGO - CENTRO DE CUSTO": "CodigoCCustoEmpresa",
     "DESCRICAO - CENTRO DE CUSTO": "DescricaoCCustoEmpresa",
     "Descrição Centro de Custo": "DescricaoCCustoEmpresa",
-    # Suportes com underscore conforme pedido
     "Codigo_Centro_De_Custo": "DescricaoCCustoEmpresa",
     "MATRICULA": "NroMatricula",
     "Matricula": "NroMatricula",
-    "NroMatricula": "NroMatricula",
+    "NroMatricula": "NroMatricula", 
     "NOME": "Nome",
     "SOBRENOME (ATE 20 CARACTERES)": "SobreNome",
     "NOME COMPLETO": "NomeCompleto",
@@ -106,7 +101,6 @@ FICHA_MAP = {
     "SOLICITANTE? (S/N)": "Solicitante",
     "TERCEIRO? (S/N)": "Terceiro",
     "Terceiro": "Terceiro",
-    "ENVIA DADOS DE ACESSO? (S/N)": "EnviaDadosAcesso",
 }
 
 
@@ -275,15 +269,9 @@ def processar_registros_from_files(paths: list, login_choice: str = "CPF", fluxo
             else:
                 df_final[bc] = df_final[bc].fillna("").apply(map_bool_to_SN)
 
-    # Garantir que NroMatricula contenha apenas dígitos
     if 'NroMatricula' in df_final.columns:
         df_final['NroMatricula'] = df_final['NroMatricula'].fillna('').apply(lambda v: extract_digits_only(v))
 
-    # Sanitizar restante das colunas de texto para saída (uppercase, sem acentos, colapso de espaços)
-    # EXCEÇÕES:
-    #  - 'Email' e 'Telefone': manter acentos e caracteres especiais (apenas trim + uppercase)
-    #  - 'Login' quando login_choice == 'EMAIL': preservar formato de e-mail (apenas trim + uppercase)
-    #  - 'DescricaoCCustoEmpresa': preservar caracteres da ficha, apenas removendo acentos
     for col in df_final.columns:
         if df_final[col].dtype == object:
             if col in ("Email", "Telefone"):
@@ -440,15 +428,17 @@ def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFram
         #busca a empresa, centro de custo e descrição que estiver configurado no usuário.
         out_df["CodigoCCustoEmpresa"] = pick(matched, "Codigo_Centro_de_Custo" , )
         out_df["DescricaoCCustoEmpresa"] = pick(matched, "Centro_de_Custo")
+        out_df["ViajanteMasterNacional"] = pick(matched, "ViajanteMasterNacional")
+        out_df["ViajanteMasterInternacional"] = pick(matched, "ViajanteMasterInternacional")
         out_df["EmpresaCCustoParaUsuario"] = "S"
+        out_df["Terceiro"] = pick(matched, "Terceiro")
         out_df["CodigoIntegracao"] = "AUT"
         out_df["Status"] = ""
 
         # Valores padrão para campos que serão preenchidos com mapeamento booleano
         bool_defaults = [
-            "Solicitante", "Vip", "ViajanteMasterNacional", "ViajanteMasterInternacional",
-            "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso", "Terceiro"
-        ]
+            "Solicitante", "Vip","SolicitanteMaster", "MasterAdiantamento", "MasterReembolso",
+            ]
         for c in ["Endereco", "Cidade", "Estado", "CEP"]:
             out_df[c] = ""
         for c in bool_defaults:

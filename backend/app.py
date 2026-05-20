@@ -1,16 +1,3 @@
-"""Aplicação principal Flask.
-
-Responsável por criar e configurar a aplicação, registrar blueprints e
-expor o objeto `app` para execução WSGI ou debug local.
-
-Reorganizado para uma estrutura profissional:
-backend/
-  core/ (config, logging)
-  api/  (blueprints por domínio)
-  processor.py, utils.py, validators.py (camada de serviços)
-  app.py (fábrica + bootstrap)
-"""
-
 import os
 import sys
 from flask import Flask
@@ -52,7 +39,6 @@ def create_app() -> Flask:
     return app
 
 
-# Instância global para uso por testes e servidores WSGI
 app = create_app()
 
 

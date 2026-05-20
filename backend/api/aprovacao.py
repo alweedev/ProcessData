@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request, send_file
 
 from backend.core.config import settings
 from backend.core.logging import get_logger
-from backend.utils import format_cpf_for_output, limpar_cpf_raw, upper_no_accents
+from backend.utils import format_cpf_for_output, limpar_cpf_raw, upper_no_accents, validar_extensao_arquivo
 
 
 logger = get_logger()
@@ -472,6 +472,15 @@ def aprovacao_remover_preview():
         if not users_file or not base_file:
             return jsonify({"error": "Envie 'users_file' e 'base_file' (arquivos Excel)."}), 400
 
+        # Validar extensões dos arquivos
+        is_valid, error_msg = validar_extensao_arquivo(users_file.filename)
+        if not is_valid:
+            return jsonify({"error": f"users_file: {error_msg}"}), 400
+        
+        is_valid, error_msg = validar_extensao_arquivo(base_file.filename)
+        if not is_valid:
+            return jsonify({"error": f"base_file: {error_msg}"}), 400
+
         cpf_digits, cpf_formatted = _normalize_cpf_input(cpf_raw)
 
         # Salvar temporários
@@ -610,6 +619,15 @@ def aprovacao_remover_export():
 
         if not users_file or not base_file:
             return jsonify({"error": "Envie 'users_file' e 'base_file' (arquivos Excel)."}), 400
+
+        # Validar extensões dos arquivos
+        is_valid, error_msg = validar_extensao_arquivo(users_file.filename)
+        if not is_valid:
+            return jsonify({"error": f"users_file: {error_msg}"}), 400
+        
+        is_valid, error_msg = validar_extensao_arquivo(base_file.filename)
+        if not is_valid:
+            return jsonify({"error": f"base_file: {error_msg}"}), 400
 
         cpf_digits, cpf_formatted = _normalize_cpf_input(cpf_raw)
 

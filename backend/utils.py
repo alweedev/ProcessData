@@ -124,3 +124,40 @@ def separar_nome_sobrenome(nome_completo: str) -> tuple[str, str]:
         sobrenome_str = " ".join(partes[1:]).strip()
 
     return nome, sobrenome_str
+
+
+def validar_extensao_arquivo(filename: str, allowed_extensions: set = None) -> tuple[bool, str]:
+    """Valida se a extensão do arquivo é permitida.
+    
+    Args:
+        filename: Nome do arquivo com extensão
+        allowed_extensions: Conjunto de extensões permitidas (ex: {'.xlsx', '.xls'})
+                           Se None, usa padrão {'.xlsx', '.xls', '.xltx'}
+    
+    Returns:
+        (bool, str): (é_válido, mensagem_erro)
+        
+    Examples:
+        >>> validar_extensao_arquivo('dados.xlsx')
+        (True, '')
+        
+        >>> validar_extensao_arquivo('script.txt')
+        (False, 'Extensão não permitida. Aceitos: .xlsx, .xls, .xltx')
+    """
+    if allowed_extensions is None:
+        allowed_extensions = {'.xlsx', '.xls', '.xltx'}
+    
+    if not filename:
+        return False, "Nenhum arquivo fornecido"
+    
+    _, ext = filename.rsplit('.', 1) if '.' in filename else ('', '')
+    ext = f".{ext.lower()}" if ext else ""
+    
+    if not ext:
+        return False, "Arquivo sem extensão"
+    
+    if ext not in allowed_extensions:
+        exts_str = ", ".join(sorted(allowed_extensions))
+        return False, f"Extensão não permitida. Aceitos: {exts_str}"
+    
+    return True, ""

@@ -5,6 +5,7 @@ import pandas as pd
 from backend.core.config import settings
 from backend.core.logging import get_logger
 from backend.processor import processar_registros_from_files
+from backend.utils import validar_extensao_arquivo
 
 logger = get_logger()
 
@@ -17,6 +18,12 @@ def api_process_cadastro():
         uploaded = request.files.getlist('files[]') or request.files.getlist('files')
         if not uploaded:
             return jsonify({"error": "Nenhum arquivo enviado"}), 400
+
+        # Validar extensões dos arquivos
+        for f in uploaded:
+            is_valid, error_msg = validar_extensao_arquivo(f.filename)
+            if not is_valid:
+                return jsonify({"error": error_msg}), 400
 
         paths = []
         for f in uploaded:
