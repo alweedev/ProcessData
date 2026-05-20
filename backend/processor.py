@@ -3,7 +3,7 @@ import re
 import pandas as pd
 from docx import Document
 from .utils import upper_no_accents, limpar_cpf_raw, format_cpf_for_output, separar_nome_sobrenome
-from .validators import validar_linha
+from .validators import validar_linha, validar_dataframe_for_output
 from .core.logging import get_logger
 
 logger = get_logger()
@@ -241,6 +241,10 @@ def processar_registros_from_files(paths: list, login_choice: str = "CPF", fluxo
         msgs = validar_linha(row)
         if msgs:
             errors[idx] = "; ".join(msgs)
+
+    general_msgs = validar_dataframe_for_output(df_final)
+    if general_msgs:
+        errors["__geral__"] = "; ".join(general_msgs)
 
     if "Login" in df_final.columns and "NomeCompleto" in df_final.columns:
         df_final = df_final.drop_duplicates(subset=["Login", "NomeCompleto"], keep="first")

@@ -12,6 +12,19 @@ MODEL_COLS = [
     "CodigoIntegracao","Status"
 ]
 
+REQUIRED_OUTPUT_COLS = [
+    "Login",
+    "NomeEmpresa",
+    "CodigoCCustoEmpresa",
+    "DescricaoCCustoEmpresa",
+    "Email",
+    "NomeCompleto",
+    "Nome",
+    "SobreNome",
+    "CodigoIntegracao",
+    "EmpresaCCustoParaUsuario",
+]
+
 logger = get_logger()
 
 def validar_linha(reg):
@@ -62,15 +75,18 @@ def validar_linha(reg):
 
     return msgs
 
+
+def validar_colunas_obrigatorias(df, required_cols: list[str]) -> list[str]:
+    """Valida se o DataFrame contem todas as colunas obrigatorias."""
+    msgs = []
+    for col in required_cols:
+        if col not in df.columns:
+            msgs.append(f"Coluna obrigatoria ausente: {col}")
+    return msgs
+
 def validar_dataframe_for_output(df):
     """
     df: pandas DataFrame final
     retorna lista de mensagens gerais
     """
-    msgs = []
-    # verificar colunas obrigatórias
-    req = ["Operacao","Login","NomeCompleto","Nome","SobreNome","CodigoIntegracao","EmpresaCCustoParaUsuario"]
-    for c in req:
-        if c not in df.columns:
-            msgs.append(f"Coluna obrigatória ausente: {c}")
-    return msgs
+    return validar_colunas_obrigatorias(df, REQUIRED_OUTPUT_COLS)

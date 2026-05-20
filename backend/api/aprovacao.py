@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request, send_file
 
 from backend.core.config import settings
 from backend.core.logging import get_logger
-from backend.utils import format_cpf_for_output, limpar_cpf_raw, upper_no_accents, validar_extensao_arquivo
+from backend.utils import format_cpf_for_output, limpar_cpf_raw, upper_no_accents, validar_extensao_arquivo, gerar_nome_arquivo_temporario
 
 
 logger = get_logger()
@@ -484,11 +484,8 @@ def aprovacao_remover_preview():
         cpf_digits, cpf_formatted = _normalize_cpf_input(cpf_raw)
 
         # Salvar temporários
-        users_ext = os.path.splitext(users_file.filename or "users.xlsx")[1] or ".xlsx"
-        base_ext = os.path.splitext(base_file.filename or "base.xlsx")[1] or ".xlsx"
-
-        users_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{users_ext}")
-        base_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{base_ext}")
+        users_path = gerar_nome_arquivo_temporario(users_file.filename or "users.xlsx", settings.UPLOAD_FOLDER)
+        base_path = gerar_nome_arquivo_temporario(base_file.filename or "base.xlsx", settings.UPLOAD_FOLDER)
         users_file.save(users_path)
         base_file.save(base_path)
 
@@ -632,11 +629,8 @@ def aprovacao_remover_export():
         cpf_digits, cpf_formatted = _normalize_cpf_input(cpf_raw)
 
         # Salvar temporários
-        users_ext = os.path.splitext(users_file.filename or "users.xlsx")[1] or ".xlsx"
-        base_ext = os.path.splitext(base_file.filename or "base.xlsx")[1] or ".xlsx"
-
-        users_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{users_ext}")
-        base_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{base_ext}")
+        users_path = gerar_nome_arquivo_temporario(users_file.filename or "users.xlsx", settings.UPLOAD_FOLDER)
+        base_path = gerar_nome_arquivo_temporario(base_file.filename or "base.xlsx", settings.UPLOAD_FOLDER)
         users_file.save(users_path)
         base_file.save(base_path)
 

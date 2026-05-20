@@ -5,7 +5,7 @@ import pandas as pd
 from backend.core.config import settings
 from backend.core.logging import get_logger
 from backend.processor import processar_registros_from_files
-from backend.utils import validar_extensao_arquivo
+from backend.utils import validar_extensao_arquivo, gerar_nome_arquivo_temporario
 
 logger = get_logger()
 
@@ -14,6 +14,7 @@ cadastro_bp = Blueprint('cadastro', __name__, url_prefix='/api')
 
 @cadastro_bp.route('/process_cadastro', methods=['POST'])
 def api_process_cadastro():
+    paths = []
     try:
         uploaded = request.files.getlist('files[]') or request.files.getlist('files')
         if not uploaded:
@@ -25,9 +26,8 @@ def api_process_cadastro():
             if not is_valid:
                 return jsonify({"error": error_msg}), 400
 
-        paths = []
         for f in uploaded:
-            p = os.path.join(settings.UPLOAD_FOLDER, f.filename)
+            p = gerar_nome_arquivo_temporario(f.filename, settings.UPLOAD_FOLDER)
             f.save(p)
             paths.append(p)
 
@@ -73,13 +73,6 @@ def api_process_cadastro():
             df_final.to_excel(output, index=False)
             output.seek(0)
 
-        for p in paths:
-            try:
-                if os.path.exists(p):
-                    os.remove(p)
-            except Exception:
-                logger.warning(f"Falha ao remover temporário {p}")
-
         return send_file(output,
                          download_name="saida_cadastro.xlsx",
                          as_attachment=True,
@@ -87,3 +80,10 @@ def api_process_cadastro():
     except Exception as e:
         logger.exception("Erro em /api/process_cadastro")
         return jsonify({"error": str(e)}), 500
+    finally:
+        for p in paths:
+            try:
+                if os.path.exists(p):
+                    os.remove(p)
+            except Exception:
+                logger.warning(f"Falha ao remover temporário {p}")

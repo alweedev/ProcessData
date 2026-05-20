@@ -9,7 +9,7 @@ from flask import Blueprint, request, jsonify, send_file
 from backend.core.config import settings
 from backend.core.logging import get_logger
 from backend.processor import processar_inativacao_from_paths, processar_registros_from_files, MODEL_COLS
-from backend.utils import upper_no_accents, validar_extensao_arquivo
+from backend.utils import upper_no_accents, validar_extensao_arquivo, gerar_nome_arquivo_temporario
 
 logger = get_logger()
 
@@ -75,8 +75,7 @@ def api_inativacao_buscar():
         if not is_valid:
             return jsonify({"error": error_msg}), 400
         
-        ext = os.path.splitext(base_file.filename)[1]
-        base_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{ext}")
+        base_path = gerar_nome_arquivo_temporario(base_file.filename, settings.UPLOAD_FOLDER)
         base_file.save(base_path)
         df_base = pd.read_excel(base_path, dtype=str).fillna("")
 
@@ -105,8 +104,7 @@ def api_inativacao_buscar():
                 if not is_valid:
                     return jsonify({"error": error_msg}), 400
                 
-                lista_ext = os.path.splitext(lista_file.filename)[1]
-                lista_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{lista_ext}")
+                lista_path = gerar_nome_arquivo_temporario(lista_file.filename, settings.UPLOAD_FOLDER)
                 lista_file.save(lista_path)
                 try:
                     df_lista = pd.read_excel(lista_path, dtype=str).fillna("")
@@ -324,8 +322,7 @@ def api_process_inativacao():
         if not is_valid:
             return jsonify({"error": error_msg}), 400
 
-        ext = os.path.splitext(base_file.filename)[1]
-        base_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{ext}")
+        base_path = gerar_nome_arquivo_temporario(base_file.filename, settings.UPLOAD_FOLDER)
         base_file.save(base_path)
         logger.info(f"Arquivo base salvo em: {base_path}")
 
@@ -335,8 +332,7 @@ def api_process_inativacao():
             if not is_valid:
                 return jsonify({"error": error_msg}), 400
             
-            lista_ext = os.path.splitext(lista_file.filename)[1]
-            lista_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{lista_ext}")
+            lista_path = gerar_nome_arquivo_temporario(lista_file.filename, settings.UPLOAD_FOLDER)
             lista_file.save(lista_path)
             logger.info(f"Arquivo lista salvo em: {lista_path}")
             df_lista = pd.read_excel(lista_path, dtype=str).fillna("")
@@ -446,8 +442,7 @@ def api_preview_inativacao():
         if not is_valid:
             return jsonify({"error": error_msg}), 400
 
-        ext = os.path.splitext(base_file.filename)[1]
-        base_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{ext}")
+        base_path = gerar_nome_arquivo_temporario(base_file.filename, settings.UPLOAD_FOLDER)
         base_file.save(base_path)
 
         if lista_file:
@@ -456,8 +451,7 @@ def api_preview_inativacao():
             if not is_valid:
                 return jsonify({"error": error_msg}), 400
             
-            lista_ext = os.path.splitext(lista_file.filename)[1]
-            lista_path = os.path.join(settings.UPLOAD_FOLDER, f"{uuid.uuid4().hex}{lista_ext}")
+            lista_path = gerar_nome_arquivo_temporario(lista_file.filename, settings.UPLOAD_FOLDER)
             lista_file.save(lista_path)
             df_lista = pd.read_excel(lista_path, dtype=str).fillna("")
             df_lista = _normalize_lista_columns(df_lista)
