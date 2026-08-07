@@ -1,5 +1,7 @@
 # backend/utils.py
+import os
 import re
+import uuid
 import unicodedata
 
 def normalize_text(s):
@@ -63,3 +65,41 @@ def validar_extensao_arquivo(filename: str, allowed_extensions: set = None) -> t
         return False, f"Extensão não permitida. Aceitos: {exts_str}"
     
     return True, ""
+
+
+def gerar_nome_arquivo_temporario(filename: str, upload_folder: str) -> str:
+    """Gera um nome único para arquivo temporário mantendo a extensão original.
+    
+    Args:
+        filename: Nome original do arquivo (ex: 'dados.xlsx')
+        upload_folder: Diretório onde o arquivo será salvo
+    
+    Returns:
+        str: Caminho completo para o arquivo temporário (ex: '/tmp_uploads/uuid-dados.xlsx')
+        
+    Examples:
+        >>> gerar_nome_arquivo_temporario('dados.xlsx', '/uploads')
+        '/uploads/3fa85f64-dados.xlsx'
+    """
+    if not filename:
+        filename = "file"
+    
+    # Extrair a extensão do arquivo
+    if '.' in filename:
+        name_part, ext = filename.rsplit('.', 1)
+        ext = f".{ext}"
+    else:
+        name_part = filename
+        ext = ""
+    
+    # Gerar UUID único
+    unique_id = str(uuid.uuid4())[:8]
+    
+    # Criar nome único preservando extensão
+    temp_filename = f"{unique_id}-{name_part}{ext}"
+    
+    # Garantir que o diretório existe
+    os.makedirs(upload_folder, exist_ok=True)
+    
+    # Retornar caminho completo
+    return os.path.join(upload_folder, temp_filename)

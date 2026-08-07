@@ -2,7 +2,7 @@ import os
 import re
 import pandas as pd
 from docx import Document
-from .utils import upper_no_accents, limpar_cpf_raw, format_cpf_for_output, separar_nome_sobrenome
+from .utils import upper_no_accents, limpar_cpf_raw, format_cpf_for_output
 from .validators import validar_linha, validar_dataframe_for_output
 from .core.logging import get_logger
 
@@ -13,7 +13,7 @@ MODEL_COLS = [
     "NomeEmpresa", "CodigoCCustoEmpresa", "DescricaoCCustoEmpresa", "EmpresaCCustoParaUsuario",
     "NroMatricula", "Nome", "SobreNome", "NomeCompleto", "Email", "Telefone", "Cargo", "Departamento", "Nivel",
     "Endereco", "Cidade", "Estado", "CEP", "Solicitante", "Vip", "ViajanteMasterNacional",
-    "ViajanteMasterInternacional", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso", "Terceiro",
+    "ViajanteMasterInternacional", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso", "Terceiro",    
     "CodigoIntegracao", "Status"
 ]
 
@@ -81,16 +81,18 @@ FICHA_MAP = {
     "Centro de custo": "CodigoCCustoEmpresa",
     "Centro_de_Custo": "CodigoCCustoEmpresa",
     "CODIGO - CENTRO DE CUSTO": "CodigoCCustoEmpresa",
+    "CÓDIGO - CENTRO DE CUSTO": "CodigoCCustoEmpresa",
     "DESCRICAO - CENTRO DE CUSTO": "DescricaoCCustoEmpresa",
     "Descrição Centro de Custo": "DescricaoCCustoEmpresa",
-    "Codigo_Centro_De_Custo": "DescricaoCCustoEmpresa",
     "MATRICULA": "NroMatricula",
     "Matricula": "NroMatricula",
-    "NroMatricula": "NroMatricula", 
+    "MATRICULA (não obrigatório)": "NroMatricula",
     "NOME": "Nome",
     "SOBRENOME (ATE 20 CARACTERES)": "SobreNome",
+    "SOBRENOME (limite 50 caracteres)": "SobreNome",
     "NOME COMPLETO": "NomeCompleto",
     "NomeCompleto": "NomeCompleto",
+    "NOME COMPLETO (limite 50 caracteres)": "NomeCompleto",
     "EMAIL": "Email",
     "E-MAIL": "Email",
     "TELEFONE": "Telefone",
@@ -98,6 +100,7 @@ FICHA_MAP = {
     "DEPARTAMENTO": "Departamento",
     "NIVEL": "Nivel",
     "NÍVEL": "Nivel",
+    "NÍVEL (se aplicável)": "Nivel",
     "SOLICITANTE? (S/N)": "Solicitante",
     "TERCEIRO? (S/N)": "Terceiro",
     "Terceiro": "Terceiro",
