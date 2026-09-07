@@ -188,7 +188,7 @@ MasterAdiantamento = "N"
 MasterReembolso = "N"
 
 Login = "FRONT" + Login (sem espaços)
-Exemplo: "João Silva" → "FONTjoaosilva" (com CPF) → "FONTxxx.xxx.xxx-xx"
+Exemplo: "João Silva" → "FRONTjoaosilva" (com CPF) → "FRONTxxx.xxx.xxx-xx"
 ```
 
 ### 2.5 Sanitização de Texto
@@ -197,7 +197,7 @@ Exemplo: "João Silva" → "FONTjoaosilva" (com CPF) → "FONTxxx.xxx.xxx-xx"
 ```
 Nome, SobreNome, NomeCompleto, NomeEmpresa,
 DescricaoCCustoEmpresa, DescricaoCCustoCliente, Cargo,
-Departamento, Cidade, Estado, Endereco
+Departamento,
 ```
 
 **Regras de Sanitização** (`sanitize_output_text()`):

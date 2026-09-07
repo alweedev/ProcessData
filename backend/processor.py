@@ -124,17 +124,6 @@ def drop_header_like_rows(df: pd.DataFrame) -> pd.DataFrame:
     return df[~df.apply(is_header, axis=1)]
 
 
-def extrair_docx(path: str) -> dict:
-    """Extrai pares label:value de um .docx usando FICHA_MAP como referência."""
-    doc = Document(path)
-    text = "\n".join(p.text for p in doc.paragraphs)
-    data = {}
-    for label, target in FICHA_MAP.items():
-        pat = rf"{re.escape(label)}\s*[:\-]\s*(.+)"
-        m = re.search(pat, text, flags=re.IGNORECASE)
-        if m:
-            data[target] = m.group(1).strip()
-    return data
 
 
 def processar_registros_from_files(paths: list, login_choice: str = "CPF", fluxo: str = "SELF"):
@@ -444,8 +433,9 @@ def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFram
 
         # Valores padrão para campos que serão preenchidos com mapeamento booleano
         bool_defaults = [
-            "Solicitante", "Vip","SolicitanteMaster", "MasterAdiantamento", "MasterReembolso",
-            ]
+            "Solicitante", "Vip", "ViajanteMasterNacional", "ViajanteMasterInternacional",
+            "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso", "Terceiro",
+        ]
         for c in ["Endereco", "Cidade", "Estado", "CEP"]:
             out_df[c] = ""
         for c in bool_defaults:
@@ -460,23 +450,15 @@ def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFram
                     return v
             return None
 
-        bool_map = {"SIM": "S", "NAO": "N", "NÃO": "N", "S": "S", "N": "N", "TRUE": "S", "FALSE": "N"}
+        bool_map = {"S": "S", "SIM": "S", "YES": "S", "Y": "S", "TRUE": "S", "1": "S",
+                    "N": "N", "NAO": "N", "NÃO": "N", "NO": "N", "FALSE": "N", "0": "N"}
         for logical_col in bool_defaults:
             real_col = find_real_col(logical_col)
             if real_col and real_col in matched.columns:
-                # Para 'Terceiro', priorizar dígitos se existirem; caso contrário mapear Sim/Não para S/N
-                if logical_col == 'Terceiro':
-                    def terceiro_map(v):
-                        d = extract_digits_only(v)
-                        if d:
-                            return d
-                        return bool_map.get(str(v).strip().upper(), "N")
-                    vals = matched[real_col].fillna("").astype(str).map(lambda x: terceiro_map(x))
-                    out_df[logical_col] = vals.values
-                else:
-                    # normalizar valores e mapear para S/N
-                    vals = matched[real_col].fillna("").astype(str).str.strip().str.upper().map(lambda x: bool_map.get(x, "N"))
-                    out_df[logical_col] = vals.values
+                vals = matched[real_col].fillna("").astype(str).map(
+                    lambda value: bool_map.get(upper_no_accents(value).strip().upper(), "N")
+                )
+                out_df[logical_col] = vals.values
 
         # Para inativação, manter Nome e SobreNome exatamente como estão na base
         # (não recalcular a partir de NomeCompleto), apenas garantir que colunas existam.

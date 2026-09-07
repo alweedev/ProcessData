@@ -239,6 +239,8 @@
         if(xhr.status>=200 && xhr.status<300){
           const blob = xhr.response; if(!blob || blob.size===0){ showToast('Arquivo gerado inválido.','danger'); return; }
           const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='saida_inativacao.xlsx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+          // Remove a referência local após o download; o backend também exclui o temporário.
+          clearBaseBtn?.click();
           showToast('Inativação processada.','success');
         } else {
           try{ const reader=new FileReader(); reader.onload=()=>{ try{ const obj=JSON.parse(reader.result||'{}'); showToast(obj.error||('Erro '+xhr.status),'danger'); }catch(_){ showToast(reader.result||('Erro '+xhr.status),'danger'); } }; reader.readAsText(xhr.response); } catch(_){ showToast('Erro ao gerar inativação.','danger'); }

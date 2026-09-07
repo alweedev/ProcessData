@@ -605,7 +605,7 @@ document.addEventListener("DOMContentLoaded", function () {
         this.setProgress(100, "Concluído");
         setTimeout(() => this.resetProgress(), 500);
         showToast("Ficha carregada com sucesso!", "success");
-        addToHistory(
+        window.addToHistory?.(
           `Análise: ${file.name} - ${new Date().toLocaleString("pt-BR")}`
         );
         try {
@@ -1518,7 +1518,7 @@ document.addEventListener("DOMContentLoaded", function () {
         downloadBlob(resp.blob, "saida_inativacao.xlsx");
         setStatus(status, '<span class="text-success">✔ Concluído</span>');
         showToast("Inativação processada!", "success");
-        addToHistory(
+        window.addToHistory?.(
           `Inativação gerada: Base ${base.files[0].name}, Lista ${
             lista.files[0]?.name || "texto"
           } - ${new Date().toLocaleString()}`
@@ -1629,147 +1629,6 @@ document.addEventListener("DOMContentLoaded", function () {
     /* ignore */
   }
 
-  // Histórico (modernizado)
-  const historicoTbody = document.getElementById("historico_tbody");
-  const historicoSearch = document.getElementById("historico_search");
-  const historicoSummary = document.getElementById("historico_summary");
-  const exportCsvBtn = document.getElementById("historico_export_csv");
-  const exportJsonBtn = document.getElementById("historico_export_json");
-  const clearHistoryBtn = document.getElementById("clearHistoryBtn");
-  const HISTORY_KEY = "history_v2"; // novo formato
-
-  function migrateOldHistory() {
-    // Se existir "history" simples (array de strings) e não existir history_v2
-    const oldRaw = localStorage.getItem("history_v2");
-    if (oldRaw) return; // já migrado
-    const legacy = JSON.parse(localStorage.getItem("history") || "[]");
-    if (Array.isArray(legacy) && legacy.length) {
-      const now = Date.now();
-      const migrated = legacy.map((text, i) => ({
-        ts: now - (legacy.length - i) * 1000,
-        text: String(text),
-      }));
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(migrated.slice(-200)));
-      // opcionalmente remover legacy
-      try { localStorage.removeItem("history"); } catch(_) {}
-    }
-  }
-  migrateOldHistory();
-
-  function getHistory() {
-    const arr = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-    return Array.isArray(arr) ? arr : [];
-  }
-  function setHistory(arr) {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(-500))); // limite maior
-  }
-  function addToHistory(action) {
-    const history = getHistory();
-    history.push({ ts: Date.now(), text: String(action) });
-    setHistory(history);
-    renderHistory();
-  }
-  function formatTs(ts) {
-    try {
-      const d = new Date(ts);
-      const pad = (n) => String(n).padStart(2, "0");
-      return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-    } catch (_) {
-      return "—";
-    }
-  }
-  let filteredHistory = [];
-  function renderHistory() {
-    const all = getHistory();
-    const term = (historicoSearch?.value || "").trim().toLowerCase();
-    filteredHistory = term
-      ? all.filter((h) => h.text.toLowerCase().includes(term))
-      : all.slice();
-    if (historicoTbody) {
-      historicoTbody.innerHTML = filteredHistory
-        .slice()
-        .reverse() // mostrar recentes primeiro
-        .map(
-          (h) => `<tr>
-            <td style="white-space:nowrap;">${formatTs(h.ts)}</td>
-            <td>${escapeHtml(h.text)}</td>
-          </tr>`
-        )
-        .join("");
-    }
-    if (historicoSummary) {
-      historicoSummary.textContent = `Itens: ${filteredHistory.length} (total armazenado: ${all.length})`;
-    }
-  }
-  historicoSearch?.addEventListener("input", () => renderHistory());
-  clearHistoryBtn?.addEventListener("click", () => {
-    setHistory([]);
-    renderHistory();
-    showToast("Histórico limpo!", "success");
-  });
-  exportCsvBtn?.addEventListener("click", () => {
-    if (!filteredHistory.length) {
-      showToast("Nada para exportar.", "warning");
-      return;
-    }
-    const header = "data_hora,acao";
-    const rows = filteredHistory
-      .slice()
-      .reverse()
-      .map((h) => `${formatTs(h.ts).replace(/,/g, " ")},"${h.text.replace(/"/g, '""')}"`);
-    const csv = [header].concat(rows).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `historico_${Date.now()}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(a.href);
-    showToast("CSV exportado.", "success");
-  });
-  exportJsonBtn?.addEventListener("click", () => {
-    if (!filteredHistory.length) {
-      showToast("Nada para exportar.", "warning");
-      return;
-    }
-    const blob = new Blob([JSON.stringify(filteredHistory, null, 2)], {
-      type: "application/json",
-    });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `historico_${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(a.href);
-    showToast("JSON exportado.", "success");
-  });
-  renderHistory();
-  function wireAnaliseHelp() {
-    const btn = document.getElementById("analise_help_btn");
-    if (!btn) return;
-    btn.addEventListener("click", () => {
-      const html = `
-        <div class="text-start">
-          <p class="mb-2 fw-semibold">Guia rápido do workspace</p>
-          <ol class="ps-2 small">
-            <li><strong>1º Passo:</strong> envie a planilha arrastando ou clicando em <em>Selecionar arquivo</em>.</li>
-            <li><strong>2º Passo:</strong> acompanhe o processamento incremental e já navegue pela ficha enquanto carrega.</li>
-            <li><strong>3º Passo:</strong> use a <strong>busca</strong> para filtrar qualquer coluna instantaneamente.</li>
-            <li><strong>4º Passo:</strong> ajuste <strong>quebra de texto</strong>, <strong>densidade</strong> e fixe o resumo conforme sua preferência.</li>
-            <li><strong>5º Passo:</strong> exporte o <strong>CSV</strong>, que respeita filtros ativos e limitações para manter a performance.</li>
-          </ol>
-          <p class="small text-muted mb-0">Tudo acontece no navegador – nenhum dado sensível sai da sua máquina.</p>
-        </div>`;
-      if (window.Swal?.fire) {
-        Swal.fire({ title: "Workspace Analítico", html, confirmButtonText: "Continuar", width: 540 });
-      } else {
-        alert("Envie o Excel, ajuste preferências e exporte quando quiser.");
-      }
-    });
-  }
-
   function wireCadastroHelp() {
     const btn = document.getElementById("cadastro_help_btn");
     if (!btn) return;
@@ -1815,7 +1674,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Wired help buttons
-  wireAnaliseHelp();
   wireCadastroHelp();
   wireInativacaoHelp();
 
@@ -1928,9 +1786,12 @@ document.addEventListener("DOMContentLoaded", function () {
           const resp = await postFiles('/api/process_cadastro', files, extraData);
           if (!resp.blob || resp.blob.size === 0) throw new Error('Arquivo gerado inválido');
           downloadBlob(resp.blob, 'saida_cadastro.xlsx');
+          // Remove a referência local após o download; o backend também exclui os temporários.
+          try { if (files) files.value = ''; } catch(_) {}
+          clearCadastroFeedback();
           setStatus(status, '<span class="text-success">✔ Concluído</span>');
           showToast(`Cadastro processado! Opções: ${loginChoice}, ${fluxo}.`, 'success');
-          try { addToHistory(`Cadastro gerado: ${files.files[0].name} - ${new Date().toLocaleString('pt-BR')}`); } catch(_) {}
+          try { window.addToHistory?.(`Cadastro gerado: ${files.files[0].name} - ${new Date().toLocaleString('pt-BR')}`); } catch(_) {}
         } catch (err) {
           setStatus(status, '');
           if (debug) debug.textContent = 'Erro: ' + (err?.message || err);

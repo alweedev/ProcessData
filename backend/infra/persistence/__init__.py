@@ -1,0 +1,1 @@
+"""Persistência local do backend."""

@@ -1,0 +1,73 @@
+import re
+
+from backend.shared.cpf_utils import clean_cpf, format_cpf_for_output
+from backend.shared.text_utils import sanitize_output_text, split_name_first_last, upper_no_accents
+
+MODEL_COLS = [
+    "Operacao", "UserId", "Login", "CodigoCCustoCliente", "DescricaoCCustoCliente",
+    "NomeEmpresa", "CodigoCCustoEmpresa", "DescricaoCCustoEmpresa", "EmpresaCCustoParaUsuario",
+    "NroMatricula", "Nome", "SobreNome", "NomeCompleto", "Email", "Telefone", "Cargo", "Departamento", "Nivel",
+    "Endereco", "Cidade", "Estado", "CEP", "Solicitante", "Vip", "ViajanteMasterNacional",
+    "ViajanteMasterInternacional", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso", "Terceiro",
+    "CodigoIntegracao", "Status"
+]
+
+REQUIRED_OUTPUT_COLS = [
+    "Login",
+    "NomeEmpresa",
+    "CodigoCCustoEmpresa",
+    "DescricaoCCustoEmpresa",
+    "Email",
+    "NomeCompleto",
+    "Nome",
+    "SobreNome",
+    "CodigoIntegracao",
+    "EmpresaCCustoParaUsuario",
+]
+
+FICHA_MAP = {
+    "CPF": "CPF",
+    "CPF (SEM PONTOS)": "CPF",
+    "EMPRESA (DO GRUPO)": "NomeEmpresa",
+    "Empresa": "NomeEmpresa",
+    "Centro de custo": "CodigoCCustoEmpresa",
+    "Centro_de_Custo": "CodigoCCustoEmpresa",
+    "CODIGO - CENTRO DE CUSTO": "CodigoCCustoEmpresa",
+    "CÓDIGO - CENTRO DE CUSTO": "CodigoCCustoEmpresa",
+    "DESCRICAO - CENTRO DE CUSTO": "DescricaoCCustoEmpresa",
+    "Descrição Centro de Custo": "DescricaoCCustoEmpresa",
+    "MATRICULA": "NroMatricula",
+    "Matricula": "NroMatricula",
+    "MATRICULA (não obrigatório)": "NroMatricula",
+    "NOME": "Nome",
+    "SOBRENOME (ATE 20 CARACTERES)": "SobreNome",
+    "SOBRENOME (limite 50 caracteres)": "SobreNome",
+    "NOME COMPLETO": "NomeCompleto",
+    "NomeCompleto": "NomeCompleto",
+    "NOME COMPLETO (limite 50 caracteres)": "NomeCompleto",
+    "EMAIL": "Email",
+    "E-MAIL": "Email",
+    "Email": "Email",
+    "TELEFONE": "Telefone",
+    "Telefone": "Telefone",
+    "CARGO": "Cargo",
+    "DEPARTAMENTO": "Departamento",
+    "NIVEL": "Nivel",
+    "NÍVEL": "Nivel",
+    "NÍVEL (se aplicável)": "Nivel",
+    "Nivel": "Nivel",
+    "SOLICITANTE": "Solicitante",
+    "SOLICITANTE? (S/N)": "Solicitante",
+    "Solicitante": "Solicitante",
+    "TERCEIRO": "Terceiro",
+    "TERCEIRO? (S/N)": "Terceiro",
+    "Terceiro": "Terceiro",
+}
+
+
+def extract_digits_only(value):
+    try:
+        s = str(value)
+    except Exception:
+        return ""
+    return re.sub(r"\D", "", s)

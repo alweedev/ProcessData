@@ -16,6 +16,8 @@ from backend.api import (
     health_bp,
     inativacao_bp,
     aprovacao_bp,
+    analysis_bp,
+    history_bp,
 )
 
 logger = get_logger()
@@ -34,6 +36,8 @@ def create_app() -> Flask:
     app.register_blueprint(frontend_bp)
     app.register_blueprint(health_bp)
     app.register_blueprint(aprovacao_bp)
+    app.register_blueprint(analysis_bp)
+    app.register_blueprint(history_bp)
 
     logger.info('Aplicação Flask criada e blueprints registrados.')
     return app

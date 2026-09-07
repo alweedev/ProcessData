@@ -12,6 +12,7 @@ class Settings:
 
     # Uploads
     UPLOAD_FOLDER: str = os.path.join(BACKEND_DIR, 'tmp_uploads')
+    HISTORY_LOG_FILE: str = os.path.join(BACKEND_DIR, 'tmp_uploads', 'history.log.jsonl')
     MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024
 
     # Server (can be overridden by environment variables)
