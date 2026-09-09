@@ -84,7 +84,11 @@ class ProcessingService:
             for col in ["Vip", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso"]:
                 df_final[col] = "N"
             if "Login" in df_final.columns:
-                df_final["Login"] = df_final["Login"].apply(lambda v: "FRONT" + str(v).replace(" ", "") if str(v).strip() else v)
+                def _prefix_front(v):
+                    if pd.isna(v) or str(v).strip() == "":
+                        return v
+                    return "FRONT" + str(v).replace(" ", "")
+                df_final["Login"] = df_final["Login"].apply(_prefix_front)
 
         for col in ["Nome", "SobreNome", "NomeCompleto", "NomeEmpresa", "DescricaoCCustoEmpresa", "DescricaoCCustoCliente", "Cargo", "Departamento", "Cidade", "Estado", "Endereco"]:
             if col in df_final.columns:
@@ -105,11 +109,25 @@ class ProcessingService:
             df_final = df_final.drop_duplicates(subset=["Login", "NomeCompleto"], keep="first")
 
         bool_cols = ["Solicitante", "Terceiro", "Vip", "ViajanteMasterNacional", "ViajanteMasterInternacional", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso"]
+        _true_set = {"S", "SIM", "YES", "Y", "TRUE", "1"}
+
+        def _map_bool_sn(value):
+            # fold de acento antes de comparar: "Não"/"Sìm" normalizam
+            return "S" if upper_no_accents(value).strip().upper() in _true_set else "N"
+
+        def _map_terceiro(value):
+            # regra da ficha: se tiver dígitos, mantém os dígitos (id de terceiro);
+            # senão mapeia Sim/Não -> S/N
+            digits = "".join(filter(str.isdigit, str(value)))
+            return digits if digits else _map_bool_sn(value)
+
         for bc in bool_cols:
             if bc not in df_final.columns:
                 df_final[bc] = "N"
+            elif bc == "Terceiro":
+                df_final[bc] = df_final[bc].fillna("").apply(_map_terceiro)
             else:
-                df_final[bc] = df_final[bc].fillna("").apply(lambda v: "S" if str(v).strip().upper() in {"S", "SIM", "YES", "Y", "TRUE", "1"} else "N")
+                df_final[bc] = df_final[bc].fillna("").apply(_map_bool_sn)
 
         if "NroMatricula" in df_final.columns:
             df_final["NroMatricula"] = df_final["NroMatricula"].fillna("").apply(lambda v: "".join(filter(str.isdigit, str(v))))
