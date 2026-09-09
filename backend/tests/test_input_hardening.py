@@ -1,8 +1,8 @@
 """Hardening de entrada: conteúdo de upload + path traversal no frontend (P8c, P8d)."""
+
 import io
 
 import pandas as pd
-
 from _helpers import valid_cpf, xlsx_upload
 
 
@@ -15,8 +15,16 @@ def test_fake_xlsx_rejected(client):
 
 def test_real_xlsx_accepted(client):
     df = pd.DataFrame(
-        [{"CPF": valid_cpf(1), "NOME COMPLETO": "Ana Souza", "EMAIL": "a@x.com",
-          "EMPRESA": "E", "Centro de custo": "C", "SOLICITANTE? (S/N)": "S"}]
+        [
+            {
+                "CPF": valid_cpf(1),
+                "NOME COMPLETO": "Ana Souza",
+                "EMAIL": "a@x.com",
+                "EMPRESA": "E",
+                "Centro de custo": "C",
+                "SOLICITANTE? (S/N)": "S",
+            }
+        ]
     )
     data = {"files[]": xlsx_upload(df, "c.xlsx"), "login_choice": "CPF", "fluxo": "SELF"}
     resp = client.post("/api/process_cadastro", data=data, content_type="multipart/form-data")

@@ -1,12 +1,12 @@
 """Remoção dos parâmetros mortos use_fuzzy/fuzzy_cutoff (C3)."""
+
 import inspect
 
 import pandas as pd
+from _helpers import valid_cpf, xlsx_upload
 
 from backend.processor import processar_inativacao_from_paths
 from backend.services.inactivation_service import InactivationService
-
-from _helpers import valid_cpf, xlsx_upload
 
 
 def test_signatures_have_no_fuzzy_params():
@@ -21,9 +21,7 @@ def test_signatures_have_no_fuzzy_params():
 
 
 def test_process_inativacao_still_works(client):
-    base = pd.DataFrame(
-        [{"CPF": valid_cpf(1), "NomeCompleto": "Ana Souza", "Email": "a@x.com", "Status": "ATIVO"}]
-    )
+    base = pd.DataFrame([{"CPF": valid_cpf(1), "NomeCompleto": "Ana Souza", "Email": "a@x.com", "Status": "ATIVO"}])
     lista = pd.DataFrame([{"CPF": valid_cpf(1)}])
     data = {"base": xlsx_upload(base, "base.xlsx"), "lista": xlsx_upload(lista, "lista.xlsx")}
     resp = client.post("/api/process_inativacao", data=data, content_type="multipart/form-data")

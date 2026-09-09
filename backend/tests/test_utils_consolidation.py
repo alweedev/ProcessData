@@ -1,4 +1,5 @@
 """backend.utils foi consolidado em backend.shared.* (D6)."""
+
 import importlib
 
 import pytest
@@ -37,7 +38,6 @@ def test_no_source_still_imports_backend_utils():
         if p.parent.name == "tests":
             continue
         text = p.read_text(encoding="utf-8")
-        if ("from backend.utils" in text or "import backend.utils" in text
-                or "from .utils import" in text):
+        if "from backend.utils" in text or "import backend.utils" in text or "from .utils import" in text:
             offenders.append(str(p))
     assert offenders == []

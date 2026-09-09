@@ -1,12 +1,12 @@
 """Neutralização de formula injection no Excel exportado (P8a)."""
+
 import io
 
 import pandas as pd
+from _helpers import valid_cpf, xlsx_upload
 from openpyxl import load_workbook
 
 from backend.services.export_service import ExportService
-
-from _helpers import valid_cpf, xlsx_upload
 
 PAYLOADS = ["=SUM(A1)", "+1", "-1", "@x", "\tx"]
 _STRING_TYPES = {"s", "str", "inlineStr"}  # qualquer um != fórmula
@@ -32,14 +32,16 @@ def test_aprovacao_export_neutralizes_injection(client):
     users = pd.DataFrame([{"CPF": valid_cpf(1), "NomeCompleto": "Aprovador Um", "Status": "ATIVO"}])
     # payload com prefixo "+": sobrevive ao round-trip de leitura da planilha
     # como string (um "=" seria lido como fórmula sem valor em cache).
-    base = pd.DataFrame([
-        {
-            "AprovacaoId": "A",
-            "AprovacaoPor": "+cmd|' /c calc'!A0",
-            "LoginAprovador_1": valid_cpf(1),
-            "LoginAprovador_2": valid_cpf(3),
-        }
-    ])
+    base = pd.DataFrame(
+        [
+            {
+                "AprovacaoId": "A",
+                "AprovacaoPor": "+cmd|' /c calc'!A0",
+                "LoginAprovador_1": valid_cpf(1),
+                "LoginAprovador_2": valid_cpf(3),
+            }
+        ]
+    )
     data = {
         "users_file": xlsx_upload(users, "u.xlsx"),
         "base_file": xlsx_upload(base, "b.xlsx"),

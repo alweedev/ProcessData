@@ -1,15 +1,17 @@
 import os
-from flask import Blueprint, send_from_directory, abort
+
+from flask import Blueprint, abort, send_from_directory
+
 from backend.core.config import settings
 from backend.core.logging import get_logger
 
 logger = get_logger()
 
-frontend_bp = Blueprint('frontend', __name__)
+frontend_bp = Blueprint("frontend", __name__)
 
 
-@frontend_bp.route('/', defaults={'path': 'index.html'})
-@frontend_bp.route('/<path:path>')
+@frontend_bp.route("/", defaults={"path": "index.html"})
+@frontend_bp.route("/<path:path>")
 def serve_frontend(path):
     frontend_dir = settings.FRONTEND_DIR
     root = os.path.realpath(frontend_dir)
@@ -18,7 +20,7 @@ def serve_frontend(path):
     within_root = candidate == root or candidate.startswith(root + os.sep)
     if within_root and os.path.isfile(candidate):
         return send_from_directory(root, os.path.relpath(candidate, root))
-    index_path = os.path.join(root, 'index.html')
+    index_path = os.path.join(root, "index.html")
     if os.path.isfile(index_path):
-        return send_from_directory(root, 'index.html')
+        return send_from_directory(root, "index.html")
     abort(404)

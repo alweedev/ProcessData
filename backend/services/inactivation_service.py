@@ -28,9 +28,7 @@ class InactivationService:
                     sobrenome = next((v for k, v in norm_map.items() if "SOBRENOME" in k), None)
                     if nome and sobrenome:
                         df_lista["NomeCompleto"] = (
-                            df_lista[nome].astype(str).fillna("")
-                            + " "
-                            + df_lista[sobrenome].astype(str).fillna("")
+                            df_lista[nome].astype(str).fillna("") + " " + df_lista[sobrenome].astype(str).fillna("")
                         ).str.strip()
                     elif nome:
                         df_lista["NomeCompleto"] = df_lista[nome]
@@ -56,10 +54,14 @@ class InactivationService:
     def _detect_base_cols(df_base: pd.DataFrame):
         col_map = {upper_no_accents(str(c)).strip(): c for c in df_base.columns}
         cpf_col = next((v for k, v in col_map.items() if "CPF" in k), None)
-        nome_col = next((v for k, v in col_map.items() if "NOMECOMPLETO" in k or "NOME COMPLETO" in k or k == "NOME COMPLETO"), None)
+        nome_col = next(
+            (v for k, v in col_map.items() if "NOMECOMPLETO" in k or "NOME COMPLETO" in k or k == "NOME COMPLETO"), None
+        )
         email_col = next((v for k, v in col_map.items() if "EMAIL" in k), None)
         status_col = next((v for k, v in col_map.items() if "STATUS" in k), None)
-        userid_col = next((v for k, v in col_map.items() if "USERID" in k or "IDUSUARIO" in k or k.endswith(" USERID")), None)
+        userid_col = next(
+            (v for k, v in col_map.items() if "USERID" in k or "IDUSUARIO" in k or k.endswith(" USERID")), None
+        )
         return cpf_col, nome_col, email_col, status_col, userid_col
 
     @staticmethod
@@ -77,7 +79,8 @@ class InactivationService:
             return len(parts) >= 2 and len(s) >= 3
 
         valid_names_raw = [
-            x for x in raw_items
+            x
+            for x in raw_items
             if re.sub(r"\D", "", x) not in valid_cpfs and x not in valid_emails and is_valid_fullname(x)
         ]
         valid_names_norm = [upper_no_accents(x).strip() for x in valid_names_raw]
@@ -103,14 +106,16 @@ class InactivationService:
             for _, row in matches.iterrows():
                 cpf = row.get("CPFdigits", "")
                 found_cpfs.add(cpf)
-                results.append({
-                    "id": str(row.get(userid_col, "")) if userid_col and row.get(userid_col, "") != "" else None,
-                    "nome": str(row.get(nome_col, "")) if nome_col else str(row.get("NomeCompleto", "")),
-                    "cpf": cpf,
-                    "email": str(row.get(email_col, "")) if email_col else str(row.get("Email", "")),
-                    "status_atual": str(row.get(status_col, "")) if status_col else str(row.get("Status", "")),
-                    "found": True,
-                })
+                results.append(
+                    {
+                        "id": str(row.get(userid_col, "")) if userid_col and row.get(userid_col, "") != "" else None,
+                        "nome": str(row.get(nome_col, "")) if nome_col else str(row.get("NomeCompleto", "")),
+                        "cpf": cpf,
+                        "email": str(row.get(email_col, "")) if email_col else str(row.get("Email", "")),
+                        "status_atual": str(row.get(status_col, "")) if status_col else str(row.get("Status", "")),
+                        "found": True,
+                    }
+                )
 
         found_name_norms = set()
         if valid_names_norm and nome_col:
@@ -122,14 +127,16 @@ class InactivationService:
                     found_name_norms.add(name_norm)
                     continue
                 found_name_norms.add(name_norm)
-                results.append({
-                    "id": str(row.get(userid_col, "")) if userid_col and row.get(userid_col, "") != "" else None,
-                    "nome": str(row.get(nome_col, "")) if nome_col else str(row.get("NomeCompleto", "")),
-                    "cpf": cpf,
-                    "email": str(row.get(email_col, "")) if email_col else str(row.get("Email", "")),
-                    "status_atual": str(row.get(status_col, "")) if status_col else str(row.get("Status", "")),
-                    "found": True,
-                })
+                results.append(
+                    {
+                        "id": str(row.get(userid_col, "")) if userid_col and row.get(userid_col, "") != "" else None,
+                        "nome": str(row.get(nome_col, "")) if nome_col else str(row.get("NomeCompleto", "")),
+                        "cpf": cpf,
+                        "email": str(row.get(email_col, "")) if email_col else str(row.get("Email", "")),
+                        "status_atual": str(row.get(status_col, "")) if status_col else str(row.get("Status", "")),
+                        "found": True,
+                    }
+                )
 
         if valid_emails and email_col:
             base_email_norm = frame[email_col].astype(str).fillna("").str.strip().str.lower()
@@ -138,28 +145,38 @@ class InactivationService:
             for _, row in matches.iterrows():
                 email_val = str(row.get(email_col, "")).strip()
                 found_emails.add(email_val.lower())
-                results.append({
-                    "id": str(row.get(userid_col, "")) if userid_col and row.get(userid_col, "") != "" else None,
-                    "nome": str(row.get(nome_col, "")) if nome_col else str(row.get("NomeCompleto", "")),
-                    "cpf": str(row.get("CPFdigits", "")),
-                    "email": email_val,
-                    "status_atual": str(row.get(status_col, "")) if status_col else str(row.get("Status", "")),
-                    "found": True,
-                })
+                results.append(
+                    {
+                        "id": str(row.get(userid_col, "")) if userid_col and row.get(userid_col, "") != "" else None,
+                        "nome": str(row.get(nome_col, "")) if nome_col else str(row.get("NomeCompleto", "")),
+                        "cpf": str(row.get("CPFdigits", "")),
+                        "email": email_val,
+                        "status_atual": str(row.get(status_col, "")) if status_col else str(row.get("Status", "")),
+                        "found": True,
+                    }
+                )
 
         not_found_cpfs = [cpf for cpf in valid_cpfs if cpf not in found_cpfs]
         for cpf in not_found_cpfs:
-            results.append({"id": None, "nome": "", "cpf": cpf, "email": "", "status_atual": "Não localizado", "found": False})
+            results.append(
+                {"id": None, "nome": "", "cpf": cpf, "email": "", "status_atual": "Não localizado", "found": False}
+            )
 
         not_found_names = [name for name in valid_names_norm if name not in found_name_norms]
         for name in not_found_names:
-            results.append({"id": None, "nome": name, "cpf": "", "email": "", "status_atual": "Não localizado", "found": False})
+            results.append(
+                {"id": None, "nome": name, "cpf": "", "email": "", "status_atual": "Não localizado", "found": False}
+            )
 
         not_found_emails = [email for email in valid_emails if email.strip().lower() not in found_emails]
         for email in not_found_emails:
-            results.append({"id": None, "nome": "", "cpf": "", "email": email, "status_atual": "Não localizado", "found": False})
+            results.append(
+                {"id": None, "nome": "", "cpf": "", "email": email, "status_atual": "Não localizado", "found": False}
+            )
 
-        results = sorted(results, key=lambda item: (0 if item.get("found") else 1, item.get("nome") or "", item.get("cpf") or ""))
+        results = sorted(
+            results, key=lambda item: (0 if item.get("found") else 1, item.get("nome") or "", item.get("cpf") or "")
+        )
         return {
             "items": results,
             "total": len(results),

@@ -1,4 +1,5 @@
 """Utilitários de teste: geração de planilhas em memória e CPFs válidos."""
+
 import io
 
 import pandas as pd

@@ -3,11 +3,11 @@
 Verificações portadas de backend/test_inativacao_run.py e
 backend/test_integration_api.py (scripts manuais removidos em D5).
 """
+
 import pandas as pd
+from _helpers import valid_cpf, xlsx_upload
 
 from backend.processor import processar_inativacao_from_paths
-
-from _helpers import valid_cpf, xlsx_upload
 
 
 def _base():

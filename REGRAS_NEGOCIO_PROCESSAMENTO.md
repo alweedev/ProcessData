@@ -322,10 +322,7 @@ EmpresaCCustoParaUsuario
 **Critério**: Combinação (Login, NomeCompleto)
 
 ```python
-df_final = df_final.drop_duplicates(
-    subset=["Login", "NomeCompleto"], 
-    keep="first"
-)
+df_final = df_final.drop_duplicates(subset=["Login", "NomeCompleto"], keep="first")
 ```
 
 - Mantém primeira ocorrência
@@ -384,7 +381,7 @@ errors, df_final = processar_registros_from_files(paths, login_choice, fluxo)
 {
     0: "Solicitante obrigatório (deve ser S ou N); CPF deve ter 11 dígitos",
     2: "NomeCompleto vazio",
-    "__geral__": "Coluna obrigatoria ausente: Email"
+    "__geral__": "Coluna obrigatoria ausente: Email",
 }
 ```
 
@@ -397,53 +394,46 @@ errors, df_final = processar_registros_from_files(paths, login_choice, fluxo)
 ```python
 [
     # Operação e Identificadores
-    "Operacao",           # INSERT
-    "UserId",             # ID do usuário (geralmente vazio)
-    "Login",              # CPF formatado ou Email (obrigatório)
-    "CodigoIntegracao",   # AUT (padrão)
-    "Status",             # (vazio)
-    
+    "Operacao",  # INSERT
+    "UserId",  # ID do usuário (geralmente vazio)
+    "Login",  # CPF formatado ou Email (obrigatório)
+    "CodigoIntegracao",  # AUT (padrão)
+    "Status",  # (vazio)
     # Identificação Pessoal
-    "NroMatricula",       # Matrícula (opcional)
-    "Nome",               # Primeiro nome (max 20 chars)
-    "SobreNome",          # Último nome (max 20 chars)
-    "NomeCompleto",       # Nome completo (obrigatório)
-    "CPF",                # CPF com dígitos (11 dígitos)
-    
+    "NroMatricula",  # Matrícula (opcional)
+    "Nome",  # Primeiro nome (max 20 chars)
+    "SobreNome",  # Último nome (max 20 chars)
+    "NomeCompleto",  # Nome completo (obrigatório)
+    "CPF",  # CPF com dígitos (11 dígitos)
     # Contato
-    "Email",              # Email (obrigatório)
-    "Telefone",           # Telefone (opcional)
-    
+    "Email",  # Email (obrigatório)
+    "Telefone",  # Telefone (opcional)
     # Profissional
-    "Cargo",              # Cargo (opcional)
-    "Departamento",       # Departamento (opcional)
-    "Nivel",              # OPERACIONAL, GERENCIA, DIRETORIA
-    
+    "Cargo",  # Cargo (opcional)
+    "Departamento",  # Departamento (opcional)
+    "Nivel",  # OPERACIONAL, GERENCIA, DIRETORIA
     # Endereço
-    "Endereco",           # Endereço (opcional)
-    "Cidade",             # Cidade (opcional)
-    "Estado",             # Estado (opcional)
-    "CEP",                # CEP (opcional)
-    
+    "Endereco",  # Endereço (opcional)
+    "Cidade",  # Cidade (opcional)
+    "Estado",  # Estado (opcional)
+    "CEP",  # CEP (opcional)
     # Centro de Custo
-    "CodigoCCustoCliente",       # CC do cliente (opcional)
-    "DescricaoCCustoCliente",    # Descrição do CC cliente
-    "CodigoCCustoEmpresa",       # CC da empresa (obrigatório)
-    "DescricaoCCustoEmpresa",    # Descrição CC empresa (obrigatório)
+    "CodigoCCustoCliente",  # CC do cliente (opcional)
+    "DescricaoCCustoCliente",  # Descrição do CC cliente
+    "CodigoCCustoEmpresa",  # CC da empresa (obrigatório)
+    "DescricaoCCustoEmpresa",  # Descrição CC empresa (obrigatório)
     "EmpresaCCustoParaUsuario",  # S/N (padrão S)
-    
     # Dados da Empresa
-    "NomeEmpresa",               # Nome da empresa (obrigatório)
-    
+    "NomeEmpresa",  # Nome da empresa (obrigatório)
     # Flags de Acesso (S/N)
-    "Solicitante",               # É solicitante (obrigatório)
-    "Terceiro",                  # É terceiro (S/N)
-    "Vip",                       # É VIP (S/N)
-    "ViajanteMasterNacional",    # Master nacional (S/N)
-    "ViajanteMasterInternacional", # Master internacional (S/N)
-    "SolicitanteMaster",         # Solicitante master (S/N)
-    "MasterAdiantamento",        # Master de adiantamento (S/N)
-    "MasterReembolso"            # Master de reembolso (S/N)
+    "Solicitante",  # É solicitante (obrigatório)
+    "Terceiro",  # É terceiro (S/N)
+    "Vip",  # É VIP (S/N)
+    "ViajanteMasterNacional",  # Master nacional (S/N)
+    "ViajanteMasterInternacional",  # Master internacional (S/N)
+    "SolicitanteMaster",  # Solicitante master (S/N)
+    "MasterAdiantamento",  # Master de adiantamento (S/N)
+    "MasterReembolso",  # Master de reembolso (S/N)
 ]
 ```
 
@@ -460,7 +450,7 @@ errors, df_final = processar_registros_from_files(paths, login_choice, fluxo)
     "Nome",
     "SobreNome",
     "CodigoIntegracao",
-    "EmpresaCCustoParaUsuario"
+    "EmpresaCCustoParaUsuario",
 ]
 ```
 

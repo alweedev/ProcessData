@@ -167,17 +167,8 @@ Ação: Deve notificar usuário antes de salvar
     "aprovador_cpf": "123.456.789-00",
     "total_estruturas": 25,
     "total_ocorrencias": 42,
-    "estruturas_por_tipo": {
-        "VIAJANTE": 15,
-        "CCEMPRESA": 10
-    },
-    "estruturas_sem_aprovador": [
-        {
-            "aprovacao_id": "APR001",
-            "tipo": "VIAJANTE",
-            "motivo": "Será única aprovadora"
-        }
-    ],
+    "estruturas_por_tipo": {"VIAJANTE": 15, "CCEMPRESA": 10},
+    "estruturas_sem_aprovador": [{"aprovacao_id": "APR001", "tipo": "VIAJANTE", "motivo": "Será única aprovadora"}],
     "estruturas": [
         {
             "aprovacao_id": "APR001",
@@ -190,9 +181,9 @@ Ação: Deve notificar usuário antes de salvar
             "cc_descricao": "Centro A",
             "posicoes": [1, 5, 8],
             "segundo_nivel": true,
-            "ficara_sem_aprovador": false
+            "ficara_sem_aprovador": false,
         }
-    ]
+    ],
 }
 ```
 
@@ -389,7 +380,7 @@ def validar_lista(itens: list) -> tuple:
             "departamento": "TI",
             "empresa": "Empresa A",
             "found": true,
-            "tipo_busca": "cpf"
+            "tipo_busca": "cpf",
         },
         {
             "id": None,
@@ -400,9 +391,9 @@ def validar_lista(itens: list) -> tuple:
             "departamento": None,
             "empresa": None,
             "found": false,
-            "tipo_busca": "cpf"
-        }
-    ]
+            "tipo_busca": "cpf",
+        },
+    ],
 }
 ```
 

@@ -1,11 +1,14 @@
 """Utilitários de arquivo: validação de extensão e nome temporário."""
+
 import os
 import uuid
 
-_DEFAULT_ALLOWED = {'.xlsx', '.xls', '.xltx'}
+_DEFAULT_ALLOWED = {".xlsx", ".xls", ".xltx"}
 
 
-def validar_extensao_arquivo(filename: str, allowed_extensions: set = None) -> tuple[bool, str]:
+def validar_extensao_arquivo(
+    filename: str, allowed_extensions: set[str] | None = None
+) -> tuple[bool, str]:
     """Valida se a extensão do arquivo é permitida.
 
     Returns:
@@ -17,7 +20,7 @@ def validar_extensao_arquivo(filename: str, allowed_extensions: set = None) -> t
     if not filename:
         return False, "Nenhum arquivo fornecido"
 
-    _, ext = filename.rsplit('.', 1) if '.' in filename else ('', '')
+    _, ext = filename.rsplit(".", 1) if "." in filename else ("", "")
     ext = f".{ext.lower()}" if ext else ""
 
     if not ext:
@@ -35,8 +38,8 @@ def gerar_nome_arquivo_temporario(filename: str, upload_folder: str) -> str:
     if not filename:
         filename = "file"
 
-    if '.' in filename:
-        name_part, ext = filename.rsplit('.', 1)
+    if "." in filename:
+        name_part, ext = filename.rsplit(".", 1)
         ext = f".{ext}"
     else:
         name_part = filename

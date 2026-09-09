@@ -1,8 +1,8 @@
 """O pipeline de cadastro legado foi aposentado (D4)."""
+
 import importlib
 
 import pandas as pd
-
 from _helpers import valid_cpf
 
 
@@ -24,9 +24,7 @@ def test_validators_module_gone():
 def test_inativacao_engine_still_works():
     from backend.processor import processar_inativacao_from_paths
 
-    base = pd.DataFrame(
-        [{"CPF": valid_cpf(1), "NomeCompleto": "Ana Souza", "Email": "a@x.com", "Status": "ATIVO"}]
-    )
+    base = pd.DataFrame([{"CPF": valid_cpf(1), "NomeCompleto": "Ana Souza", "Email": "a@x.com", "Status": "ATIVO"}])
     lista = pd.DataFrame([{"CPF": valid_cpf(1)}])
     out, stats = processar_inativacao_from_paths(base, lista)
     assert not out.empty

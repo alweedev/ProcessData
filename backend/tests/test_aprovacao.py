@@ -1,10 +1,10 @@
 """Testes de validação e remoção de aprovador (B3: P4 + P5)."""
+
 import io
 
 import pandas as pd
-from openpyxl import load_workbook
-
 from _helpers import valid_cpf, xlsx_bytes, xlsx_upload
+from openpyxl import load_workbook
 
 APPROVER = valid_cpf(1)
 SECOND = valid_cpf(2)
@@ -21,9 +21,7 @@ def _users_df(status="ATIVO", with_name=True, include_approver=True):
         if with_name:
             row["NomeCompleto"] = "Aprovador Um"
         rows.append(row)
-    rows.append(
-        {"CPF": OTHER, "Status": "ATIVO", **({"NomeCompleto": "Outro"} if with_name else {})}
-    )
+    rows.append({"CPF": OTHER, "Status": "ATIVO", **({"NomeCompleto": "Outro"} if with_name else {})})
     return pd.DataFrame(rows)
 
 
@@ -39,9 +37,7 @@ def _post_export(client, users_df, base_df, cpf, **form):
         "mode": form.pop("mode", "all"),
     }
     data.update({k: str(v) for k, v in form.items()})
-    return client.post(
-        "/api/aprovacao/remover/export", data=data, content_type="multipart/form-data"
-    )
+    return client.post("/api/aprovacao/remover/export", data=data, content_type="multipart/form-data")
 
 
 def _post_preview(client, users_df, base_df, cpf, **form):
@@ -51,12 +47,11 @@ def _post_preview(client, users_df, base_df, cpf, **form):
         "cpf": cpf,
     }
     data.update({k: str(v) for k, v in form.items()})
-    return client.post(
-        "/api/aprovacao/remover/preview", data=data, content_type="multipart/form-data"
-    )
+    return client.post("/api/aprovacao/remover/preview", data=data, content_type="multipart/form-data")
 
 
 # ---------------------------------------------------------------- P4
+
 
 def test_cpf_checksum_rejected(client):
     bad = "12345678900"  # 11 dígitos, dígito verificador inválido
@@ -90,9 +85,11 @@ def test_approver_not_found(client):
 
 
 def test_preview_happy_path(client):
-    base = _base_df([
-        {"AprovacaoId": "A", "AprovacaoPor": "VIAJANTE", "LoginAprovador_1": APPROVER, "LoginAprovador_2": OTHER},
-    ])
+    base = _base_df(
+        [
+            {"AprovacaoId": "A", "AprovacaoPor": "VIAJANTE", "LoginAprovador_1": APPROVER, "LoginAprovador_2": OTHER},
+        ]
+    )
     resp = _post_preview(client, _users_df(), base, APPROVER)
     assert resp.status_code == 200, resp.get_data(as_text=True)
     body = resp.get_json()
@@ -102,15 +99,18 @@ def test_preview_happy_path(client):
 
 # ---------------------------------------------------------------- P5
 
+
 def test_second_level_promoted(client):
-    base = _base_df([
-        {
-            "AprovacaoId": "A",
-            "LoginAprovador_1": APPROVER,
-            "LoginAprovador_2": "",
-            "LoginAprovador_SEGUNDO_NIVEL": SECOND,
-        }
-    ])
+    base = _base_df(
+        [
+            {
+                "AprovacaoId": "A",
+                "LoginAprovador_1": APPROVER,
+                "LoginAprovador_2": "",
+                "LoginAprovador_SEGUNDO_NIVEL": SECOND,
+            }
+        ]
+    )
     resp = _post_export(client, _users_df(), base, APPROVER, remove_second_level="false")
     assert resp.status_code == 200, resp.get_data(as_text=True)
     wb = load_workbook(io.BytesIO(resp.data))
@@ -124,10 +124,12 @@ def test_second_level_promoted(client):
 
 
 def test_update_only_on_changed_rows(client):
-    base = _base_df([
-        {"AprovacaoId": "A", "LoginAprovador_1": APPROVER, "LoginAprovador_2": OTHER},
-        {"AprovacaoId": "A", "LoginAprovador_1": OTHER, "LoginAprovador_2": ""},
-    ])
+    base = _base_df(
+        [
+            {"AprovacaoId": "A", "LoginAprovador_1": APPROVER, "LoginAprovador_2": OTHER},
+            {"AprovacaoId": "A", "LoginAprovador_1": OTHER, "LoginAprovador_2": ""},
+        ]
+    )
     resp = _post_export(client, _users_df(), base, APPROVER, ignore_empty_warning="true")
     assert resp.status_code == 200, resp.get_data(as_text=True)
     wb = load_workbook(io.BytesIO(resp.data))

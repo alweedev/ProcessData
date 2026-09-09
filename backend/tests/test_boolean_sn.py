@@ -1,10 +1,10 @@
 """Booleanos exportados sempre como S/N (P6)."""
+
 import pandas as pd
+from _helpers import valid_cpf
 
 from backend.processor import processar_inativacao_from_paths
 from backend.services.processing_service import ProcessingService
-
-from _helpers import valid_cpf
 
 
 def test_cadastro_sn_mapping(tmp_path):
@@ -25,9 +25,7 @@ def test_cadastro_sn_mapping(tmp_path):
     p = tmp_path / "cadastro.xlsx"
     df.to_excel(p, index=False)
 
-    _errors, out = ProcessingService.process_records_from_files(
-        [str(p)], login_choice="CPF", fluxo="SELF"
-    )
+    _errors, out = ProcessingService.process_records_from_files([str(p)], login_choice="CPF", fluxo="SELF")
     assert out["Solicitante"].tolist() == ["S", "N", "S", "S", "N"]
     assert set(out["Solicitante"].unique()).issubset({"S", "N"})
 

@@ -1,4 +1,5 @@
 """MODEL_COLS / FICHA_MAP têm fonte única em backend.domain.rules (D1)."""
+
 from backend import processor
 from backend.domain import rules
 from backend.services.processing_service import FICHA_MAP as SERVICE_FICHA_MAP

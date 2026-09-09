@@ -2,6 +2,7 @@
 
 Rode a partir da raiz do repositório: ``python -m pytest -q``.
 """
+
 import pytest
 
 

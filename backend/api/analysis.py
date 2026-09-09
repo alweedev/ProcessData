@@ -62,10 +62,12 @@ def analysis_summary():
             },
         )
 
-        return jsonify({
-            "report": report,
-            "preview": preview,
-        }), 200
+        return jsonify(
+            {
+                "report": report,
+                "preview": preview,
+            }
+        ), 200
     except Exception as exc:
         logger.exception("Erro em /api/analysis/summary")
         AuditService.record(

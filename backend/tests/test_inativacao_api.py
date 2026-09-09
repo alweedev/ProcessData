@@ -1,11 +1,11 @@
 """Testes dos endpoints de inativação: preview e rota /executar removida (B1)."""
+
 import os
 
 import pandas as pd
+from _helpers import valid_cpf, xlsx_upload
 
 from backend.core.config import settings
-
-from _helpers import valid_cpf, xlsx_upload
 
 
 def _base_df():

@@ -1,9 +1,10 @@
 """Sanidade do harness de testes (fixtures, isolamento de estado)."""
+
 import os
 
-from backend.core.config import settings
-
 from _helpers import valid_cpf
+
+from backend.core.config import settings
 
 
 def test_health_ok(client):

@@ -8,7 +8,12 @@ class ValidationService:
     # não trouxe o dado (sinal útil para o relatório). CC código/descrição
     # ficam de fora — podem ser legitimamente vazios em algumas fichas.
     _NON_EMPTY_REQUIRED = [
-        "Login", "Email", "NomeCompleto", "Nome", "SobreNome", "NomeEmpresa",
+        "Login",
+        "Email",
+        "NomeCompleto",
+        "Nome",
+        "SobreNome",
+        "NomeEmpresa",
     ]
 
     @staticmethod

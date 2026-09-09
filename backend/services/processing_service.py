@@ -1,11 +1,9 @@
-import os
-
 import pandas as pd
 
-from backend.domain.rules import MODEL_COLS, FICHA_MAP
+from backend.domain.rules import FICHA_MAP, MODEL_COLS
 from backend.services.validation_service import ValidationService
-from backend.shared.text_utils import sanitize_output_text, split_name_first_last, upper_no_accents
 from backend.shared.cpf_utils import clean_cpf, format_cpf_for_output
+from backend.shared.text_utils import sanitize_output_text, split_name_first_last, upper_no_accents
 
 
 class ProcessingService:
@@ -76,7 +74,14 @@ class ProcessingService:
 
         fluxo_up = (fluxo or "").upper()
         if fluxo_up == "SELF":
-            for col in ["Vip", "ViajanteMasterNacional", "ViajanteMasterInternacional", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso"]:
+            for col in [
+                "Vip",
+                "ViajanteMasterNacional",
+                "ViajanteMasterInternacional",
+                "SolicitanteMaster",
+                "MasterAdiantamento",
+                "MasterReembolso",
+            ]:
                 df_final[col] = "N"
         elif fluxo_up == "FRONT":
             df_final["ViajanteMasterNacional"] = "S"
@@ -84,13 +89,27 @@ class ProcessingService:
             for col in ["Vip", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso"]:
                 df_final[col] = "N"
             if "Login" in df_final.columns:
+
                 def _prefix_front(v):
                     if pd.isna(v) or str(v).strip() == "":
                         return v
                     return "FRONT" + str(v).replace(" ", "")
+
                 df_final["Login"] = df_final["Login"].apply(_prefix_front)
 
-        for col in ["Nome", "SobreNome", "NomeCompleto", "NomeEmpresa", "DescricaoCCustoEmpresa", "DescricaoCCustoCliente", "Cargo", "Departamento", "Cidade", "Estado", "Endereco"]:
+        for col in [
+            "Nome",
+            "SobreNome",
+            "NomeCompleto",
+            "NomeEmpresa",
+            "DescricaoCCustoEmpresa",
+            "DescricaoCCustoCliente",
+            "Cargo",
+            "Departamento",
+            "Cidade",
+            "Estado",
+            "Endereco",
+        ]:
             if col in df_final.columns:
                 if col in ["Nome", "SobreNome"]:
                     df_final[col] = df_final[col].apply(lambda v: sanitize_output_text(v, 20))
@@ -114,7 +133,16 @@ class ProcessingService:
         if "Login" in df_final.columns and "NomeCompleto" in df_final.columns:
             df_final = df_final.drop_duplicates(subset=["Login", "NomeCompleto"], keep="first")
 
-        bool_cols = ["Solicitante", "Terceiro", "Vip", "ViajanteMasterNacional", "ViajanteMasterInternacional", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso"]
+        bool_cols = [
+            "Solicitante",
+            "Terceiro",
+            "Vip",
+            "ViajanteMasterNacional",
+            "ViajanteMasterInternacional",
+            "SolicitanteMaster",
+            "MasterAdiantamento",
+            "MasterReembolso",
+        ]
         _true_set = {"S", "SIM", "YES", "Y", "TRUE", "1"}
 
         def _map_bool_sn(value):
@@ -136,7 +164,9 @@ class ProcessingService:
                 df_final[bc] = df_final[bc].fillna("").apply(_map_bool_sn)
 
         if "NroMatricula" in df_final.columns:
-            df_final["NroMatricula"] = df_final["NroMatricula"].fillna("").apply(lambda v: "".join(filter(str.isdigit, str(v))))
+            df_final["NroMatricula"] = (
+                df_final["NroMatricula"].fillna("").apply(lambda v: "".join(filter(str.isdigit, str(v))))
+            )
 
         for col in df_final.columns:
             if df_final[col].dtype == object:

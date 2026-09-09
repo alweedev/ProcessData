@@ -282,7 +282,7 @@ text_cols = [
 
 for c in text_cols:
     if c in df_final.columns:
-        if c == 'MeuCampoNovo':
+        if c == "MeuCampoNovo":
             df_final[c] = df_final[c].apply(lambda v: minha_transformacao(v))
 ```
 
@@ -348,12 +348,10 @@ taxa_sucesso = (linhas_válidas / total_linhas) × 100%
     # Erros por linha
     0: "Erro da linha 0",
     1: "Erro da linha 1",
-    
     # Erro geral
     "__geral__": "Erro do DataFrame inteiro",
-    
     # Erros de I/O
-    "/caminho/arquivo.xlsx": "Erro ao ler arquivo"
+    "/caminho/arquivo.xlsx": "Erro ao ler arquivo",
 }
 ```
 
@@ -363,7 +361,7 @@ taxa_sucesso = (linhas_válidas / total_linhas) × 100%
 {
     0: "Solicitante obrigatório (deve ser S ou N)",
     2: "NomeCompleto vazio; CPF deve ter 11 dígitos",
-    "__geral__": "Coluna obrigatoria ausente: Email"
+    "__geral__": "Coluna obrigatoria ausente: Email",
 }
 ```
 

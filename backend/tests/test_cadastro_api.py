@@ -2,14 +2,14 @@
 
 Inclui as verificações portadas do antigo script backend/test_cadastro_run.py.
 """
+
 import io
 
 import pandas as pd
+from _helpers import valid_cpf, xlsx_upload
 from openpyxl import load_workbook
 
 from backend.services.processing_service import ProcessingService
-
-from _helpers import valid_cpf, xlsx_upload
 
 
 def _read_first_sheet(binary):
@@ -28,8 +28,14 @@ def test_docx_upload_rejected(client):
 def test_cadastro_happy_path_returns_xlsx(client):
     df = pd.DataFrame(
         [
-            {"CPF": valid_cpf(10), "NOME COMPLETO": "Ana Souza", "EMAIL": "ana@empresa.com",
-             "EMPRESA": "Empresa A", "Centro de custo": "CC1", "SOLICITANTE? (S/N)": "S"},
+            {
+                "CPF": valid_cpf(10),
+                "NOME COMPLETO": "Ana Souza",
+                "EMAIL": "ana@empresa.com",
+                "EMPRESA": "Empresa A",
+                "Centro de custo": "CC1",
+                "SOLICITANTE? (S/N)": "S",
+            },
         ]
     )
     data = {"files[]": xlsx_upload(df, "cadastro.xlsx"), "login_choice": "CPF", "fluxo": "SELF"}
@@ -48,10 +54,22 @@ def test_cadastro_happy_path_returns_xlsx(client):
 def test_cadastro_bool_and_blank_rows(tmp_path):
     df = pd.DataFrame(
         [
-            {"CPF": valid_cpf(1), "NOME COMPLETO": "Ana Um", "EMAIL": "a@x.com",
-             "EMPRESA": "E", "SOLICITANTE? (S/N)": "Sim", "Terceiro": "Sim"},
-            {"CPF": valid_cpf(2), "NOME COMPLETO": "Bruno Dois", "EMAIL": "b@x.com",
-             "EMPRESA": "E", "SOLICITANTE? (S/N)": "", "Terceiro": "Não"},
+            {
+                "CPF": valid_cpf(1),
+                "NOME COMPLETO": "Ana Um",
+                "EMAIL": "a@x.com",
+                "EMPRESA": "E",
+                "SOLICITANTE? (S/N)": "Sim",
+                "Terceiro": "Sim",
+            },
+            {
+                "CPF": valid_cpf(2),
+                "NOME COMPLETO": "Bruno Dois",
+                "EMAIL": "b@x.com",
+                "EMPRESA": "E",
+                "SOLICITANTE? (S/N)": "",
+                "Terceiro": "Não",
+            },
             {"CPF": "", "NOME COMPLETO": "", "EMAIL": "", "EMPRESA": "", "SOLICITANTE? (S/N)": ""},
         ]
     )

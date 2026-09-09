@@ -5,6 +5,7 @@ conteúdo seja realmente uma planilha. Aqui checamos a assinatura/estrutura do
 arquivo já salvo em disco. ``.xls`` (BIFF binário) não é checado — fica a cargo
 do pandas/xlrd na leitura.
 """
+
 import os
 import zipfile
 

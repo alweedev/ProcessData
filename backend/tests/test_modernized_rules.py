@@ -4,11 +4,11 @@ import tempfile
 import pandas as pd
 
 from backend.domain.rules import MODEL_COLS
+from backend.processor import processar_inativacao_from_paths
+from backend.services.processing_service import ProcessingService
+from backend.services.validation_service import ValidationService
 from backend.shared.cpf_utils import clean_cpf, format_cpf_for_output
 from backend.shared.text_utils import sanitize_output_text, split_name_first_last, upper_no_accents
-from backend.services.validation_service import ValidationService
-from backend.services.processing_service import ProcessingService
-from backend.processor import processar_inativacao_from_paths
 
 
 def test_cpf_normalization_and_formatting():
@@ -38,10 +38,24 @@ def test_validation_rejects_invalid_solicitante_and_missing_name():
 
 
 def test_processing_service_generates_output_for_self_flow():
-    df = pd.DataFrame([
-        {"CPF": "11122233344", "NomeCompleto": "Ana Souza", "Solicitante": "S", "Email": "ana@empresa.com", "Empresa": "Empresa A"},
-        {"CPF": "22233344455", "NomeCompleto": "Bruno Lima", "Solicitante": "N", "Email": "bruno@empresa.com", "Empresa": "Empresa A"},
-    ])
+    df = pd.DataFrame(
+        [
+            {
+                "CPF": "11122233344",
+                "NomeCompleto": "Ana Souza",
+                "Solicitante": "S",
+                "Email": "ana@empresa.com",
+                "Empresa": "Empresa A",
+            },
+            {
+                "CPF": "22233344455",
+                "NomeCompleto": "Bruno Lima",
+                "Solicitante": "N",
+                "Email": "bruno@empresa.com",
+                "Empresa": "Empresa A",
+            },
+        ]
+    )
 
     with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
         df.to_excel(tmp.name, index=False)
@@ -53,31 +67,41 @@ def test_processing_service_generates_output_for_self_flow():
         assert list(result.columns) == MODEL_COLS
         assert set(result["Solicitante"].unique()).issubset({"S", "N"})
         assert result["ViajanteMasterNacional"].tolist() == ["N", "N"]
-        assert result["Login"].tolist()[0].startswith("111222333-") or result["Login"].tolist()[0].startswith("111222333")
+        assert result["Login"].tolist()[0].startswith("111222333-") or result["Login"].tolist()[0].startswith(
+            "111222333"
+        )
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
 
 def test_inactivation_boolean_fields_are_exported_as_s_or_n():
-    base = pd.DataFrame([
-        {
-            "CPF": "11122233344",
-            "NomeCompleto": "Ana Souza",
-            "Status": "ATIVO",
-            "Solicitante": "Sim",
-            "Terceiro": "Não",
-            "ViajanteMasterNacional": "Sim",
-            "ViajanteMasterInternacional": "Não",
-        }
-    ])
+    base = pd.DataFrame(
+        [
+            {
+                "CPF": "11122233344",
+                "NomeCompleto": "Ana Souza",
+                "Status": "ATIVO",
+                "Solicitante": "Sim",
+                "Terceiro": "Não",
+                "ViajanteMasterNacional": "Sim",
+                "ViajanteMasterInternacional": "Não",
+            }
+        ]
+    )
     lista = pd.DataFrame([{"CPF": "11122233344"}])
 
     result, _ = processar_inativacao_from_paths(base, lista)
 
     boolean_columns = [
-        "Solicitante", "Vip", "ViajanteMasterNacional", "ViajanteMasterInternacional",
-        "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso", "Terceiro",
+        "Solicitante",
+        "Vip",
+        "ViajanteMasterNacional",
+        "ViajanteMasterInternacional",
+        "SolicitanteMaster",
+        "MasterAdiantamento",
+        "MasterReembolso",
+        "Terceiro",
     ]
     for column in boolean_columns:
         assert set(result[column].unique()).issubset({"S", "N"})

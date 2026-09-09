@@ -43,7 +43,7 @@ class HistoryStore:
         if not os.path.exists(path):
             return []
         max_rows = getattr(settings, "HISTORY_MAX_ROWS", 5000) or 5000
-        with open(path, "r", encoding="utf-8") as fp:
+        with open(path, encoding="utf-8") as fp:
             tail = deque(fp, maxlen=max_rows)
         rows = []
         for line in tail:

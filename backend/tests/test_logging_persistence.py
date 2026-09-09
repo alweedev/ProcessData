@@ -1,8 +1,8 @@
 """Rotação da trilha de auditoria + respostas 5xx genéricas (P8g, P8h)."""
+
 import os
 
 import pandas as pd
-
 from _helpers import valid_cpf, xlsx_upload
 
 
@@ -36,8 +36,16 @@ def test_500_response_is_generic(client, monkeypatch):
     monkeypatch.setattr(ProcessingService, "process_records_from_files", boom)
 
     df = pd.DataFrame(
-        [{"CPF": valid_cpf(1), "NOME COMPLETO": "Ana", "EMAIL": "a@x.com",
-          "EMPRESA": "E", "Centro de custo": "C", "SOLICITANTE? (S/N)": "S"}]
+        [
+            {
+                "CPF": valid_cpf(1),
+                "NOME COMPLETO": "Ana",
+                "EMAIL": "a@x.com",
+                "EMPRESA": "E",
+                "Centro de custo": "C",
+                "SOLICITANTE? (S/N)": "S",
+            }
+        ]
     )
     data = {"files[]": xlsx_upload(df, "c.xlsx")}
     resp = client.post("/api/process_cadastro", data=data, content_type="multipart/form-data")

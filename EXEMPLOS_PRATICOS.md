@@ -18,11 +18,7 @@
 ### Processamento
 
 ```python
-errors, df_final = processar_registros_from_files(
-    paths=["dados.xlsx"],
-    login_choice="CPF",
-    fluxo="SELF"
-)
+errors, df_final = processar_registros_from_files(paths=["dados.xlsx"], login_choice="CPF", fluxo="SELF")
 ```
 
 ### Transformações Aplicadas
@@ -97,7 +93,7 @@ errors, df_final = processar_registros_from_files(
     "MasterAdiantamento": "N",
     "MasterReembolso": "N",
     "CodigoIntegracao": "AUT",
-    "Status": ""
+    "Status": "",
 }
 ```
 
@@ -116,11 +112,7 @@ errors, df_final = processar_registros_from_files(
 ### Processamento
 
 ```python
-errors, df_final = processar_registros_from_files(
-    paths=["viajantes.xlsx"],
-    login_choice="EMAIL",
-    fluxo="FRONT"
-)
+errors, df_final = processar_registros_from_files(paths=["viajantes.xlsx"], login_choice="EMAIL", fluxo="FRONT")
 ```
 
 ### Transformações Específicas
@@ -197,9 +189,7 @@ Mesmo fluxo: `processar_registros_from_files()`
 ### Saída com Erro
 
 ```python
-errors = {
-    0: "CPF deve ter 11 dígitos"
-}
+errors = {0: "CPF deve ter 11 dígitos"}
 
 # Nota: A linha continua no DataFrame com Nivel corrigido para "GERENCIA"
 # mas o processamento falha para essa linha devido ao CPF inválido
@@ -222,11 +212,7 @@ errors = {
 ### Processamento
 
 ```python
-errors, df_final = processar_registros_from_files(
-    paths=["duplicados.xlsx"],
-    login_choice="CPF",
-    fluxo="SELF"
-)
+errors, df_final = processar_registros_from_files(paths=["duplicados.xlsx"], login_choice="CPF", fluxo="SELF")
 ```
 
 ### Lógica de Desduplicação
@@ -234,7 +220,7 @@ errors, df_final = processar_registros_from_files(
 ```python
 df_final = df_final.drop_duplicates(
     subset=["Login", "NomeCompleto"],  # Critério
-    keep="first"  # Mantém primeira ocorrência
+    keep="first",  # Mantém primeira ocorrência
 )
 ```
 
@@ -332,7 +318,7 @@ Executa todas as 5 validações por linha.
 errors = {
     0: "CPF deve ter 11 dígitos; Email inválido; NomeCompleto vazio; Nivel inválido, ajustado para vazio",
     1: "NomeCompleto vazio",  # Linha 2 (0-indexed = 1)
-    "__geral__": ""  # Se colunas obrigatórias estiverem presentes
+    "__geral__": "",  # Se colunas obrigatórias estiverem presentes
 }
 ```
 
@@ -365,7 +351,7 @@ normalized_map = {
     "CORREIO": "Email",
     "AGENCIA": "NomeEmpresa",
     "CENTRODESPESA": "CodigoCCustoEmpresa",
-    "HIERARQUIA": "Nivel"
+    "HIERARQUIA": "Nivel",
 }
 ```
 
@@ -415,11 +401,7 @@ errors = {
 ### Processamento
 
 ```python
-errors, df_final = processar_registros_from_files(
-    paths=["vendas.xlsx"],
-    login_choice="CPF",
-    fluxo="SELF"
-)
+errors, df_final = processar_registros_from_files(paths=["vendas.xlsx"], login_choice="CPF", fluxo="SELF")
 ```
 
 ### Resultado

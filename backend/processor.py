@@ -1,8 +1,11 @@
 import re
+from typing import Any
+
 import pandas as pd
+
+from .core.logging import get_logger
 from .domain.rules import MODEL_COLS
 from .shared.text_utils import upper_no_accents
-from .core.logging import get_logger
 
 logger = get_logger()
 
@@ -31,6 +34,7 @@ def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFram
     Retorna: (df_inativacao, stats)
     """
     try:
+
         def normalize_str(s):
             return upper_no_accents(str(s)).strip() if pd.notna(s) else ""
 
@@ -44,43 +48,58 @@ def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFram
         # Detectar colunas relevantes
         col_map = {upper_no_accents(str(c)).strip(): c for c in df_base.columns}
         cpf_col = next((v for k, v in col_map.items() if "CPF" in k), None)
-        logger.info("Coluna CPF detectada: {}".format(cpf_col) if cpf_col else "Nenhuma coluna CPF detectada na base; CPF matching desabilitado")
+        logger.info(
+            f"Coluna CPF detectada: {cpf_col}"
+            if cpf_col
+            else "Nenhuma coluna CPF detectada na base; CPF matching desabilitado"
+        )
         nome_col = next((v for k, v in col_map.items() if "NOMECOMPLETO" in k or "NOME COMPLETO" in k), None)
         email_col = next((v for k, v in col_map.items() if "EMAIL" in k), None)
         status_col = next((v for k, v in col_map.items() if "STATUS" in k), None)
 
         df_base["CPFdigits"] = df_base[cpf_col].apply(normalize_cpf) if cpf_col else ""
         df_base["Nome Normalizado"] = df_base[nome_col].apply(normalize_str) if nome_col else ""
-        df_base["Email Normalizado"] = df_base[email_col].astype(str).fillna("").str.strip().str.lower() if email_col else ""
+        df_base["Email Normalizado"] = (
+            df_base[email_col].astype(str).fillna("").str.strip().str.lower() if email_col else ""
+        )
 
         if status_col:
             df_base["Status Normalizado"] = df_base[status_col].apply(normalize_str)
             df_base = df_base[df_base["Status Normalizado"] == "ATIVO"].copy()
 
         df_lista["CPFdigits"] = df_lista["CPF"].apply(normalize_cpf) if "CPF" in df_lista.columns else ""
-        df_lista["Nome Normalizado"] = df_lista["NomeCompleto"].apply(normalize_str) if "NomeCompleto" in df_lista.columns else ""
-        df_lista["Email Normalizado"] = df_lista["Email"].astype(str).fillna("").str.strip().str.lower() if "Email" in df_lista.columns else ""
+        df_lista["Nome Normalizado"] = (
+            df_lista["NomeCompleto"].apply(normalize_str) if "NomeCompleto" in df_lista.columns else ""
+        )
+        df_lista["Email Normalizado"] = (
+            df_lista["Email"].astype(str).fillna("").str.strip().str.lower() if "Email" in df_lista.columns else ""
+        )
 
         lista_cpfs = [cpf for cpf in df_lista["CPFdigits"].unique() if cpf]
         matched_by_cpf = df_base[df_base["CPFdigits"].isin(lista_cpfs)] if cpf_col else pd.DataFrame()
 
         lista_nomes = [nome for nome in df_lista["Nome Normalizado"].unique() if nome]
-        matched_by_nome = df_base[
-            (df_base["Nome Normalizado"].isin(lista_nomes)) &
-            (~df_base.index.isin(matched_by_cpf.index))
-        ] if nome_col else pd.DataFrame()
+        matched_by_nome = (
+            df_base[(df_base["Nome Normalizado"].isin(lista_nomes)) & (~df_base.index.isin(matched_by_cpf.index))]
+            if nome_col
+            else pd.DataFrame()
+        )
 
         lista_emails = [em for em in df_lista["Email Normalizado"].unique() if em]
-        matched_by_email = df_base[
-            (df_base["Email Normalizado"].isin(lista_emails)) &
-            (~df_base.index.isin(matched_by_cpf.index)) &
-            (~df_base.index.isin(matched_by_nome.index))
-        ] if email_col else pd.DataFrame()
+        matched_by_email = (
+            df_base[
+                (df_base["Email Normalizado"].isin(lista_emails))
+                & (~df_base.index.isin(matched_by_cpf.index))
+                & (~df_base.index.isin(matched_by_nome.index))
+            ]
+            if email_col
+            else pd.DataFrame()
+        )
 
-        stats = {
+        stats: dict[str, Any] = {
             "cpf_matches": len(matched_by_cpf),
             "name_matches": len(matched_by_nome),
-            "email_matches": len(matched_by_email)
+            "email_matches": len(matched_by_email),
         }
 
         # adicionar coluna temporária de match_type para auditoria
@@ -142,8 +161,11 @@ def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFram
         out_df["Departamento"] = pick(matched, "Departamento")
         out_df["Nivel"] = pick(matched, "Nivel")
         out_df["NomeEmpresa"] = pick(matched, "Empresa")
-        #busca a empresa, centro de custo e descrição que estiver configurado no usuário.
-        out_df["CodigoCCustoEmpresa"] = pick(matched, "Codigo_Centro_de_Custo" , )
+        # busca a empresa, centro de custo e descrição que estiver configurado no usuário.
+        out_df["CodigoCCustoEmpresa"] = pick(
+            matched,
+            "Codigo_Centro_de_Custo",
+        )
         out_df["DescricaoCCustoEmpresa"] = pick(matched, "Centro_de_Custo")
         out_df["ViajanteMasterNacional"] = pick(matched, "ViajanteMasterNacional")
         out_df["ViajanteMasterInternacional"] = pick(matched, "ViajanteMasterInternacional")
@@ -154,8 +176,14 @@ def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFram
 
         # Valores padrão para campos que serão preenchidos com mapeamento booleano
         bool_defaults = [
-            "Solicitante", "Vip", "ViajanteMasterNacional", "ViajanteMasterInternacional",
-            "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso", "Terceiro",
+            "Solicitante",
+            "Vip",
+            "ViajanteMasterNacional",
+            "ViajanteMasterInternacional",
+            "SolicitanteMaster",
+            "MasterAdiantamento",
+            "MasterReembolso",
+            "Terceiro",
         ]
         for c in ["Endereco", "Cidade", "Estado", "CEP"]:
             out_df[c] = ""
@@ -175,13 +203,28 @@ def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFram
                     return v
             return None
 
-        bool_map = {"S": "S", "SIM": "S", "YES": "S", "Y": "S", "TRUE": "S", "1": "S",
-                    "N": "N", "NAO": "N", "NÃO": "N", "NO": "N", "FALSE": "N", "0": "N"}
+        bool_map = {
+            "S": "S",
+            "SIM": "S",
+            "YES": "S",
+            "Y": "S",
+            "TRUE": "S",
+            "1": "S",
+            "N": "N",
+            "NAO": "N",
+            "NÃO": "N",
+            "NO": "N",
+            "FALSE": "N",
+            "0": "N",
+        }
         for logical_col in bool_defaults:
             real_col = find_real_col(logical_col)
             if real_col and real_col in matched.columns:
-                vals = matched[real_col].fillna("").astype(str).map(
-                    lambda value: bool_map.get(upper_no_accents(value).strip().upper(), "N")
+                vals = (
+                    matched[real_col]
+                    .fillna("")
+                    .astype(str)
+                    .map(lambda value: bool_map.get(upper_no_accents(value).strip().upper(), "N"))
                 )
                 out_df[logical_col] = vals.values
 
@@ -211,32 +254,32 @@ def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFram
         inactive = {}
         try:
             if not matched_by_cpf.empty:
-                inactive['cpf'] = matched_by_cpf.fillna('').to_dict(orient='records')
+                inactive["cpf"] = matched_by_cpf.fillna("").to_dict(orient="records")
             else:
-                inactive['cpf'] = []
+                inactive["cpf"] = []
         except Exception:
-            inactive['cpf'] = []
+            inactive["cpf"] = []
         try:
             if not matched_by_nome.empty:
-                inactive['nome'] = matched_by_nome.fillna('').to_dict(orient='records')
+                inactive["nome"] = matched_by_nome.fillna("").to_dict(orient="records")
             else:
-                inactive['nome'] = []
+                inactive["nome"] = []
         except Exception:
-            inactive['nome'] = []
+            inactive["nome"] = []
         try:
             if not matched_by_email.empty:
-                inactive['email'] = matched_by_email.fillna('').to_dict(orient='records')
+                inactive["email"] = matched_by_email.fillna("").to_dict(orient="records")
             else:
-                inactive['email'] = []
+                inactive["email"] = []
         except Exception:
-            inactive['email'] = []
+            inactive["email"] = []
 
-        stats['inactive_matches'] = inactive
+        stats["inactive_matches"] = inactive
         # total de matches combinados (fonte de verdade para contagem no preview)
         try:
-            stats['total_matches'] = int(matched.shape[0])
+            stats["total_matches"] = int(matched.shape[0])
         except Exception:
-            stats['total_matches'] = sum(len(v) for v in inactive.values() if isinstance(v, list))
+            stats["total_matches"] = sum(len(v) for v in inactive.values() if isinstance(v, list))
 
         logger.info(
             f"Inativação concluída. Linhas encontradas: {out_df.shape[0]} (CPF={stats['cpf_matches']}, Nome={stats['name_matches']}, Email={stats['email_matches']})"
