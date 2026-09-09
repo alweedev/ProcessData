@@ -46,4 +46,6 @@ def test_preview_inativacao_bad_extension(client):
 
 def test_inativacao_executar_gone(client):
     resp = client.post("/api/inativacao/executar", json={"usuarios": []})
-    assert resp.status_code == 404
+    # rota removida: 404 (sem regra) ou 405 (só o catch-all de SPA aceita GET)
+    assert resp.status_code in (404, 405)
+    assert resp.get_json() != {"success": True}

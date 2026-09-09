@@ -32,11 +32,12 @@ def test_no_source_still_imports_backend_utils():
     import pathlib
 
     root = pathlib.Path(__file__).resolve().parents[2] / "backend"
-    offenders = [
-        str(p)
-        for p in root.rglob("*.py")
-        if "from backend.utils" in p.read_text(encoding="utf-8")
-        or "import backend.utils" in p.read_text(encoding="utf-8")
-        or "from .utils import" in p.read_text(encoding="utf-8")
-    ]
+    offenders = []
+    for p in root.rglob("*.py"):
+        if p.parent.name == "tests":
+            continue
+        text = p.read_text(encoding="utf-8")
+        if ("from backend.utils" in text or "import backend.utils" in text
+                or "from .utils import" in text):
+            offenders.append(str(p))
     assert offenders == []
