@@ -1,20 +1,12 @@
 import os
 import re
 import pandas as pd
+from .domain.rules import MODEL_COLS, FICHA_MAP
 from .utils import upper_no_accents, limpar_cpf_raw, format_cpf_for_output
 from .validators import validar_linha, validar_dataframe_for_output
 from .core.logging import get_logger
 
 logger = get_logger()
-
-MODEL_COLS = [
-    "Operacao", "UserId", "Login", "CodigoCCustoCliente", "DescricaoCCustoCliente",
-    "NomeEmpresa", "CodigoCCustoEmpresa", "DescricaoCCustoEmpresa", "EmpresaCCustoParaUsuario",
-    "NroMatricula", "Nome", "SobreNome", "NomeCompleto", "Email", "Telefone", "Cargo", "Departamento", "Nivel",
-    "Endereco", "Cidade", "Estado", "CEP", "Solicitante", "Vip", "ViajanteMasterNacional",
-    "ViajanteMasterInternacional", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso", "Terceiro",    
-    "CodigoIntegracao", "Status"
-]
 
 
 # Helpers de sanitização e extração usados em cadastro/inativação
@@ -70,40 +62,6 @@ def split_name_first_last(fullname: str) -> tuple:
     last_clean = sanitize_output_text(last, 20)
 
     return first_clean, last_clean
-
-
-FICHA_MAP = {
-    "CPF": "CPF",
-    "CPF (SEM PONTOS)": "CPF",
-    "EMPRESA (DO GRUPO)": "NomeEmpresa",
-    "Empresa": "NomeEmpresa",
-    "Centro de custo": "CodigoCCustoEmpresa",
-    "Centro_de_Custo": "CodigoCCustoEmpresa",
-    "CODIGO - CENTRO DE CUSTO": "CodigoCCustoEmpresa",
-    "CÓDIGO - CENTRO DE CUSTO": "CodigoCCustoEmpresa",
-    "DESCRICAO - CENTRO DE CUSTO": "DescricaoCCustoEmpresa",
-    "Descrição Centro de Custo": "DescricaoCCustoEmpresa",
-    "MATRICULA": "NroMatricula",
-    "Matricula": "NroMatricula",
-    "MATRICULA (não obrigatório)": "NroMatricula",
-    "NOME": "Nome",
-    "SOBRENOME (ATE 20 CARACTERES)": "SobreNome",
-    "SOBRENOME (limite 50 caracteres)": "SobreNome",
-    "NOME COMPLETO": "NomeCompleto",
-    "NomeCompleto": "NomeCompleto",
-    "NOME COMPLETO (limite 50 caracteres)": "NomeCompleto",
-    "EMAIL": "Email",
-    "E-MAIL": "Email",
-    "TELEFONE": "Telefone",
-    "CARGO": "Cargo",
-    "DEPARTAMENTO": "Departamento",
-    "NIVEL": "Nivel",
-    "NÍVEL": "Nivel",
-    "NÍVEL (se aplicável)": "Nivel",
-    "SOLICITANTE? (S/N)": "Solicitante",
-    "TERCEIRO? (S/N)": "Terceiro",
-    "Terceiro": "Terceiro",
-}
 
 
 def drop_header_like_rows(df: pd.DataFrame) -> pd.DataFrame:
