@@ -436,12 +436,16 @@ def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFram
         for c in bool_defaults:
             out_df[c] = "N"
 
-        # Preencher flags booleanas a partir das colunas reais na base (detecção robusta)
+        # Preencher flags booleanas a partir das colunas reais na base (detecção robusta).
+        # Igualdade normalizada (sem espaços/_/-): evita que 'Solicitante' case com
+        # uma coluna 'SolicitanteMaster' por conter a substring.
+        def _norm_col(s):
+            return upper_no_accents(str(s)).replace(" ", "").replace("_", "").replace("-", "").strip()
+
         def find_real_col(target_name):
-            # procura por uma coluna cujo nome normalizado contenha target_name (ex: 'SOLICITANTE')
-            t = upper_no_accents(target_name).strip()
+            t = _norm_col(target_name)
             for k, v in col_map.items():
-                if t in k:
+                if _norm_col(k) == t:
                     return v
             return None
 
