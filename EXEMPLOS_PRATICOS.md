@@ -1,5 +1,10 @@
 # 📚 EXEMPLOS PRÁTICOS - Processamento de Planilhas
 
+> **Nota (set/2026):** os exemplos citam `processar_registros_from_files(...)`,
+> que foi substituído por
+> `ProcessingService.process_records_from_files(paths, login_choice, fluxo)`
+> (mesma assinatura e mesmo resultado). Entrada aceita: `.xlsx`, `.xls`, `.xltx`.
+
 ## 1. Caso de Uso: Cadastro SELF (Padrão)
 
 ### Entrada (Excel)

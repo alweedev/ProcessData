@@ -1,16 +1,24 @@
 # 🏗️ ANÁLISE ARQUITETURAL - Processamento de Planilhas
 
-## 1. Estrutura de Módulos
+> **Nota (set/2026):** este documento descreve o pipeline histórico de cadastro
+> (`processor.processar_registros_from_files` + `validators.py`), **removido** na
+> consolidação. O cadastro agora roda por
+> `backend/services/processing_service.py`; `MODEL_COLS`/`FICHA_MAP` vivem em
+> `backend/domain/rules.py`; os utilitários em `backend/shared/*`;
+> `processor.py` mantém só `processar_inativacao_from_paths`. Regras de negócio
+> equivalentes foram preservadas e testadas. Ver `ARQUITETURA_MODERNIZADA.md`.
+> As seções abaixo permanecem como referência do algoritmo de transformação.
+
+## 1. Estrutura de Módulos (atual)
 
 ```
 backend/
-├── processor.py          ← Transformação e normalização
-├── validators.py         ← Validações de negócio
-├── utils.py             ← Utilitários (CPF, texto, formatação)
-└── api/
-    ├── cadastro.py      ← Endpoint /api/process_cadastro
-    ├── inativacao.py    ← Endpoints de inativação
-    └── aprovacao.py     ← Endpoints de aprovação
+├── domain/rules.py       ← MODEL_COLS, FICHA_MAP, REQUIRED_OUTPUT_COLS
+├── services/             ← processing, validation, inactivation, export, audit, report
+├── shared/               ← text_utils, cpf_utils, file_utils, upload_validation
+├── infra/persistence/    ← history_store (auditoria JSONL)
+├── processor.py          ← motor de inativação
+└── api/                  ← cadastro, inativacao, aprovacao, analysis, history, health, frontend
 ```
 
 ---

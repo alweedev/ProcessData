@@ -34,26 +34,34 @@ Nível 2: Aprovador secundário (pode estar ausente)
 
 ### 1.3 Regras de Validação
 
-#### 1. CPF do Aprovador (OBRIGATÓRIO)
+#### 1. CPF do Aprovador (OBRIGATÓRIO) — enforçado
 
 ```
-✓ Deve existir na base de usuários
-✓ Deve ter exatamente 11 dígitos
-✓ Deve estar ativo na base de usuários
+✓ Informado
+✓ 11 dígitos
+✓ Dígito verificador válido (módulo 11)
+✓ Existe na base de usuários
+✓ O usuário está com Status = ATIVO (quando a base tem coluna Status)
 
-✗ Erro: "Informe um CPF para o aprovador."
-✗ Erro: "CPF inválido. Informe 11 dígitos."
-✗ Erro: "CPF não encontrado na base de usuários."
+✗ "Informe um CPF para o aprovador."
+✗ "CPF inválido. Informe 11 dígitos."
+✗ "CPF inválido (dígito verificador)."
+✗ "CPF não encontrado na base de usuários."
+✗ "Aprovador não está ATIVO na base de usuários (Status: '...')."
 ```
 
-#### 2. Base de Usuários (OBRIGATÓRIO)
+> A validação de dígito verificador é aplicada **apenas** no fluxo de aprovação;
+> cadastro e inativação seguem com checagem de comprimento.
+
+#### 2. Base de Usuários (OBRIGATÓRIO) — enforçado
 
 ```
-✓ Arquivo Excel com coluna 'CPF'
-✓ Arquivo Excel com coluna 'NomeCompleto' ou (Nome + SobreNome)
+✓ Coluna 'CPF' (detecção case-insensitive, sem acento/_/-)
+✓ Coluna de nome: 'NomeCompleto' OU 'Nome' (+ opcional 'SobreNome')
 
-✗ Erro: "Base de usuários não contém coluna 'CPF'."
-✗ Erro: "Falha ao ler base de usuários: {erro}"
+✗ "Base de usuários não contém coluna 'CPF'."
+✗ "Base de usuários não contém coluna de nome ('NomeCompleto' ou 'Nome')."
+✗ "Falha ao ler base de usuários: {erro}"
 ```
 
 #### 3. Detecção de Colunas (AUTOMÁTICO)
@@ -132,12 +140,19 @@ Ação: Deve notificar usuário antes de salvar
     - Confirma remoção
 
 [3] Execução:
-    - Remove CPF das estruturas
-    - Compacta dados (remove vazios)
-    - Atualiza contadores
+    - Remove o CPF de LoginAprovador_1..100 e compacta à esquerda (sem vazios no meio)
+    - Se o 1º nível ficou vazio e há LoginAprovador_SEGUNDO_NIVEL preenchido
+      (que não seja o próprio CPF removido): promove o 2º nível para o 1º e
+      esvazia o 2º nível (§2.4 Fase 3)
+    - Se remove_second_level=true e o 2º nível é o CPF removido: apaga o 2º nível
+    - Gate: se alguma estrutura selecionada ficar sem NENHUM aprovador, retorna
+      aviso (HTTP 400 + warning) e só prossegue com ignore_empty_warning=true
 
 [4] Export:
-    - Gera arquivo Excel com estruturas modificadas
+    - Exporta TODAS as linhas das estruturas alvo (a Argo precisa da estrutura
+      completa)
+    - Operacao = "UPDATE" apenas nas linhas efetivamente alteradas;
+      as demais linhas ficam sem carimbo
 ```
 
 ---

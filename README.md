@@ -156,10 +156,23 @@ npx playwright install
 npx playwright test
 ```
 
+## 🔒 Segurança
+
+- **Excel**: células que começam com `= + - @` / TAB / CR são gravadas como
+  texto (anti *formula injection*).
+- **Preview**: valores da planilha são escapados antes de ir para o DOM.
+- **Upload**: além da extensão, o conteúdo `.xlsx/.xltx` é checado (assinatura
+  ZIP + estrutura OOXML).
+- **Estático**: o servidor só entrega arquivos dentro de `frontend/` (bloqueia `../`).
+- **CORS**: mesma origem por padrão; libere origens com `CORS_ORIGINS`.
+- **Histórico**: `DELETE /api/history` só de localhost ou com `X-Admin-Token`.
+- **Auditoria**: `history.log.jsonl` rotaciona ao passar `HISTORY_MAX_BYTES`.
+- **Erros**: respostas 5xx são genéricas; o detalhe fica só no log do servidor.
+- Não versione planilhas reais, `.env`, `.venv`, logs sensíveis ou temporários
+  (`UPLOAD_FOLDER` fica fora do repositório por padrão).
+
 ## 📌 Observações
 
-- A pasta `tmp_uploads/` é utilizada apenas em tempo de execução e não deve conter dados sensíveis.
-- Planilhas reais não devem ser versionadas. Utilize apenas exemplos fictícios em `data/`.
 - O projeto segue em evolução contínua com foco em organização, clareza e boas práticas.
 - Ferramentas de IA foram utilizadas como suporte ao desenvolvimento, principalmente para revisão de código, identificação de melhorias e aceleração do aprendizado, com todas as decisões técnicas sendo analisadas e implementadas conscientemente.
 
