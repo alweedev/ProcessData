@@ -295,13 +295,13 @@ def processar_registros_from_files(paths: list, login_choice: str = "CPF", fluxo
 # ==========================================================
 # NOVA VERSÃO: processar_inativacao_from_paths (compatível)
 # ==========================================================
-def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFrame,
-                                    use_fuzzy: bool = False, fuzzy_cutoff: float = 0.9):
+def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFrame):
     """
     Processa inativação comparando usuários da base com uma lista de desligados.
     Estratégia:
       - Match exato por CPF (prioritário)
       - Match exato por NomeCompleto (fallback)
+      - Match exato por Email (fallback)
     Retorna: (df_inativacao, stats)
     """
     try:

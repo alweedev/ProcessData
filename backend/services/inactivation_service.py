@@ -168,10 +168,5 @@ class InactivationService:
         }
 
     @staticmethod
-    def process_from_dataframes(df_base: pd.DataFrame, df_lista: pd.DataFrame, use_fuzzy: bool, fuzzy_cutoff: float):
-        return processar_inativacao_from_paths(
-            df_base,
-            df_lista,
-            use_fuzzy=use_fuzzy,
-            fuzzy_cutoff=fuzzy_cutoff,
-        )
+    def process_from_dataframes(df_base: pd.DataFrame, df_lista: pd.DataFrame):
+        return processar_inativacao_from_paths(df_base, df_lista)

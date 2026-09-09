@@ -1,8 +1,3 @@
-import re
-
-from backend.shared.cpf_utils import clean_cpf, format_cpf_for_output
-from backend.shared.text_utils import sanitize_output_text, split_name_first_last, upper_no_accents
-
 MODEL_COLS = [
     "Operacao", "UserId", "Login", "CodigoCCustoCliente", "DescricaoCCustoCliente",
     "NomeEmpresa", "CodigoCCustoEmpresa", "DescricaoCCustoEmpresa", "EmpresaCCustoParaUsuario",
@@ -63,11 +58,3 @@ FICHA_MAP = {
     "TERCEIRO? (S/N)": "Terceiro",
     "Terceiro": "Terceiro",
 }
-
-
-def extract_digits_only(value):
-    try:
-        s = str(value)
-    except Exception:
-        return ""
-    return re.sub(r"\D", "", s)

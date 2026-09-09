@@ -3,9 +3,9 @@ import tempfile
 
 import pandas as pd
 
-from backend.domain.rules import MODEL_COLS, split_name_first_last
+from backend.domain.rules import MODEL_COLS
 from backend.shared.cpf_utils import clean_cpf, format_cpf_for_output
-from backend.shared.text_utils import sanitize_output_text, upper_no_accents
+from backend.shared.text_utils import sanitize_output_text, split_name_first_last, upper_no_accents
 from backend.services.validation_service import ValidationService
 from backend.services.processing_service import ProcessingService
 from backend.processor import processar_inativacao_from_paths

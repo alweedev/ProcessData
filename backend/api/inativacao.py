@@ -175,18 +175,7 @@ def api_process_inativacao():
 
         df_base = pd.read_excel(base_path, dtype=str).fillna("")
 
-        use_fuzzy = request.form.get('use_fuzzy', 'false').lower() in ['1', 'true', 'yes']
-        try:
-            fuzzy_cutoff = float(request.form.get('fuzzy_cutoff', 0.90))
-        except Exception:
-            fuzzy_cutoff = 0.90
-
-        out = InactivationService.process_from_dataframes(
-            df_base,
-            df_lista,
-            use_fuzzy=use_fuzzy,
-            fuzzy_cutoff=fuzzy_cutoff,
-        )
+        out = InactivationService.process_from_dataframes(df_base, df_lista)
         if isinstance(out, tuple) and len(out) == 2:
             out_df, stats = out
         else:
@@ -219,8 +208,6 @@ def api_process_inativacao():
             details={
                 "rows": int(out_df.shape[0]),
                 "columns": int(out_df.shape[1]),
-                "use_fuzzy": use_fuzzy,
-                "fuzzy_cutoff": fuzzy_cutoff,
             },
         )
         return send_file(output,
@@ -302,14 +289,7 @@ def api_preview_inativacao():
 
         df_base = pd.read_excel(base_path, dtype=str).fillna("")
 
-        use_fuzzy = request.form.get('use_fuzzy', 'false').lower() in ['1', 'true', 'yes']
-        try:
-            fuzzy_cutoff = float(request.form.get('fuzzy_cutoff', 0.90))
-        except Exception:
-            fuzzy_cutoff = 0.90
-        out = InactivationService.process_from_dataframes(
-            df_base, df_lista, use_fuzzy=use_fuzzy, fuzzy_cutoff=fuzzy_cutoff
-        )
+        out = InactivationService.process_from_dataframes(df_base, df_lista)
         if isinstance(out, tuple) and len(out) == 2:
             out_df, stats = out
         else:
