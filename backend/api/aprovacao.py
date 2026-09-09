@@ -1,7 +1,5 @@
-import io
 import os
 import re
-import uuid
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import pandas as pd
@@ -9,6 +7,7 @@ from flask import Blueprint, jsonify, request, send_file
 
 from backend.core.config import settings
 from backend.core.logging import get_logger
+from backend.services.export_service import ExportService
 from backend.shared.cpf_utils import is_valid_cpf
 from backend.utils import format_cpf_for_output, limpar_cpf_raw, upper_no_accents, validar_extensao_arquivo, gerar_nome_arquivo_temporario
 
@@ -754,39 +753,8 @@ def aprovacao_remover_export():
             cols_list.insert(0, "Operacao")
             df_export = df_export[cols_list]
 
-        output = io.BytesIO()
-        try:
-            import openpyxl  # noqa: F401
-            from openpyxl.styles import Alignment, Font, PatternFill
-            with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                df_export.to_excel(writer, sheet_name="Aprovacao", index=False)
-                ws = writer.sheets["Aprovacao"]
-
-                header_fill = PatternFill(start_color="FFDCE6F1", end_color="FFDCE6F1", fill_type="solid")
-                for cell in list(ws[1]):
-                    cell.font = Font(bold=True)
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                    cell.fill = header_fill
-
-                from openpyxl.utils import get_column_letter
-
-                for idx, col in enumerate(df_export.columns, 1):
-                    series = df_export[col].astype(str).fillna("")
-                    max_len = max(series.map(len).max(), len(str(col))) + 2
-                    max_len = min(max_len, 60)
-                    ws.column_dimensions[get_column_letter(idx)].width = max_len
-
-                ws.freeze_panes = "A2"
-                try:
-                    ws.auto_filter.ref = ws.dimensions
-                except Exception:
-                    pass
-
-            output.seek(0)
-        except Exception:  # pragma: no cover - fallback simples
-            output = io.BytesIO()
-            df_export.to_excel(output, index=False)
-            output.seek(0)
+        # Escrita/estilo/neutralização de fórmula centralizados no ExportService.
+        output = ExportService.to_excel_bytes(df_export, sheet_name="Aprovacao")
 
         filename = f"base_aprovacao_atualizada_{cpf_formatted.replace('-', '')}.xlsx"
         logger.info(

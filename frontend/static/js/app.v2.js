@@ -1449,7 +1449,7 @@ document.addEventListener("DOMContentLoaded", function () {
                       .map(
                         (row) =>
                           `<tr>${shownCols
-                            .map((c) => `<td>${row[c] ?? ""}</td>`)
+                            .map((c) => `<td>${escapeHtml(row[c] ?? "")}</td>`)
                             .join("")}</tr>`
                       )
                       .join("");
