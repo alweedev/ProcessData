@@ -1,257 +1,25 @@
-import os
 import re
 import pandas as pd
-from .domain.rules import MODEL_COLS, FICHA_MAP
-from .utils import upper_no_accents, limpar_cpf_raw, format_cpf_for_output
-from .validators import validar_linha, validar_dataframe_for_output
+from .domain.rules import MODEL_COLS
+from .utils import upper_no_accents
 from .core.logging import get_logger
 
 logger = get_logger()
 
 
-# Helpers de sanitização e extração usados em cadastro/inativação
+# Helper de extração usado por processar_inativacao_from_paths.
+# O pipeline de cadastro foi consolidado em backend.services.processing_service.
 def extract_digits_only(v: str) -> str:
     """Retorna apenas os dígitos da string (ou '' se nenhum dígito)."""
     try:
         s = str(v)
     except Exception:
         return ""
-    digits = re.sub(r"\D", "", s)
-    return digits
-
-
-def sanitize_output_text(v: str, maxlen: int | None = None) -> str:
-    """Normaliza texto para saída:
-
-    - Remove acentos (via upper_no_accents)
-    - Mantém letras, números, espaços, hífens, parênteses e barras
-      (para suportar descrições como "COM AQUISICAO SFB (CO/N/NE)")
-    - Retorna em MAIÚSCULAS
-    - Opcionalmente trunca para maxlen
-    """
-    if v is None:
-        return ""
-    s = str(v)
-    s = upper_no_accents(s)
-    # manter apenas letras, dígitos, espaços, hífen, parênteses e barras
-    s = re.sub(r"[^A-Z0-9 \-/()]", "", s.upper())
-    s = re.sub(r"\s+", " ", s).strip()
-    if maxlen:
-        return s[:maxlen]
-    return s
-
-
-def split_name_first_last(fullname: str) -> tuple:
-    """Separa apenas primeiro e último nome a partir de `NomeCompleto`.
-    Regra simples: primeiro token como Nome e último token como SobreNome.
-    Não tenta detectar partículas (da/de/dos etc.) nem sobrenomes compostos.
-    """
-    if not fullname:
-        return "", ""
-
-    parts = [p for p in str(fullname).strip().split() if p]
-    if not parts:
-        return "", ""
-    if len(parts) == 1:
-        first, last = parts[0], ""
-    else:
-        first, last = parts[0], parts[-1]
-
-    # Sanitizar e aplicar limites de 20 caracteres
-    first_clean = sanitize_output_text(first, 20)
-    last_clean = sanitize_output_text(last, 20)
-
-    return first_clean, last_clean
-
-
-def drop_header_like_rows(df: pd.DataFrame) -> pd.DataFrame:
-    """Remove linhas que parecem ser cabeçalhos repetidos dentro do arquivo Excel."""
-    if df.empty:
-        return df
-    cols = list(df.columns)
-
-    def is_header(row):
-        matches = 0
-        for c in cols:
-            val = str(row.get(c, "")).strip()
-            if val.upper() == str(c).upper():
-                matches += 1
-        return (matches / max(1, len(cols))) > 0.4
-
-    return df[~df.apply(is_header, axis=1)]
-
-
-
-
-def processar_registros_from_files(paths: list, login_choice: str = "CPF", fluxo: str = "SELF"):
-    """Processa arquivos (.xls, .xlsx) e retorna (errors, df_final)."""
-    all_errors = {}
-    all_data = []
-
-    for path in paths:
-        try:
-            if path.lower().endswith(('.xls', '.xlsx')):
-                df = pd.read_excel(path, dtype=str).fillna("")
-                df = drop_header_like_rows(df)
-                normalized_map = {upper_no_accents(k).strip(): v for k, v in FICHA_MAP.items()}
-                for _, row in df.iterrows():
-                    mapped_row = {}
-                    for col in df.columns:
-                        normalized_col = upper_no_accents(str(col)).strip()
-                        if normalized_col in normalized_map:
-                            mapped_row[normalized_map[normalized_col]] = row[col]
-                    if mapped_row:
-                        all_data.append(mapped_row)
-            else:
-                logger.debug(f"Ignorando arquivo não suportado: {path}")
-        except Exception as e:
-            logger.warning(f"Falha ao ler {path}: {e}")
-            all_errors[path] = str(e)
-
-    if not all_data:
-        return all_errors, pd.DataFrame(columns=MODEL_COLS)
-
-    df_final = pd.DataFrame(all_data)
-
-    for col in MODEL_COLS:
-        if col not in df_final.columns:
-            df_final[col] = ""
-
-    df_final["Operacao"] = "INSERT"
-    df_final["EmpresaCCustoParaUsuario"] = "S"
-    df_final["CodigoIntegracao"] = "AUT"
-    df_final["Status"] = ""
-
-    for idx, row in df_final.iterrows():
-        # Sempre recalcular Nome e SobreNome a partir de NomeCompleto,
-        # dando prioridade à lógica do script em relação ao que veio na ficha.
-        first, last = split_name_first_last(row.get("NomeCompleto", ""))
-        if first:
-            df_final.at[idx, "Nome"] = first
-        if last:
-            df_final.at[idx, "SobreNome"] = last
-
-    if login_choice == "CPF":
-        if "CPF" in df_final.columns:
-            df_final["Login"] = df_final["CPF"].apply(
-                lambda x: format_cpf_for_output(limpar_cpf_raw(x)) if x else ""
-            )
-    elif login_choice == "EMAIL":
-        if "Email" in df_final.columns:
-            df_final["Login"] = df_final["Email"]
-
-    try:
-        fluxo_up = (fluxo or "").upper()
-    except Exception:
-        fluxo_up = ""
-    if fluxo_up == "SELF":
-        for col in ["Vip", "ViajanteMasterNacional", "ViajanteMasterInternacional",
-                    "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso"]:
-            df_final[col] = "N"
-    elif fluxo_up == "FRONT":
-        df_final["ViajanteMasterNacional"] = "S"
-        df_final["ViajanteMasterInternacional"] = "S"
-        for col in ["Vip", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso"]:
-            df_final[col] = "N"
-        if "Login" in df_final.columns:
-            def prefix_front(v):
-                if pd.isna(v) or str(v).strip() == "":
-                    return v
-                s = str(v)
-                return "FRONT" + s.replace(" ", "")
-            df_final["Login"] = df_final["Login"].apply(prefix_front)
-
-    text_cols = [
-        "Nome", "SobreNome", "NomeCompleto", "NomeEmpresa",
-        "DescricaoCCustoEmpresa", "DescricaoCCustoCliente", "Cargo",
-        "Departamento", "Cidade", "Estado", "Endereco"
-    ]
-    for c in text_cols:
-        if c in df_final.columns:
-            if c == 'Nome':
-                df_final[c] = df_final[c].apply(lambda v: sanitize_output_text(v, 20))
-            elif c == 'SobreNome':
-                df_final[c] = df_final[c].apply(lambda v: sanitize_output_text(v, 20))
-            elif c == 'NomeCompleto':
-                df_final[c] = df_final[c].apply(lambda v: sanitize_output_text(v, None))
-            elif c == 'DescricaoCCustoEmpresa':
-                # Para DescricaoCCustoEmpresa, manter como na ficha,
-                # apenas removendo acentos (sem remover parênteses, barras, etc.)
-                df_final[c] = df_final[c].apply(lambda v: upper_no_accents(v))
-            else:
-                df_final[c] = df_final[c].apply(lambda v: sanitize_output_text(v, None))
-
-    errors = {}
-    for idx, row in df_final.iterrows():
-        msgs = validar_linha(row)
-        if msgs:
-            errors[idx] = "; ".join(msgs)
-
-    general_msgs = validar_dataframe_for_output(df_final)
-    if general_msgs:
-        errors["__geral__"] = "; ".join(general_msgs)
-
-    if "Login" in df_final.columns and "NomeCompleto" in df_final.columns:
-        df_final = df_final.drop_duplicates(subset=["Login", "NomeCompleto"], keep="first")
-
-    # Normalizar campos booleanos (mapear Sim/Não, Yes/No, True/False para S/N)
-    # Garantir que 'Solicitante' exista e seja preenchido (obrigatório na saída)
-    def map_bool_to_SN(v):
-        try:
-            s = upper_no_accents(str(v)).strip().upper()
-        except Exception:
-            s = str(v).strip().upper()
-        if s in ("S", "SIM", "YES", "Y", "TRUE", "1"):
-            return "S"
-        return "N"
-
-    bool_cols = ["Solicitante", "Terceiro", "Vip", "ViajanteMasterNacional", "ViajanteMasterInternacional",
-                 "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso"]
-    for bc in bool_cols:
-        if bc not in df_final.columns:
-            # 'Solicitante' é obrigatório; outros campos recebem 'N' por padrão
-            df_final[bc] = "N"
-        else:
-            if bc == 'Terceiro':
-                # se houver dígitos, manter apenas os dígitos; caso contrário, mapear Sim/Não para S/N
-                df_final[bc] = df_final[bc].fillna("").apply(lambda v: extract_digits_only(v) if extract_digits_only(v) else map_bool_to_SN(v))
-            else:
-                df_final[bc] = df_final[bc].fillna("").apply(map_bool_to_SN)
-
-    if 'NroMatricula' in df_final.columns:
-        df_final['NroMatricula'] = df_final['NroMatricula'].fillna('').apply(lambda v: extract_digits_only(v))
-
-    for col in df_final.columns:
-        if df_final[col].dtype == object:
-            if col in ("Email", "Telefone"):
-                df_final[col] = df_final[col].fillna('').astype(str).apply(lambda v: v.strip().upper())
-            elif col == "Login" and login_choice == "EMAIL":
-                df_final[col] = df_final[col].fillna('').astype(str).apply(lambda v: v.strip().upper())
-            elif col == 'DescricaoCCustoEmpresa':
-                df_final[col] = df_final[col].fillna('').astype(str).apply(lambda v: upper_no_accents(v))
-            elif col == 'NroMatricula':
-                df_final[col] = df_final[col].fillna('').apply(lambda v: extract_digits_only(v))
-            else:
-                df_final[col] = df_final[col].fillna('').astype(str).apply(lambda v: sanitize_output_text(v, None))
-
-    # Descartar linhas em branco (apenas espaços) sem dados críticos
-    def _drop_blank_rows(df: pd.DataFrame) -> pd.DataFrame:
-        critical = [c for c in ["Login", "NomeCompleto", "CPF", "Email"] if c in df.columns]
-        if not critical:
-            return df
-        trimmed = df[critical].apply(lambda s: s.astype(str).str.strip())
-        mask_blank = trimmed.eq("").all(axis=1)
-        return df.loc[~mask_blank].copy()
-
-    df_final = _drop_blank_rows(df_final)
-
-    df_final = df_final[MODEL_COLS]
-
-    return errors, df_final
+    return re.sub(r"\D", "", s)
 
 
 # ==========================================================
-# NOVA VERSÃO: processar_inativacao_from_paths (compatível)
+# processar_inativacao_from_paths
 # ==========================================================
 def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFrame):
     """
@@ -481,4 +249,3 @@ def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFram
         # garantir que stats sempre tenha total_matches válido mesmo em caso de erro
         error_stats = {"error": str(e), "cpf_matches": 0, "name_matches": 0, "total_matches": 0, "inactive_matches": {}}
         return pd.DataFrame(columns=MODEL_COLS), error_stats
-    # Verificar colunas obrigatórias
