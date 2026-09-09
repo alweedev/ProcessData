@@ -45,14 +45,14 @@ def validar_linha(reg):
     if digits and len(digits) != 11:
         msgs.append("CPF deve ter 11 dígitos")
     elif not digits and "CPF" in reg and reg["CPF"]:  # CPF vazio ou inválido
-        logger.warning("CPF ausente ou inválido para registro: %s", reg.get("NomeCompleto", "desconhecido"))
+        logger.warning("CPF ausente ou inválido em um registro de cadastro")
 
     # Email simples (opcional)
     email = reg.get("Email","").strip()
     if email and ("@" not in email or "." not in email.split("@")[-1]):
         msgs.append("Email inválido")
     elif not email and "Email" in reg:  # Email vazio mas esperado
-        logger.warning("Email ausente para registro: %s", reg.get("NomeCompleto", "desconhecido"))
+        logger.warning("Email ausente em um registro de cadastro")
 
     # Nome completo
     nomec = reg.get("NomeCompleto","").strip()

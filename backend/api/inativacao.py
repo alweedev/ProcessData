@@ -95,7 +95,7 @@ def api_inativacao_buscar():
             status="error",
             details={"message": str(e)},
         )
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for path in [base_path, lista_path]:
             try:
@@ -193,9 +193,9 @@ def api_process_inativacao():
             out_df = out
             stats = {}
 
-        logger.info(f"DataFrame gerado: {out_df.shape} linhas, {out_df.columns.tolist()} colunas")
+        logger.info("DataFrame de inativação gerado: %s linhas x %s colunas", out_df.shape[0], out_df.shape[1])
         if out_df.empty:
-            logger.warning("DataFrame vazio retornado por processar_inativacao_from_paths")
+            logger.warning("Nenhuma linha ativa correspondente para inativação")
             if stats and stats.get('inactive_matches'):
                 AuditService.record(
                     event_type="inativacao_geracao",
@@ -234,7 +234,7 @@ def api_process_inativacao():
             status="error",
             details={"message": str(e)},
         )
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for path in [base_path, lista_path]:
             try:
@@ -372,7 +372,7 @@ def api_preview_inativacao():
         return jsonify({"count": count, "sample": sample, "columns": columns, "records": records, "stats": stats}), 200
     except Exception as e:
         logger.exception("Erro em /api/preview_inativacao")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for path in [base_path, lista_path]:
             try:

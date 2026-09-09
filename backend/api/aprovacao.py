@@ -624,7 +624,7 @@ def aprovacao_remover_preview():
         return jsonify({"error": str(ve)}), 400
     except Exception as exc:  # pragma: no cover - proteção extra
         logger.exception("Erro em /api/aprovacao/remover/preview")
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for path in [users_path, base_path]:
             try:
@@ -788,7 +788,7 @@ def aprovacao_remover_export():
         return jsonify({"error": str(ve)}), 400
     except Exception as exc:  # pragma: no cover - proteção extra
         logger.exception("Erro em /api/aprovacao/remover/export")
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for path in [users_path, base_path]:
             try:

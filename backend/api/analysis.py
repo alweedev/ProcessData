@@ -73,7 +73,7 @@ def analysis_summary():
             status="error",
             details={"message": str(exc)},
         )
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for path in paths:
             try:

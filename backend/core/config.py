@@ -36,6 +36,10 @@ class Settings:
     # Token para DELETE /api/history fora de localhost (env: HISTORY_ADMIN_TOKEN)
     HISTORY_ADMIN_TOKEN: str = os.getenv('HISTORY_ADMIN_TOKEN', '')
 
+    # Rotação da trilha de auditoria (JSONL)
+    HISTORY_MAX_BYTES: int = int(os.getenv('HISTORY_MAX_BYTES', str(5 * 1024 * 1024)))
+    HISTORY_MAX_ROWS: int = int(os.getenv('HISTORY_MAX_ROWS', '5000'))
+
     @property
     def cors_origins_list(self) -> list:
         return [o.strip() for o in self.CORS_ORIGINS.split(',') if o.strip()]

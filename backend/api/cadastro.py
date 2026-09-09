@@ -76,7 +76,7 @@ def api_process_cadastro():
             status="error",
             details={"message": str(e)},
         )
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for p in paths:
             try:
