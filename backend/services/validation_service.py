@@ -1,8 +1,29 @@
+from backend.domain.rules import REQUIRED_OUTPUT_COLS
 from backend.shared.cpf_utils import clean_cpf
 from backend.shared.text_utils import upper_no_accents
 
 
 class ValidationService:
+    # Colunas obrigatórias em que uma coluna inteira vazia indica que a origem
+    # não trouxe o dado (sinal útil para o relatório). CC código/descrição
+    # ficam de fora — podem ser legitimamente vazios em algumas fichas.
+    _NON_EMPTY_REQUIRED = [
+        "Login", "Email", "NomeCompleto", "Nome", "SobreNome", "NomeEmpresa",
+    ]
+
+    @staticmethod
+    def validate_dataframe(df) -> list:
+        """Valida colunas obrigatórias de saída (erro __geral__)."""
+        msgs = []
+        for col in REQUIRED_OUTPUT_COLS:
+            if col not in df.columns:
+                msgs.append(f"Coluna obrigatoria ausente: {col}")
+        if df.shape[0] > 0:
+            for col in ValidationService._NON_EMPTY_REQUIRED:
+                if col in df.columns and df[col].astype(str).str.strip().eq("").all():
+                    msgs.append(f"Coluna obrigatoria vazia: {col}")
+        return msgs
+
     @staticmethod
     def validate_row(row):
         errors = []

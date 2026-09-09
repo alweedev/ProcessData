@@ -24,3 +24,16 @@ def test_build_quality_report_counts_rows_and_errors():
     assert report["valid_rows"] == 2
     assert report["duplicated_rows"] >= 1
     assert "NomeEmpresa" in report["required_blank"]
+    assert report["general_errors"] == "Coluna obrigatória ausente: X"
+
+
+def test_analysis_summary_surfaces_geral_when_required_column_empty(client, tmp_path):
+    import pandas as pd
+
+    from _helpers import xlsx_upload
+
+    df = pd.DataFrame([{"NOME COMPLETO": "Ana Um", "EMAIL": "a@x.com"}])
+    data = {"files[]": xlsx_upload(df, "in.xlsx"), "login_choice": "EMAIL", "fluxo": "SELF"}
+    resp = client.post("/api/analysis/summary", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    assert resp.get_json()["report"]["general_errors"]

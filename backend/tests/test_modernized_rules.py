@@ -39,8 +39,8 @@ def test_validation_rejects_invalid_solicitante_and_missing_name():
 
 def test_processing_service_generates_output_for_self_flow():
     df = pd.DataFrame([
-        {"CPF": "11122233344", "NomeCompleto": "Ana Souza", "Solicitante": "S", "Email": "ana@empresa.com"},
-        {"CPF": "22233344455", "NomeCompleto": "Bruno Lima", "Solicitante": "N", "Email": "bruno@empresa.com"},
+        {"CPF": "11122233344", "NomeCompleto": "Ana Souza", "Solicitante": "S", "Email": "ana@empresa.com", "Empresa": "Empresa A"},
+        {"CPF": "22233344455", "NomeCompleto": "Bruno Lima", "Solicitante": "N", "Email": "bruno@empresa.com", "Empresa": "Empresa A"},
     ])
 
     with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:

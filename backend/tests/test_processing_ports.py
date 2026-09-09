@@ -42,3 +42,31 @@ def test_front_prefix_no_nan_or_bare_prefix(tmp_path):
     logins = out["Login"].tolist()
     assert all("nan" not in str(v).lower() for v in logins)
     assert "FRONT" not in logins  # não vira só o prefixo
+
+
+# ---------------------------------------------------------------- D3
+
+def test_desc_ccusto_keeps_punctuation(tmp_path):
+    rows = [
+        {
+            "CPF": valid_cpf(1), "NOME COMPLETO": "Ana Um", "EMAIL": "a@x.com",
+            "EMPRESA": "E", "SOLICITANTE? (S/N)": "S",
+            "DESCRICAO - CENTRO DE CUSTO": "COM AQUISICAO SFB (CO/N/NE), FASE 2",
+        }
+    ]
+    _err, out = _run(rows, tmp_path)
+    val = out["DescricaoCCustoEmpresa"].tolist()[0]
+    assert "(" in val and ")" in val and "/" in val
+    assert "," in val  # vírgula preservada (sanitize_output_text a removeria)
+
+
+def test_geral_validation_reports_missing_or_empty_required_columns(tmp_path):
+    rows = [{"NOME COMPLETO": "Ana Um", "EMAIL": "a@x.com"}]
+    df = pd.DataFrame(rows)
+    p = tmp_path / "in.xlsx"
+    df.to_excel(p, index=False)
+    errors, _out = ProcessingService.process_records_from_files(
+        [str(p)], login_choice="EMAIL", fluxo="SELF"
+    )
+    assert "__geral__" in errors
+    assert "obrigatoria" in errors["__geral__"].lower()

@@ -94,8 +94,10 @@ class ProcessingService:
             if col in df_final.columns:
                 if col in ["Nome", "SobreNome"]:
                     df_final[col] = df_final[col].apply(lambda v: sanitize_output_text(v, 20))
-                elif col == "NomeCompleto":
-                    df_final[col] = df_final[col].apply(lambda v: sanitize_output_text(v, None))
+                elif col == "DescricaoCCustoEmpresa":
+                    # só remove acentos; preserva vírgulas, parênteses e barras
+                    # (ex.: "COM AQUISICAO SFB (CO/N/NE), FASE 2")
+                    df_final[col] = df_final[col].apply(upper_no_accents)
                 else:
                     df_final[col] = df_final[col].apply(lambda v: sanitize_output_text(v, None))
 
@@ -104,6 +106,10 @@ class ProcessingService:
             msgs = ValidationService.validate_row(row)
             if msgs:
                 errors[idx] = "; ".join(msgs)
+
+        geral = ValidationService.validate_dataframe(df_final)
+        if geral:
+            errors["__geral__"] = "; ".join(geral)
 
         if "Login" in df_final.columns and "NomeCompleto" in df_final.columns:
             df_final = df_final.drop_duplicates(subset=["Login", "NomeCompleto"], keep="first")
@@ -138,6 +144,8 @@ class ProcessingService:
                     df_final[col] = df_final[col].fillna("").astype(str).apply(lambda v: v.strip().upper())
                 elif col == "Login" and login_choice == "EMAIL":
                     df_final[col] = df_final[col].fillna("").astype(str).apply(lambda v: v.strip().upper())
+                elif col == "DescricaoCCustoEmpresa":
+                    df_final[col] = df_final[col].fillna("").astype(str).apply(upper_no_accents)
                 else:
                     df_final[col] = df_final[col].fillna("").astype(str).apply(lambda v: sanitize_output_text(v, None))
 
