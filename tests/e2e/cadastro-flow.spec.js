@@ -1,0 +1,43 @@
+// @ts-check
+import { test, expect } from "@playwright/test";
+import { xlsxFile, validCpf } from "./fixtures.mjs";
+
+const cadastroRows = (n) =>
+  Array.from({ length: n }, (_, i) => ({
+    CPF: validCpf(i + 1),
+    "NOME COMPLETO": `Pessoa ${i + 1}`,
+    EMAIL: `p${i + 1}@x.com`,
+    EMPRESA: "Empresa A",
+    "Centro de custo": "CC1",
+    "SOLICITANTE? (S/N)": "S",
+  }));
+
+test.beforeEach(async ({ page }) => {
+  await page.goto("/");
+  await page.locator("#cadastro-tab").click();
+  await expect(page.locator("#cadastro_files")).toBeVisible();
+});
+
+test("gera saida_cadastro.xlsx e limpa a selecao no sucesso", async ({ page }) => {
+  await page.setInputFiles("#cadastro_files", xlsxFile("cadastro.xlsx", cadastroRows(1)));
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#cadastro_btn").click(),
+  ]);
+  expect(download.suggestedFilename()).toBe("saida_cadastro.xlsx");
+
+  // selecao limpa apos sucesso
+  await expect
+    .poll(async () => page.locator("#cadastro_files").evaluate((el) => el.files.length))
+    .toBe(0);
+});
+
+test("bloqueia mais de 5 arquivos no cliente", async ({ page }) => {
+  const files = cadastroRows(6).map((r, i) => xlsxFile(`c${i}.xlsx`, [r]));
+  await page.setInputFiles("#cadastro_files", files);
+  // guarda do cliente zera a selecao e mostra toast
+  await expect
+    .poll(async () => page.locator("#cadastro_files").evaluate((el) => el.files.length))
+    .toBe(0);
+});

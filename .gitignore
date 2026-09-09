@@ -44,11 +44,14 @@ results/
 *.docx
 
 # =========================
-# Frontend
+# Frontend / Node / Playwright
 # =========================
 node_modules/
 dist/
 build/
+playwright-report/
+test-results/
+/playwright/.cache/
 
 # =========================
 # Sistema operacional
