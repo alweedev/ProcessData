@@ -5,6 +5,7 @@ from backend.core.logging import get_logger
 from backend.services.processing_service import ProcessingService
 from backend.services.export_service import ExportService
 from backend.services.audit_service import AuditService
+from backend.shared.upload_validation import validar_conteudo_xlsx
 from backend.utils import validar_extensao_arquivo, gerar_nome_arquivo_temporario
 
 logger = get_logger()
@@ -30,6 +31,9 @@ def api_process_cadastro():
             p = gerar_nome_arquivo_temporario(f.filename, settings.UPLOAD_FOLDER)
             f.save(p)
             paths.append(p)
+            ok, msg = validar_conteudo_xlsx(p)
+            if not ok:
+                return jsonify({"error": msg}), 400
 
         login_choice = request.form.get('login_choice', 'CPF')
         fluxo = request.form.get('fluxo', 'SELF')

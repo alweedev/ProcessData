@@ -9,6 +9,7 @@ from backend.core.logging import get_logger
 from backend.services.audit_service import AuditService
 from backend.services.inactivation_service import InactivationService
 from backend.services.export_service import ExportService
+from backend.shared.upload_validation import validar_conteudo_xlsx
 from backend.utils import validar_extensao_arquivo, gerar_nome_arquivo_temporario
 
 logger = get_logger()
@@ -32,6 +33,9 @@ def api_inativacao_buscar():
         
         base_path = gerar_nome_arquivo_temporario(base_file.filename, settings.UPLOAD_FOLDER)
         base_file.save(base_path)
+        ok, msg = validar_conteudo_xlsx(base_path)
+        if not ok:
+            return jsonify({"error": msg}), 400
         df_base = pd.read_excel(base_path, dtype=str).fillna("")
 
         # Extrair itens (CPFs ou nomes)
@@ -61,6 +65,9 @@ def api_inativacao_buscar():
                 
                 lista_path = gerar_nome_arquivo_temporario(lista_file.filename, settings.UPLOAD_FOLDER)
                 lista_file.save(lista_path)
+                ok, msg = validar_conteudo_xlsx(lista_path)
+                if not ok:
+                    return jsonify({"error": msg}), 400
                 try:
                     df_lista = pd.read_excel(lista_path, dtype=str).fillna("")
                     df_lista = InactivationService.normalize_lista_columns(df_lista)
@@ -128,6 +135,9 @@ def api_process_inativacao():
 
         base_path = gerar_nome_arquivo_temporario(base_file.filename, settings.UPLOAD_FOLDER)
         base_file.save(base_path)
+        ok, msg = validar_conteudo_xlsx(base_path)
+        if not ok:
+            return jsonify({"error": msg}), 400
         logger.info(f"Arquivo base salvo em: {base_path}")
 
         if lista_file:
@@ -135,9 +145,12 @@ def api_process_inativacao():
             is_valid, error_msg = validar_extensao_arquivo(lista_file.filename)
             if not is_valid:
                 return jsonify({"error": error_msg}), 400
-            
+
             lista_path = gerar_nome_arquivo_temporario(lista_file.filename, settings.UPLOAD_FOLDER)
             lista_file.save(lista_path)
+            ok, msg = validar_conteudo_xlsx(lista_path)
+            if not ok:
+                return jsonify({"error": msg}), 400
             logger.info(f"Arquivo lista salvo em: {lista_path}")
             df_lista = pd.read_excel(lista_path, dtype=str).fillna("")
             df_lista = InactivationService.normalize_lista_columns(df_lista)
@@ -251,15 +264,21 @@ def api_preview_inativacao():
 
         base_path = gerar_nome_arquivo_temporario(base_file.filename, settings.UPLOAD_FOLDER)
         base_file.save(base_path)
+        ok, msg = validar_conteudo_xlsx(base_path)
+        if not ok:
+            return jsonify({"error": msg}), 400
 
         if lista_file:
             # Validar extensão do arquivo lista
             is_valid, error_msg = validar_extensao_arquivo(lista_file.filename)
             if not is_valid:
                 return jsonify({"error": error_msg}), 400
-            
+
             lista_path = gerar_nome_arquivo_temporario(lista_file.filename, settings.UPLOAD_FOLDER)
             lista_file.save(lista_path)
+            ok, msg = validar_conteudo_xlsx(lista_path)
+            if not ok:
+                return jsonify({"error": msg}), 400
             df_lista = pd.read_excel(lista_path, dtype=str).fillna("")
         else:
             if not lista_text:

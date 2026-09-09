@@ -9,6 +9,7 @@ from backend.core.config import settings
 from backend.core.logging import get_logger
 from backend.services.export_service import ExportService
 from backend.shared.cpf_utils import is_valid_cpf
+from backend.shared.upload_validation import validar_conteudo_xlsx
 from backend.utils import format_cpf_for_output, limpar_cpf_raw, upper_no_accents, validar_extensao_arquivo, gerar_nome_arquivo_temporario
 
 
@@ -539,6 +540,10 @@ def aprovacao_remover_preview():
         base_path = gerar_nome_arquivo_temporario(base_file.filename or "base.xlsx", settings.UPLOAD_FOLDER)
         users_file.save(users_path)
         base_file.save(base_path)
+        for _p in (users_path, base_path):
+            _ok, _msg = validar_conteudo_xlsx(_p)
+            if not _ok:
+                return jsonify({"error": _msg}), 400
 
         _, approver_name = _load_users_and_find_approver(users_path, cpf_digits)
 
@@ -684,6 +689,10 @@ def aprovacao_remover_export():
         base_path = gerar_nome_arquivo_temporario(base_file.filename or "base.xlsx", settings.UPLOAD_FOLDER)
         users_file.save(users_path)
         base_file.save(base_path)
+        for _p in (users_path, base_path):
+            _ok, _msg = validar_conteudo_xlsx(_p)
+            if not _ok:
+                return jsonify({"error": _msg}), 400
 
         # Garante que o CPF existe na base de usuários (e obtém nome apenas para validação/coerência)
         _, _ = _load_users_and_find_approver(users_path, cpf_digits)
