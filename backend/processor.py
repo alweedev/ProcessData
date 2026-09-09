@@ -1,7 +1,7 @@
 import re
 import pandas as pd
 from .domain.rules import MODEL_COLS
-from .utils import upper_no_accents
+from .shared.text_utils import upper_no_accents
 from .core.logging import get_logger
 
 logger = get_logger()

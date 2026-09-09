@@ -8,9 +8,10 @@ from flask import Blueprint, jsonify, request, send_file
 from backend.core.config import settings
 from backend.core.logging import get_logger
 from backend.services.export_service import ExportService
-from backend.shared.cpf_utils import is_valid_cpf
+from backend.shared.cpf_utils import format_cpf_for_output, is_valid_cpf, limpar_cpf_raw
+from backend.shared.file_utils import gerar_nome_arquivo_temporario, validar_extensao_arquivo
+from backend.shared.text_utils import upper_no_accents
 from backend.shared.upload_validation import validar_conteudo_xlsx
-from backend.utils import format_cpf_for_output, limpar_cpf_raw, upper_no_accents, validar_extensao_arquivo, gerar_nome_arquivo_temporario
 
 
 logger = get_logger()

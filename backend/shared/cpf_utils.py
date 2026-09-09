@@ -7,6 +7,10 @@ def clean_cpf(value):
     return re.sub(r"\D", "", str(value))
 
 
+# Alias histórico (backend.utils.limpar_cpf_raw)
+limpar_cpf_raw = clean_cpf
+
+
 def format_cpf_for_output(cpf_digits):
     if not cpf_digits:
         return ""

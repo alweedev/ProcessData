@@ -5,8 +5,8 @@ from backend.core.logging import get_logger
 from backend.services.processing_service import ProcessingService
 from backend.services.export_service import ExportService
 from backend.services.audit_service import AuditService
+from backend.shared.file_utils import gerar_nome_arquivo_temporario, validar_extensao_arquivo
 from backend.shared.upload_validation import validar_conteudo_xlsx
-from backend.utils import validar_extensao_arquivo, gerar_nome_arquivo_temporario
 
 logger = get_logger()
 
