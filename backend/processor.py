@@ -1,7 +1,6 @@
 import os
 import re
 import pandas as pd
-from docx import Document
 from .utils import upper_no_accents, limpar_cpf_raw, format_cpf_for_output
 from .validators import validar_linha, validar_dataframe_for_output
 from .core.logging import get_logger
@@ -127,17 +126,13 @@ def drop_header_like_rows(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def processar_registros_from_files(paths: list, login_choice: str = "CPF", fluxo: str = "SELF"):
-    """Processa arquivos (.docx, .xls, .xlsx) e retorna (errors, df_final)."""
+    """Processa arquivos (.xls, .xlsx) e retorna (errors, df_final)."""
     all_errors = {}
     all_data = []
 
     for path in paths:
         try:
-            if path.lower().endswith('.docx'):
-                data = extrair_docx(path)
-                if data:
-                    all_data.append(data)
-            elif path.lower().endswith(('.xls', '.xlsx')):
+            if path.lower().endswith(('.xls', '.xlsx')):
                 df = pd.read_excel(path, dtype=str).fillna("")
                 df = drop_header_like_rows(df)
                 normalized_map = {upper_no_accents(k).strip(): v for k, v in FICHA_MAP.items()}

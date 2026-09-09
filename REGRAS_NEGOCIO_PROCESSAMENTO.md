@@ -13,7 +13,7 @@ O backend processa planilhas através de um pipeline centralizado em **3 módulo
 ## 🔄 FLUXO DE PROCESSAMENTO
 
 ```
-Arquivo (DOCX/XLS/XLSX)
+Arquivo (XLS/XLSX)
     ↓
 [1] LEITURA & MAPEAMENTO DE COLUNAS
     ↓
@@ -36,8 +36,7 @@ Arquivo (DOCX/XLS/XLSX)
 
 ### Formatos Suportados
 - **Excel**: `.xlsx`, `.xls`, `.xltx`
-- **Word**: `.docx` (fichas individuais)
-- ❌ Outros formatos são ignorados
+- ❌ Outros formatos são rejeitados na validação de extensão
 
 ### Mapas de Colunas (FICHA_MAP)
 
@@ -531,17 +530,6 @@ Exemplo:
 | 987.654.321-11 | Maria Santos | maria@email.com | 002 - CC2 | Empresa B | ... |
 ```
 
-### Arquivo Word (.docx) Esperado
-
-```
-CPF: 123.456.789-00
-NOME COMPLETO: João Silva
-EMAIL: joao@email.com
-CENTRO DE CUSTO: 001 - CC1
-EMPRESA (DO GRUPO): Empresa A
-...
-```
-
 ---
 
 ## 🎯 RESUMO ARQUITETURAL
@@ -549,7 +537,7 @@ EMPRESA (DO GRUPO): Empresa A
 | Aspecto | Descrição |
 |---------|-----------|
 | **Pipeline** | Sequencial com validações em camadas |
-| **Entrada** | DOCX, XLSX, XLS |
+| **Entrada** | XLSX, XLS |
 | **Saída** | DataFrame normalizado + erros estruturados |
 | **Validações** | 5 camadas (mapeamento, normalização, linha, geral, desdup) |
 | **Colunas Modelo** | 33 campos padronizados |

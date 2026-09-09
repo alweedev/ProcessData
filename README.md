@@ -37,7 +37,6 @@ O projeto foi criado a partir de uma **necessidade real do dia a dia profissiona
 - Pandas
 - OpenPyXL
 - xlrd
-- python-docx
 
 ### Frontend
 - HTML

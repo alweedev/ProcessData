@@ -20,14 +20,13 @@ backend/
 ### 📄 processor.py
 
 **Responsabilidades**:
-1. Leitura de múltiplos formatos (DOCX, XLSX, XLS)
+1. Leitura de planilhas Excel (XLSX, XLS)
 2. Mapeamento de colunas (normalização case-insensitive e sem acentos)
-3. Extração de dados (extrair_docx, processamento Excel)
+3. Extração e transformação de dados
 4. **Transformação de dados** (prioridade alta)
 5. Desduplicação
 
 **Funções Principais**:
-- `extrair_docx(path)` → Extrai texto de Word
 - `processar_registros_from_files(paths, login_choice, fluxo)` → Pipeline principal
 - `drop_header_like_rows(df)` → Remove cabeçalhos repetidos
 - `split_name_first_last(fullname)` → Divide nome/sobrenome
@@ -79,10 +78,9 @@ backend/
 
 ```
 ┌─────────────────────────────────────┐
-│  Arquivo enviado (DOCX/XLS/XLSX)    │
+│  Arquivo enviado (XLS/XLSX)         │
 └────────────┬────────────────────────┘
              │
-             ├─→ [DOCX] extrair_docx() → texto → regex FICHA_MAP
              └─→ [XLS/XLSX] pd.read_excel() → drop_header_like_rows()
                                                 ↓
                                     [Mapeamento de Colunas]
@@ -401,7 +399,7 @@ taxa_sucesso = (linhas_válidas / total_linhas) × 100%
 |-----------|-----|---------|
 | pandas | Manipulação de dados | ✅ Sim |
 | openpyxl | Leitura de Excel | ✅ Sim |
-| python-docx | Leitura de Word | ✅ Sim |
+| xlrd | Leitura de .xls legado | ✅ Sim |
 | unicodedata | Normalização Unicode | ✅ Sim |
 
 ---
@@ -415,6 +413,6 @@ taxa_sucesso = (linhas_válidas / total_linhas) × 100%
 | Validações por Linha | 5 |
 | Variações de Coluna Mapeadas | 23+ |
 | Fluxos Suportados | 2 (SELF, FRONT) |
-| Formatos de Entrada | 3 (DOCX, XLSX, XLS) |
+| Formatos de Entrada | 2 (XLSX, XLS) |
 | Campos Booleanos | 8 |
 

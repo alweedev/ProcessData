@@ -333,48 +333,7 @@ errors = {
 
 ---
 
-## 7. Caso de Uso: Arquivo Word (DOCX)
-
-### Entrada (Word Document)
-
-```
-CPF: 123.456.789-00
-NOME COMPLETO: João Silva
-EMAIL: joao@empresa.com
-CENTRO DE CUSTO: CC001
-EMPRESA (DO GRUPO): Empresa A
-NIVEL: Operacional
-SOLICITANTE? (S/N): S
-```
-
-### Processamento
-
-```python
-errors, df_final = processar_registros_from_files(
-    paths=["ficha.docx"],
-    login_choice="CPF",
-    fluxo="SELF"
-)
-```
-
-### Extração (DOCX)
-
-```python
-doc = Document("ficha.docx")
-text = "\n".join(p.text for p in doc.paragraphs)
-
-# Regex para cada label em FICHA_MAP:
-# "CPF: 123.456.789-00" → match "123.456.789-00"
-# "NOME COMPLETO: João Silva" → match "João Silva"
-```
-
-### Saída
-
-Mesmo resultado do Excel, com um registro por ficha.
-
----
-
-## 8. Caso de Uso: Mapeamento de Colunas Variadas
+## 7. Caso de Uso: Mapeamento de Colunas Variadas
 
 ### Entrada (Excel com Nomes Diferentes)
 
@@ -411,7 +370,7 @@ Mesma estrutura padrão, colunas mapeadas corretamente.
 
 ---
 
-## 9. Caso de Uso: Campos Opcionais vs Obrigatórios
+## 8. Caso de Uso: Campos Opcionais vs Obrigatórios
 
 ### Cenário: Dados Mínimos
 
@@ -436,7 +395,7 @@ errors = {
 
 ---
 
-## 10. Caso de Uso: Importação Bem-Sucedida
+## 9. Caso de Uso: Importação Bem-Sucedida
 
 ### Entrada Completa e Válida
 
@@ -486,7 +445,7 @@ Status: PRONTO PARA CARGA
 
 ---
 
-## 11. Mapeamento de Booleanos
+## 10. Mapeamento de Booleanos
 
 ### Entrada (Variações)
 
@@ -524,7 +483,7 @@ def map_bool_to_SN(v):
 
 ---
 
-## 12. Estatísticas de Processamento
+## 11. Estatísticas de Processamento
 
 ### Exemplo Real
 
