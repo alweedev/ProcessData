@@ -26,7 +26,8 @@ logger = get_logger()
 def create_app() -> Flask:
     """Factory para criar a aplicação Flask configurada."""
     app = Flask(__name__, static_folder=settings.FRONTEND_STATIC_DIR, static_url_path='/static')
-    CORS(app)
+    # CORS restrito: vazio => somente mesma origem (sem wildcard).
+    CORS(app, resources={r"/api/*": {"origins": settings.cors_origins_list}})
     app.config['MAX_CONTENT_LENGTH'] = settings.MAX_CONTENT_LENGTH
     app.config['UPLOAD_FOLDER'] = settings.UPLOAD_FOLDER
 

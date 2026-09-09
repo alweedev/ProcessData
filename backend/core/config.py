@@ -31,6 +31,15 @@ class Settings:
     HOST: str = os.getenv('HOST', '0.0.0.0')
     PORT: int = int(os.getenv('PORT', '5000'))
 
+    # Acesso (env: CORS_ORIGINS lista separada por virgula; vazio = mesma origem)
+    CORS_ORIGINS: str = os.getenv('CORS_ORIGINS', '')
+    # Token para DELETE /api/history fora de localhost (env: HISTORY_ADMIN_TOKEN)
+    HISTORY_ADMIN_TOKEN: str = os.getenv('HISTORY_ADMIN_TOKEN', '')
+
+    @property
+    def cors_origins_list(self) -> list:
+        return [o.strip() for o in self.CORS_ORIGINS.split(',') if o.strip()]
+
     def ensure_dirs(self):
         os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)
         history_dir = os.path.dirname(self.HISTORY_LOG_FILE)
