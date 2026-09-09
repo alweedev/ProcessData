@@ -371,7 +371,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const base = window.API_BASE ? window.API_BASE.replace(/\/$/, "") : "";
 
     const candidates = [
-      `${base}/health`,
       `${base}/api/health`,
       base ? `${base}/` : "/",
     ];

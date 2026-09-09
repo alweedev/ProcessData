@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, send_from_directory, abort, jsonify, request
+from flask import Blueprint, send_from_directory, abort
 from backend.core.config import settings
 from backend.core.logging import get_logger
 
@@ -22,8 +22,3 @@ def serve_frontend(path):
     if os.path.isfile(index_path):
         return send_from_directory(root, 'index.html')
     abort(404)
-
-
-@frontend_bp.route('/health', methods=['GET', 'HEAD'])
-def health_check():
-    return ('', 204) if request.method == 'HEAD' else jsonify({'status': 'OK', 'message': 'Servidor rodando'}), 200
