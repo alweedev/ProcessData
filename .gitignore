@@ -28,6 +28,7 @@ htmlcov/
 # Uploads e arquivos gerados
 # =========================
 tmp_uploads/
+backend/tmp_uploads/
 uploads/
 output/
 exports/

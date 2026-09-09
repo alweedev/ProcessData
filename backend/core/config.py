@@ -1,5 +1,16 @@
 import os
+import tempfile
 from dataclasses import dataclass
+
+# Diretorio de trabalho para uploads temporarios e trilha de auditoria.
+# Fora do repositorio por padrao (evita vazar planilhas / history.jsonl para o
+# git); sobrescrevivel por variavel de ambiente em producao.
+_DEFAULT_UPLOAD_FOLDER = os.getenv(
+    "UPLOAD_FOLDER", os.path.join(tempfile.gettempdir(), "processdata_uploads")
+)
+_DEFAULT_HISTORY_LOG_FILE = os.getenv(
+    "HISTORY_LOG_FILE", os.path.join(_DEFAULT_UPLOAD_FOLDER, "history.log.jsonl")
+)
 
 
 @dataclass
@@ -10,9 +21,9 @@ class Settings:
     FRONTEND_DIR: str = os.path.abspath(os.path.join(BACKEND_DIR, '..', 'frontend'))
     FRONTEND_STATIC_DIR: str = os.path.abspath(os.path.join(FRONTEND_DIR, 'static'))
 
-    # Uploads
-    UPLOAD_FOLDER: str = os.path.join(BACKEND_DIR, 'tmp_uploads')
-    HISTORY_LOG_FILE: str = os.path.join(BACKEND_DIR, 'tmp_uploads', 'history.log.jsonl')
+    # Uploads / persistência (env: UPLOAD_FOLDER, HISTORY_LOG_FILE)
+    UPLOAD_FOLDER: str = _DEFAULT_UPLOAD_FOLDER
+    HISTORY_LOG_FILE: str = _DEFAULT_HISTORY_LOG_FILE
     MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024
 
     # Server (can be overridden by environment variables)
@@ -22,7 +33,9 @@ class Settings:
 
     def ensure_dirs(self):
         os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)
-        # static dir is managed by frontend assets; no creation here.
+        history_dir = os.path.dirname(self.HISTORY_LOG_FILE)
+        if history_dir:
+            os.makedirs(history_dir, exist_ok=True)
         return self
 
 
