@@ -6,9 +6,7 @@ import uuid
 _DEFAULT_ALLOWED = {".xlsx", ".xls", ".xltx"}
 
 
-def validar_extensao_arquivo(
-    filename: str, allowed_extensions: set[str] | None = None
-) -> tuple[bool, str]:
+def validar_extensao_arquivo(filename: str, allowed_extensions: set[str] | None = None) -> tuple[bool, str]:
     """Valida se a extensão do arquivo é permitida.
 
     Returns:
