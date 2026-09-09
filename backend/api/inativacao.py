@@ -1,17 +1,15 @@
 import os
 import re
-import io
 import pandas as pd
 from flask import Blueprint, request, jsonify, send_file
 
 # Use absolute imports to be robust to direct script execution
 from backend.core.config import settings
 from backend.core.logging import get_logger
-from backend.processor import MODEL_COLS
 from backend.services.audit_service import AuditService
 from backend.services.inactivation_service import InactivationService
 from backend.services.export_service import ExportService
-from backend.utils import upper_no_accents, validar_extensao_arquivo, gerar_nome_arquivo_temporario
+from backend.utils import validar_extensao_arquivo, gerar_nome_arquivo_temporario
 
 logger = get_logger()
 
@@ -100,34 +98,10 @@ def api_inativacao_buscar():
                 pass
 
 
-@inativacao_bp.route("/inativacao/executar", methods=["POST"])
-def api_inativacao_executar():
-    try:
-        if not request.is_json:
-            return jsonify({"error": "Conteúdo inválido. Envie JSON."}), 400
-        data = request.get_json(silent=True) or {}
-        usuarios = data.get("usuarios", [])
-        if not usuarios:
-            return jsonify({"error": "Nenhum usuário selecionado"}), 400
-        processed = []
-        seen = set()
-        for u in usuarios:
-            cpf = re.sub(r"\D", "", str(u.get('cpf', '')))
-            if len(cpf) != 11:
-                continue
-            if cpf in seen:
-                continue
-            seen.add(cpf)
-            processed.append({"id": u.get('id'), "cpf": cpf})
-        return jsonify({
-            "success": True,
-            "processed": len(processed),
-            "usuarios": processed,
-            "message": f"{len(processed)} usuário(s) inativados."
-        }), 200
-    except Exception as e:
-        logger.exception("Erro em /api/inativacao/executar")
-        return jsonify({"error": str(e)}), 500
+# NOTE: a rota POST /api/inativacao/executar foi removida (2026-09).
+# Ela retornava {"success": true, "message": "N usuário(s) inativados."} sem
+# ler a base, gerar arquivo ou registrar auditoria — sucesso falso, sem
+# consumidor no frontend. A inativação real é feita por /api/process_inativacao.
 
 
 @inativacao_bp.route("/process_inativacao", methods=["POST"])
@@ -314,7 +288,9 @@ def api_preview_inativacao():
             fuzzy_cutoff = float(request.form.get('fuzzy_cutoff', 0.90))
         except Exception:
             fuzzy_cutoff = 0.90
-        out = processar_inativacao_from_paths(df_base, df_lista, use_fuzzy=use_fuzzy, fuzzy_cutoff=fuzzy_cutoff)
+        out = InactivationService.process_from_dataframes(
+            df_base, df_lista, use_fuzzy=use_fuzzy, fuzzy_cutoff=fuzzy_cutoff
+        )
         if isinstance(out, tuple) and len(out) == 2:
             out_df, stats = out
         else:
