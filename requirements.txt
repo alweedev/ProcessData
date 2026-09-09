@@ -4,3 +4,8 @@ pandas
 openpyxl
 python-docx
 xlrd>=2.0.1
+
+# Testes
+pytest>=8.0
+pytest-cov
+# Testes end-to-end (Playwright) usam Node/npm, não pip: ver tests/e2e/README.md
