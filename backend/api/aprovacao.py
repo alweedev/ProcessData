@@ -9,6 +9,7 @@ from flask import Blueprint, jsonify, request, send_file
 
 from backend.core.config import settings
 from backend.core.logging import get_logger
+from backend.shared.cpf_utils import is_valid_cpf
 from backend.utils import format_cpf_for_output, limpar_cpf_raw, upper_no_accents, validar_extensao_arquivo, gerar_nome_arquivo_temporario
 
 
@@ -30,6 +31,8 @@ def _normalize_cpf_input(raw_cpf: Optional[str]) -> Tuple[str, str]:
     digits = limpar_cpf_raw(raw_cpf)
     if len(digits) != 11:
         raise ValueError("CPF inválido. Informe 11 dígitos.")
+    if not is_valid_cpf(digits):
+        raise ValueError("CPF inválido (dígito verificador).")
 
     formatted = format_cpf_for_output(digits)
     return digits, formatted
@@ -46,20 +49,47 @@ def _load_users_and_find_approver(users_path: str, cpf_digits: str) -> Tuple[pd.
     except Exception as exc:  # pragma: no cover - erro de IO
         raise ValueError(f"Falha ao ler base de usuários: {exc}") from exc
 
-    if "CPF" not in df_users.columns:
+    # Mapa de colunas normalizadas (case-insensitive, sem acentos/separadores)
+    norm_cols: Dict[str, str] = {}
+    for col in df_users.columns:
+        key = upper_no_accents(str(col)).replace(" ", "").replace("-", "").replace("_", "")
+        norm_cols.setdefault(key, col)
+
+    cpf_col = norm_cols.get("CPF")
+    if not cpf_col:
         raise ValueError("Base de usuários não contém coluna 'CPF'.")
 
+    nome_completo_col = norm_cols.get("NOMECOMPLETO")
+    nome_col = norm_cols.get("NOME")
+    sobrenome_col = norm_cols.get("SOBRENOME")
+    if not nome_completo_col and not nome_col:
+        raise ValueError(
+            "Base de usuários não contém coluna de nome ('NomeCompleto' ou 'Nome')."
+        )
+
+    status_col = next((v for k, v in norm_cols.items() if "STATUS" in k), None)
+
     df_users = df_users.copy()
-    df_users["CPFdigits"] = df_users["CPF"].apply(limpar_cpf_raw)
+    df_users["CPFdigits"] = df_users[cpf_col].apply(limpar_cpf_raw)
     matches = df_users[df_users["CPFdigits"] == cpf_digits]
     if matches.empty:
         raise ValueError("CPF não encontrado na base de usuários.")
 
     row = matches.iloc[0]
-    nome_completo = str(row.get("NomeCompleto", "")).strip()
+
+    if status_col:
+        status_val = upper_no_accents(str(row.get(status_col, ""))).strip()
+        if status_val != "ATIVO":
+            raise ValueError(
+                f"Aprovador não está ATIVO na base de usuários (Status: '{status_val or 'vazio'}')."
+            )
+
+    nome_completo = ""
+    if nome_completo_col:
+        nome_completo = str(row.get(nome_completo_col, "")).strip()
     if not nome_completo:
-        primeiro = str(row.get("Nome", "")).strip()
-        sobrenome = str(row.get("SobreNome", "")).strip()
+        primeiro = str(row.get(nome_col, "")).strip() if nome_col else ""
+        sobrenome = str(row.get(sobrenome_col, "")).strip() if sobrenome_col else ""
         nome_completo = f"{primeiro} {sobrenome}".strip()
 
     return df_users, nome_completo
@@ -382,14 +412,17 @@ def _remove_cpf_and_compact(
     approver_cols: List[str] = cols.get("approver_cols") or []
     aprov_id_col = cols.get("aprovacao_id")
     if not aprov_id_col or not approver_cols:
-        return df_base, {"structures_updated": 0, "occurrences_removed": 0}
+        return df_base, {"structures_updated": 0, "occurrences_removed": 0, "changed_indices": set(), "promotions": 0}
 
     df_out = df_base.copy()
     login_segundo_col = cols.get("login_segundo")
+    has_segundo = bool(login_segundo_col and login_segundo_col in df_out.columns)
     segundo_master_col = cols.get("segundo_master")
 
     structures_updated: Set[str] = set()
+    changed_indices: Set[Any] = set()
     occurrences_removed = 0
+    promotions = 0
 
     for idx, row in df_out.iterrows():
         aprov_id = str(row.get(aprov_id_col, "")).strip()
@@ -404,7 +437,7 @@ def _remove_cpf_and_compact(
                 has_cpf_main = True
                 break
 
-        raw_second = str(row.get(login_segundo_col, "")).strip() if login_segundo_col and login_segundo_col in df_out.columns else ""
+        raw_second = str(row.get(login_segundo_col, "")).strip() if has_segundo else ""
         has_cpf_second = bool(raw_second and limpar_cpf_raw(raw_second) == cpf_digits)
 
         if not has_cpf_main and not has_cpf_second:
@@ -430,13 +463,30 @@ def _remove_cpf_and_compact(
                 df_out.at[idx, col] = new_val
 
         # Opcionalmente remover do SEGUNDO_NIVEL
-        if remove_second_level and has_cpf_second and login_segundo_col and login_segundo_col in df_out.columns:
+        if remove_second_level and has_cpf_second and has_segundo:
             df_out.at[idx, login_segundo_col] = ""
             occurrences_removed += 1
             changed = True
 
+        # Promoção de nível: se o 1º nível ficou vazio e ainda há um aprovador
+        # de segundo nível (que não seja o CPF removido), ele sobe para o 1º nível.
+        # REGRAS_APROVACAO_INATIVACAO.md §2.4 Fase 3.
+        if has_segundo:
+            remaining_main = [
+                str(df_out.at[idx, col]).strip()
+                for col in approver_cols
+                if str(df_out.at[idx, col]).strip()
+            ]
+            current_second = str(df_out.at[idx, login_segundo_col]).strip()
+            if not remaining_main and current_second:
+                df_out.at[idx, approver_cols[0]] = current_second
+                df_out.at[idx, login_segundo_col] = ""
+                promotions += 1
+                changed = True
+
         if changed:
             structures_updated.add(aprov_id)
+            changed_indices.add(idx)
 
     # Garantir que SegundoNivelMaster permaneça vazio
     if segundo_master_col and segundo_master_col in df_out.columns:
@@ -445,6 +495,8 @@ def _remove_cpf_and_compact(
     stats = {
         "structures_updated": len(structures_updated),
         "occurrences_removed": int(occurrences_removed),
+        "promotions": int(promotions),
+        "changed_indices": changed_indices,
     }
     return df_out, stats
 
@@ -680,24 +732,27 @@ def aprovacao_remover_export():
             remove_second_level=remove_second_level,
         )
 
-        # Filtrar apenas as estruturas que foram alteradas para reduzir tamanho e tempo
+        # Exporta todas as linhas das estruturas alvo (a Argo precisa da estrutura
+        # completa), mas só carimba Operacao=UPDATE nas linhas efetivamente
+        # alteradas pela remoção/compactação/promoção.
         aprovacao_id_col = cols.get("aprovacao_id")
         if aprovacao_id_col and aprovacao_id_col in df_updated.columns:
             df_export = df_updated[df_updated[aprovacao_id_col].astype(str).isin(target_ids)].copy()
         else:
             df_export = df_updated.copy()
 
-        # Adicionar/atualizar coluna Operacao com valor UPDATE em todas as linhas (como primeira coluna)
-        if "Operacao" in df_export.columns:
-            df_export["Operacao"] = "UPDATE"
-            # Mover para primeira posição se não estiver
-            cols_list = df_export.columns.tolist()
-            if cols_list[0] != "Operacao":
-                cols_list.remove("Operacao")
-                cols_list.insert(0, "Operacao")
-                df_export = df_export[cols_list]
-        else:
-            df_export.insert(0, "Operacao", "UPDATE")
+        changed_indices = stats.get("changed_indices") or set()
+        if "Operacao" not in df_export.columns:
+            df_export.insert(0, "Operacao", "")
+        changed_mask = df_export.index.isin(changed_indices)
+        df_export.loc[changed_mask, "Operacao"] = "UPDATE"
+
+        # Mover Operacao para a primeira posição
+        cols_list = df_export.columns.tolist()
+        if cols_list and cols_list[0] != "Operacao":
+            cols_list.remove("Operacao")
+            cols_list.insert(0, "Operacao")
+            df_export = df_export[cols_list]
 
         output = io.BytesIO()
         try:

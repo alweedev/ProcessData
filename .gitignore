@@ -67,3 +67,6 @@ Thumbs.db
 # =========================
 .env
 .env.*
+
+# Claude Code (local, nao versionar)
+.claude/

@@ -30,10 +30,15 @@ def _cpf_check_digits(base9: str) -> str:
 
 
 def valid_cpf(seed: int = 0) -> str:
-    """CPF de 11 dígitos com dígito verificador válido (determinístico por seed)."""
-    base = f"{(seed * 7 + 1) % 1_000_000_000:09d}"
+    """CPF de 11 dígitos com dígito verificador válido (determinístico por seed).
+
+    A base de 9 dígitos fica entre 100000000 e 899999999 para evitar zeros à
+    esquerda (que planilhas costumam coagir para número).
+    """
+    n = 100_000_000 + (seed * 7_654_321) % 800_000_000
+    base = f"{n:09d}"
     if len(set(base)) == 1:  # evita CPFs de dígitos repetidos (inválidos por regra)
-        base = f"{(seed * 7 + 123456789) % 1_000_000_000:09d}"
+        base = "123456789"
     return base + _cpf_check_digits(base)
 
 
