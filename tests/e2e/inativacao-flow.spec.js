@@ -10,7 +10,8 @@ const base = () => [
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.locator("#inativacao-tab").click();
-  await expect(page.locator("#inativacao_base")).toBeVisible();
+  await expect(page.locator("#inativacao")).toBeVisible(); // painel da aba
+  await expect(page.locator("#inativacao_btn")).toBeVisible();
 });
 
 test("buscar e gerar saida_inativacao.xlsx; limpa a base no sucesso", async ({ page }) => {

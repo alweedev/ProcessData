@@ -17,7 +17,8 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "python -m backend.app",
+    // defina PYTHON para o interpretador do venv se "python" não estiver no PATH
+    command: `${process.env.PYTHON || "python"} -m backend.app`,
     url: `${BASE_URL}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

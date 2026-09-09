@@ -15,7 +15,8 @@ const cadastroRows = (n) =>
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.locator("#cadastro-tab").click();
-  await expect(page.locator("#cadastro_files")).toBeVisible();
+  await expect(page.locator("#cadastro")).toBeVisible(); // painel da aba
+  await expect(page.locator("#cadastro_btn")).toBeVisible();
 });
 
 test("gera saida_cadastro.xlsx e limpa a selecao no sucesso", async ({ page }) => {
