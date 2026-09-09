@@ -1,34 +1,36 @@
 import os
 import sys
+
 from flask import Flask
 from flask_cors import CORS
 
 # Garantir que o diretório pai esteja no sys.path para execução direta (python backend/app.py ou python app.py)
-PARENT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+PARENT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PARENT not in sys.path:
     sys.path.insert(0, PARENT)
 
-from backend.core.config import settings
-from backend.core.logging import get_logger
 from backend.api import (
+    analysis_bp,
+    aprovacao_bp,
     cadastro_bp,
     frontend_bp,
     health_bp,
-    inativacao_bp,
-    aprovacao_bp,
-    analysis_bp,
     history_bp,
+    inativacao_bp,
 )
+from backend.core.config import settings
+from backend.core.logging import get_logger
 
 logger = get_logger()
 
 
 def create_app() -> Flask:
     """Factory para criar a aplicação Flask configurada."""
-    app = Flask(__name__, static_folder=settings.FRONTEND_STATIC_DIR, static_url_path='/static')
-    CORS(app)
-    app.config['MAX_CONTENT_LENGTH'] = settings.MAX_CONTENT_LENGTH
-    app.config['UPLOAD_FOLDER'] = settings.UPLOAD_FOLDER
+    app = Flask(__name__, static_folder=settings.FRONTEND_STATIC_DIR, static_url_path="/static")
+    # CORS restrito: vazio => somente mesma origem (sem wildcard).
+    CORS(app, resources={r"/api/*": {"origins": settings.cors_origins_list}})
+    app.config["MAX_CONTENT_LENGTH"] = settings.MAX_CONTENT_LENGTH
+    app.config["UPLOAD_FOLDER"] = settings.UPLOAD_FOLDER
 
     # Registrar blueprints
     app.register_blueprint(inativacao_bp)
@@ -39,13 +41,13 @@ def create_app() -> Flask:
     app.register_blueprint(analysis_bp)
     app.register_blueprint(history_bp)
 
-    logger.info('Aplicação Flask criada e blueprints registrados.')
+    logger.info("Aplicação Flask criada e blueprints registrados.")
     return app
 
 
 app = create_app()
 
 
-if __name__ == '__main__':
-    logger.info('Iniciando servidor de desenvolvimento Flask...')
+if __name__ == "__main__":
+    logger.info("Iniciando servidor de desenvolvimento Flask...")
     app.run(debug=settings.DEBUG, host=settings.HOST, port=settings.PORT)

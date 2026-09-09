@@ -148,6 +148,24 @@
       }
     });
 
+    // Drag-and-drop + ativação por teclado na área de upload da base.
+    const baseUploadArea = $('inativacao_base_uploadArea');
+    if (baseUploadArea && baseInput) {
+      baseUploadArea.addEventListener('keydown', (e)=>{
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); baseInput.click(); }
+      });
+      baseUploadArea.addEventListener('dragover', (e)=>{ e.preventDefault(); baseUploadArea.classList.add('dragover'); });
+      baseUploadArea.addEventListener('dragleave', ()=> baseUploadArea.classList.remove('dragover'));
+      baseUploadArea.addEventListener('drop', (e)=>{
+        e.preventDefault();
+        baseUploadArea.classList.remove('dragover');
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+          baseInput.files = e.dataTransfer.files;
+          baseInput.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+
     // Clear buttons for attachments
     clearBaseBtn && clearBaseBtn.addEventListener('click', (e)=>{
       e.stopPropagation();

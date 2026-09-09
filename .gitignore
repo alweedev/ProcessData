@@ -28,6 +28,7 @@ htmlcov/
 # Uploads e arquivos gerados
 # =========================
 tmp_uploads/
+backend/tmp_uploads/
 uploads/
 output/
 exports/
@@ -43,11 +44,14 @@ results/
 *.docx
 
 # =========================
-# Frontend
+# Frontend / Node / Playwright
 # =========================
 node_modules/
 dist/
 build/
+playwright-report/
+test-results/
+/playwright/.cache/
 
 # =========================
 # Sistema operacional
@@ -67,3 +71,6 @@ Thumbs.db
 # =========================
 .env
 .env.*
+
+# Claude Code (local, nao versionar)
+.claude/

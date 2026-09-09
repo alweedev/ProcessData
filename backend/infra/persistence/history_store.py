@@ -1,5 +1,6 @@
 import json
 import os
+from collections import deque
 from datetime import datetime, timezone
 
 from backend.core.config import settings
@@ -11,9 +12,24 @@ class HistoryStore:
         return settings.HISTORY_LOG_FILE
 
     @staticmethod
+    def _rotate_if_needed(path: str) -> None:
+        """Rotação simples de 1 geração quando o arquivo passa de HISTORY_MAX_BYTES."""
+        max_bytes = getattr(settings, "HISTORY_MAX_BYTES", 5 * 1024 * 1024)
+        try:
+            if max_bytes and os.path.getsize(path) >= max_bytes:
+                backup = path + ".1"
+                if os.path.exists(backup):
+                    os.remove(backup)
+                os.replace(path, backup)
+        except OSError:
+            pass
+
+    @staticmethod
     def append(event: dict):
         path = HistoryStore._file_path()
         os.makedirs(os.path.dirname(path), exist_ok=True)
+        if os.path.exists(path):
+            HistoryStore._rotate_if_needed(path)
         payload = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             **(event or {}),
@@ -26,16 +42,18 @@ class HistoryStore:
         path = HistoryStore._file_path()
         if not os.path.exists(path):
             return []
+        max_rows = getattr(settings, "HISTORY_MAX_ROWS", 5000) or 5000
+        with open(path, encoding="utf-8") as fp:
+            tail = deque(fp, maxlen=max_rows)
         rows = []
-        with open(path, "r", encoding="utf-8") as fp:
-            for line in fp:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rows.append(json.loads(line))
-                except Exception:
-                    continue
+        for line in tail:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except Exception:
+                continue
         if limit and limit > 0:
             rows = rows[-limit:]
         return list(reversed(rows))
@@ -43,5 +61,6 @@ class HistoryStore:
     @staticmethod
     def clear():
         path = HistoryStore._file_path()
-        if os.path.exists(path):
-            os.remove(path)
+        for p in (path, path + ".1"):
+            if os.path.exists(p):
+                os.remove(p)

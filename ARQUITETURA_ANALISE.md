@@ -1,16 +1,24 @@
 # 🏗️ ANÁLISE ARQUITETURAL - Processamento de Planilhas
 
-## 1. Estrutura de Módulos
+> **Nota (set/2026):** este documento descreve o pipeline histórico de cadastro
+> (`processor.processar_registros_from_files` + `validators.py`), **removido** na
+> consolidação. O cadastro agora roda por
+> `backend/services/processing_service.py`; `MODEL_COLS`/`FICHA_MAP` vivem em
+> `backend/domain/rules.py`; os utilitários em `backend/shared/*`;
+> `processor.py` mantém só `processar_inativacao_from_paths`. Regras de negócio
+> equivalentes foram preservadas e testadas. Ver `ARQUITETURA_MODERNIZADA.md`.
+> As seções abaixo permanecem como referência do algoritmo de transformação.
+
+## 1. Estrutura de Módulos (atual)
 
 ```
 backend/
-├── processor.py          ← Transformação e normalização
-├── validators.py         ← Validações de negócio
-├── utils.py             ← Utilitários (CPF, texto, formatação)
-└── api/
-    ├── cadastro.py      ← Endpoint /api/process_cadastro
-    ├── inativacao.py    ← Endpoints de inativação
-    └── aprovacao.py     ← Endpoints de aprovação
+├── domain/rules.py       ← MODEL_COLS, FICHA_MAP, REQUIRED_OUTPUT_COLS
+├── services/             ← processing, validation, inactivation, export, audit, report
+├── shared/               ← text_utils, cpf_utils, file_utils, upload_validation
+├── infra/persistence/    ← history_store (auditoria JSONL)
+├── processor.py          ← motor de inativação
+└── api/                  ← cadastro, inativacao, aprovacao, analysis, history, health, frontend
 ```
 
 ---
@@ -20,14 +28,13 @@ backend/
 ### 📄 processor.py
 
 **Responsabilidades**:
-1. Leitura de múltiplos formatos (DOCX, XLSX, XLS)
+1. Leitura de planilhas Excel (XLSX, XLS)
 2. Mapeamento de colunas (normalização case-insensitive e sem acentos)
-3. Extração de dados (extrair_docx, processamento Excel)
+3. Extração e transformação de dados
 4. **Transformação de dados** (prioridade alta)
 5. Desduplicação
 
 **Funções Principais**:
-- `extrair_docx(path)` → Extrai texto de Word
 - `processar_registros_from_files(paths, login_choice, fluxo)` → Pipeline principal
 - `drop_header_like_rows(df)` → Remove cabeçalhos repetidos
 - `split_name_first_last(fullname)` → Divide nome/sobrenome
@@ -79,10 +86,9 @@ backend/
 
 ```
 ┌─────────────────────────────────────┐
-│  Arquivo enviado (DOCX/XLS/XLSX)    │
+│  Arquivo enviado (XLS/XLSX)         │
 └────────────┬────────────────────────┘
              │
-             ├─→ [DOCX] extrair_docx() → texto → regex FICHA_MAP
              └─→ [XLS/XLSX] pd.read_excel() → drop_header_like_rows()
                                                 ↓
                                     [Mapeamento de Colunas]
@@ -276,7 +282,7 @@ text_cols = [
 
 for c in text_cols:
     if c in df_final.columns:
-        if c == 'MeuCampoNovo':
+        if c == "MeuCampoNovo":
             df_final[c] = df_final[c].apply(lambda v: minha_transformacao(v))
 ```
 
@@ -342,12 +348,10 @@ taxa_sucesso = (linhas_válidas / total_linhas) × 100%
     # Erros por linha
     0: "Erro da linha 0",
     1: "Erro da linha 1",
-    
     # Erro geral
     "__geral__": "Erro do DataFrame inteiro",
-    
     # Erros de I/O
-    "/caminho/arquivo.xlsx": "Erro ao ler arquivo"
+    "/caminho/arquivo.xlsx": "Erro ao ler arquivo",
 }
 ```
 
@@ -357,7 +361,7 @@ taxa_sucesso = (linhas_válidas / total_linhas) × 100%
 {
     0: "Solicitante obrigatório (deve ser S ou N)",
     2: "NomeCompleto vazio; CPF deve ter 11 dígitos",
-    "__geral__": "Coluna obrigatoria ausente: Email"
+    "__geral__": "Coluna obrigatoria ausente: Email",
 }
 ```
 
@@ -401,7 +405,7 @@ taxa_sucesso = (linhas_válidas / total_linhas) × 100%
 |-----------|-----|---------|
 | pandas | Manipulação de dados | ✅ Sim |
 | openpyxl | Leitura de Excel | ✅ Sim |
-| python-docx | Leitura de Word | ✅ Sim |
+| xlrd | Leitura de .xls legado | ✅ Sim |
 | unicodedata | Normalização Unicode | ✅ Sim |
 
 ---
@@ -415,6 +419,6 @@ taxa_sucesso = (linhas_válidas / total_linhas) × 100%
 | Validações por Linha | 5 |
 | Variações de Coluna Mapeadas | 23+ |
 | Fluxos Suportados | 2 (SELF, FRONT) |
-| Formatos de Entrada | 3 (DOCX, XLSX, XLS) |
+| Formatos de Entrada | 2 (XLSX, XLS) |
 | Campos Booleanos | 8 |
 

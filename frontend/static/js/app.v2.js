@@ -371,7 +371,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const base = window.API_BASE ? window.API_BASE.replace(/\/$/, "") : "";
 
     const candidates = [
-      `${base}/health`,
       `${base}/api/health`,
       base ? `${base}/` : "/",
     ];
@@ -1449,7 +1448,7 @@ document.addEventListener("DOMContentLoaded", function () {
                       .map(
                         (row) =>
                           `<tr>${shownCols
-                            .map((c) => `<td>${row[c] ?? ""}</td>`)
+                            .map((c) => `<td>${escapeHtml(row[c] ?? "")}</td>`)
                             .join("")}</tr>`
                       )
                       .join("");
@@ -1708,10 +1707,61 @@ document.addEventListener("DOMContentLoaded", function () {
       if (clearCadastroBtn) clearCadastroBtn.classList.add('d-none');
     }
     
-    if (cadastroFiles) {
-      cadastroFiles.addEventListener('change', updateCadastroFeedback);
+    // Limite no cliente: no máximo 5 arquivos, 10 MB cada (portado de app.js).
+    const CADASTRO_MAX_FILES = 5;
+    const CADASTRO_MAX_SIZE = 10 * 1024 * 1024;
+    function validateCadastroFiles() {
+      if (!cadastroFiles || !cadastroFiles.files) return true;
+      const list = cadastroFiles.files;
+      if (list.length > CADASTRO_MAX_FILES) {
+        showToast(`Máximo de ${CADASTRO_MAX_FILES} arquivos por envio.`, 'danger');
+        cadastroFiles.value = '';
+        updateCadastroFeedback();
+        return false;
+      }
+      for (const f of list) {
+        if (f.size > CADASTRO_MAX_SIZE) {
+          showToast(`"${f.name}" excede 10 MB.`, 'danger');
+          cadastroFiles.value = '';
+          updateCadastroFeedback();
+          return false;
+        }
+      }
+      return true;
     }
-    
+
+    if (cadastroFiles) {
+      cadastroFiles.addEventListener('change', () => {
+        if (validateCadastroFiles()) updateCadastroFeedback();
+      });
+    }
+
+    // Drag-and-drop + ativação por teclado na área de upload (portado de app.js).
+    const cadastroUploadArea = document.getElementById('cadastro_uploadArea');
+    if (cadastroUploadArea && cadastroFiles) {
+      cadastroUploadArea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          cadastroFiles.click();
+        }
+      });
+      cadastroUploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        cadastroUploadArea.classList.add('dragover');
+      });
+      cadastroUploadArea.addEventListener('dragleave', () =>
+        cadastroUploadArea.classList.remove('dragover')
+      );
+      cadastroUploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        cadastroUploadArea.classList.remove('dragover');
+        if (e.dataTransfer && e.dataTransfer.files) {
+          cadastroFiles.files = e.dataTransfer.files;
+          if (validateCadastroFiles()) updateCadastroFeedback();
+        }
+      });
+    }
+
     if (clearCadastroBtn) {
       clearCadastroBtn.addEventListener('click', (e) => {
         e.stopPropagation();

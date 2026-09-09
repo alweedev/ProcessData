@@ -1,11 +1,9 @@
-import os
-
 import pandas as pd
 
-from backend.domain.rules import MODEL_COLS, FICHA_MAP
+from backend.domain.rules import FICHA_MAP, MODEL_COLS
 from backend.services.validation_service import ValidationService
-from backend.shared.text_utils import sanitize_output_text, split_name_first_last, upper_no_accents
 from backend.shared.cpf_utils import clean_cpf, format_cpf_for_output
+from backend.shared.text_utils import sanitize_output_text, split_name_first_last, upper_no_accents
 
 
 class ProcessingService:
@@ -76,7 +74,14 @@ class ProcessingService:
 
         fluxo_up = (fluxo or "").upper()
         if fluxo_up == "SELF":
-            for col in ["Vip", "ViajanteMasterNacional", "ViajanteMasterInternacional", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso"]:
+            for col in [
+                "Vip",
+                "ViajanteMasterNacional",
+                "ViajanteMasterInternacional",
+                "SolicitanteMaster",
+                "MasterAdiantamento",
+                "MasterReembolso",
+            ]:
                 df_final[col] = "N"
         elif fluxo_up == "FRONT":
             df_final["ViajanteMasterNacional"] = "S"
@@ -84,14 +89,34 @@ class ProcessingService:
             for col in ["Vip", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso"]:
                 df_final[col] = "N"
             if "Login" in df_final.columns:
-                df_final["Login"] = df_final["Login"].apply(lambda v: "FRONT" + str(v).replace(" ", "") if str(v).strip() else v)
 
-        for col in ["Nome", "SobreNome", "NomeCompleto", "NomeEmpresa", "DescricaoCCustoEmpresa", "DescricaoCCustoCliente", "Cargo", "Departamento", "Cidade", "Estado", "Endereco"]:
+                def _prefix_front(v):
+                    if pd.isna(v) or str(v).strip() == "":
+                        return v
+                    return "FRONT" + str(v).replace(" ", "")
+
+                df_final["Login"] = df_final["Login"].apply(_prefix_front)
+
+        for col in [
+            "Nome",
+            "SobreNome",
+            "NomeCompleto",
+            "NomeEmpresa",
+            "DescricaoCCustoEmpresa",
+            "DescricaoCCustoCliente",
+            "Cargo",
+            "Departamento",
+            "Cidade",
+            "Estado",
+            "Endereco",
+        ]:
             if col in df_final.columns:
                 if col in ["Nome", "SobreNome"]:
                     df_final[col] = df_final[col].apply(lambda v: sanitize_output_text(v, 20))
-                elif col == "NomeCompleto":
-                    df_final[col] = df_final[col].apply(lambda v: sanitize_output_text(v, None))
+                elif col == "DescricaoCCustoEmpresa":
+                    # só remove acentos; preserva vírgulas, parênteses e barras
+                    # (ex.: "COM AQUISICAO SFB (CO/N/NE), FASE 2")
+                    df_final[col] = df_final[col].apply(upper_no_accents)
                 else:
                     df_final[col] = df_final[col].apply(lambda v: sanitize_output_text(v, None))
 
@@ -101,18 +126,47 @@ class ProcessingService:
             if msgs:
                 errors[idx] = "; ".join(msgs)
 
+        geral = ValidationService.validate_dataframe(df_final)
+        if geral:
+            errors["__geral__"] = "; ".join(geral)
+
         if "Login" in df_final.columns and "NomeCompleto" in df_final.columns:
             df_final = df_final.drop_duplicates(subset=["Login", "NomeCompleto"], keep="first")
 
-        bool_cols = ["Solicitante", "Terceiro", "Vip", "ViajanteMasterNacional", "ViajanteMasterInternacional", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso"]
+        bool_cols = [
+            "Solicitante",
+            "Terceiro",
+            "Vip",
+            "ViajanteMasterNacional",
+            "ViajanteMasterInternacional",
+            "SolicitanteMaster",
+            "MasterAdiantamento",
+            "MasterReembolso",
+        ]
+        _true_set = {"S", "SIM", "YES", "Y", "TRUE", "1"}
+
+        def _map_bool_sn(value):
+            # fold de acento antes de comparar: "Não"/"Sìm" normalizam
+            return "S" if upper_no_accents(value).strip().upper() in _true_set else "N"
+
+        def _map_terceiro(value):
+            # regra da ficha: se tiver dígitos, mantém os dígitos (id de terceiro);
+            # senão mapeia Sim/Não -> S/N
+            digits = "".join(filter(str.isdigit, str(value)))
+            return digits if digits else _map_bool_sn(value)
+
         for bc in bool_cols:
             if bc not in df_final.columns:
                 df_final[bc] = "N"
+            elif bc == "Terceiro":
+                df_final[bc] = df_final[bc].fillna("").apply(_map_terceiro)
             else:
-                df_final[bc] = df_final[bc].fillna("").apply(lambda v: "S" if str(v).strip().upper() in {"S", "SIM", "YES", "Y", "TRUE", "1"} else "N")
+                df_final[bc] = df_final[bc].fillna("").apply(_map_bool_sn)
 
         if "NroMatricula" in df_final.columns:
-            df_final["NroMatricula"] = df_final["NroMatricula"].fillna("").apply(lambda v: "".join(filter(str.isdigit, str(v))))
+            df_final["NroMatricula"] = (
+                df_final["NroMatricula"].fillna("").apply(lambda v: "".join(filter(str.isdigit, str(v))))
+            )
 
         for col in df_final.columns:
             if df_final[col].dtype == object:
@@ -120,6 +174,8 @@ class ProcessingService:
                     df_final[col] = df_final[col].fillna("").astype(str).apply(lambda v: v.strip().upper())
                 elif col == "Login" and login_choice == "EMAIL":
                     df_final[col] = df_final[col].fillna("").astype(str).apply(lambda v: v.strip().upper())
+                elif col == "DescricaoCCustoEmpresa":
+                    df_final[col] = df_final[col].fillna("").astype(str).apply(upper_no_accents)
                 else:
                     df_final[col] = df_final[col].fillna("").astype(str).apply(lambda v: sanitize_output_text(v, None))
 

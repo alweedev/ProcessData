@@ -1,5 +1,10 @@
 # 📚 EXEMPLOS PRÁTICOS - Processamento de Planilhas
 
+> **Nota (set/2026):** os exemplos citam `processar_registros_from_files(...)`,
+> que foi substituído por
+> `ProcessingService.process_records_from_files(paths, login_choice, fluxo)`
+> (mesma assinatura e mesmo resultado). Entrada aceita: `.xlsx`, `.xls`, `.xltx`.
+
 ## 1. Caso de Uso: Cadastro SELF (Padrão)
 
 ### Entrada (Excel)
@@ -13,11 +18,7 @@
 ### Processamento
 
 ```python
-errors, df_final = processar_registros_from_files(
-    paths=["dados.xlsx"],
-    login_choice="CPF",
-    fluxo="SELF"
-)
+errors, df_final = processar_registros_from_files(paths=["dados.xlsx"], login_choice="CPF", fluxo="SELF")
 ```
 
 ### Transformações Aplicadas
@@ -92,7 +93,7 @@ errors, df_final = processar_registros_from_files(
     "MasterAdiantamento": "N",
     "MasterReembolso": "N",
     "CodigoIntegracao": "AUT",
-    "Status": ""
+    "Status": "",
 }
 ```
 
@@ -111,11 +112,7 @@ errors, df_final = processar_registros_from_files(
 ### Processamento
 
 ```python
-errors, df_final = processar_registros_from_files(
-    paths=["viajantes.xlsx"],
-    login_choice="EMAIL",
-    fluxo="FRONT"
-)
+errors, df_final = processar_registros_from_files(paths=["viajantes.xlsx"], login_choice="EMAIL", fluxo="FRONT")
 ```
 
 ### Transformações Específicas
@@ -192,9 +189,7 @@ Mesmo fluxo: `processar_registros_from_files()`
 ### Saída com Erro
 
 ```python
-errors = {
-    0: "CPF deve ter 11 dígitos"
-}
+errors = {0: "CPF deve ter 11 dígitos"}
 
 # Nota: A linha continua no DataFrame com Nivel corrigido para "GERENCIA"
 # mas o processamento falha para essa linha devido ao CPF inválido
@@ -217,11 +212,7 @@ errors = {
 ### Processamento
 
 ```python
-errors, df_final = processar_registros_from_files(
-    paths=["duplicados.xlsx"],
-    login_choice="CPF",
-    fluxo="SELF"
-)
+errors, df_final = processar_registros_from_files(paths=["duplicados.xlsx"], login_choice="CPF", fluxo="SELF")
 ```
 
 ### Lógica de Desduplicação
@@ -229,7 +220,7 @@ errors, df_final = processar_registros_from_files(
 ```python
 df_final = df_final.drop_duplicates(
     subset=["Login", "NomeCompleto"],  # Critério
-    keep="first"  # Mantém primeira ocorrência
+    keep="first",  # Mantém primeira ocorrência
 )
 ```
 
@@ -327,54 +318,13 @@ Executa todas as 5 validações por linha.
 errors = {
     0: "CPF deve ter 11 dígitos; Email inválido; NomeCompleto vazio; Nivel inválido, ajustado para vazio",
     1: "NomeCompleto vazio",  # Linha 2 (0-indexed = 1)
-    "__geral__": ""  # Se colunas obrigatórias estiverem presentes
+    "__geral__": "",  # Se colunas obrigatórias estiverem presentes
 }
 ```
 
 ---
 
-## 7. Caso de Uso: Arquivo Word (DOCX)
-
-### Entrada (Word Document)
-
-```
-CPF: 123.456.789-00
-NOME COMPLETO: João Silva
-EMAIL: joao@empresa.com
-CENTRO DE CUSTO: CC001
-EMPRESA (DO GRUPO): Empresa A
-NIVEL: Operacional
-SOLICITANTE? (S/N): S
-```
-
-### Processamento
-
-```python
-errors, df_final = processar_registros_from_files(
-    paths=["ficha.docx"],
-    login_choice="CPF",
-    fluxo="SELF"
-)
-```
-
-### Extração (DOCX)
-
-```python
-doc = Document("ficha.docx")
-text = "\n".join(p.text for p in doc.paragraphs)
-
-# Regex para cada label em FICHA_MAP:
-# "CPF: 123.456.789-00" → match "123.456.789-00"
-# "NOME COMPLETO: João Silva" → match "João Silva"
-```
-
-### Saída
-
-Mesmo resultado do Excel, com um registro por ficha.
-
----
-
-## 8. Caso de Uso: Mapeamento de Colunas Variadas
+## 7. Caso de Uso: Mapeamento de Colunas Variadas
 
 ### Entrada (Excel com Nomes Diferentes)
 
@@ -401,7 +351,7 @@ normalized_map = {
     "CORREIO": "Email",
     "AGENCIA": "NomeEmpresa",
     "CENTRODESPESA": "CodigoCCustoEmpresa",
-    "HIERARQUIA": "Nivel"
+    "HIERARQUIA": "Nivel",
 }
 ```
 
@@ -411,7 +361,7 @@ Mesma estrutura padrão, colunas mapeadas corretamente.
 
 ---
 
-## 9. Caso de Uso: Campos Opcionais vs Obrigatórios
+## 8. Caso de Uso: Campos Opcionais vs Obrigatórios
 
 ### Cenário: Dados Mínimos
 
@@ -436,7 +386,7 @@ errors = {
 
 ---
 
-## 10. Caso de Uso: Importação Bem-Sucedida
+## 9. Caso de Uso: Importação Bem-Sucedida
 
 ### Entrada Completa e Válida
 
@@ -451,11 +401,7 @@ errors = {
 ### Processamento
 
 ```python
-errors, df_final = processar_registros_from_files(
-    paths=["vendas.xlsx"],
-    login_choice="CPF",
-    fluxo="SELF"
-)
+errors, df_final = processar_registros_from_files(paths=["vendas.xlsx"], login_choice="CPF", fluxo="SELF")
 ```
 
 ### Resultado
@@ -486,7 +432,7 @@ Status: PRONTO PARA CARGA
 
 ---
 
-## 11. Mapeamento de Booleanos
+## 10. Mapeamento de Booleanos
 
 ### Entrada (Variações)
 
@@ -524,7 +470,7 @@ def map_bool_to_SN(v):
 
 ---
 
-## 12. Estatísticas de Processamento
+## 11. Estatísticas de Processamento
 
 ### Exemplo Real
 

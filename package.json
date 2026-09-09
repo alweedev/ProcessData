@@ -1,0 +1,14 @@
+{
+  "name": "processdata-e2e",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Testes end-to-end (Playwright) do ProcessData",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "xlsx": "^0.18.5"
+  }
+}

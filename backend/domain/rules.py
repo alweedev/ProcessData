@@ -1,15 +1,36 @@
-import re
-
-from backend.shared.cpf_utils import clean_cpf, format_cpf_for_output
-from backend.shared.text_utils import sanitize_output_text, split_name_first_last, upper_no_accents
-
 MODEL_COLS = [
-    "Operacao", "UserId", "Login", "CodigoCCustoCliente", "DescricaoCCustoCliente",
-    "NomeEmpresa", "CodigoCCustoEmpresa", "DescricaoCCustoEmpresa", "EmpresaCCustoParaUsuario",
-    "NroMatricula", "Nome", "SobreNome", "NomeCompleto", "Email", "Telefone", "Cargo", "Departamento", "Nivel",
-    "Endereco", "Cidade", "Estado", "CEP", "Solicitante", "Vip", "ViajanteMasterNacional",
-    "ViajanteMasterInternacional", "SolicitanteMaster", "MasterAdiantamento", "MasterReembolso", "Terceiro",
-    "CodigoIntegracao", "Status"
+    "Operacao",
+    "UserId",
+    "Login",
+    "CodigoCCustoCliente",
+    "DescricaoCCustoCliente",
+    "NomeEmpresa",
+    "CodigoCCustoEmpresa",
+    "DescricaoCCustoEmpresa",
+    "EmpresaCCustoParaUsuario",
+    "NroMatricula",
+    "Nome",
+    "SobreNome",
+    "NomeCompleto",
+    "Email",
+    "Telefone",
+    "Cargo",
+    "Departamento",
+    "Nivel",
+    "Endereco",
+    "Cidade",
+    "Estado",
+    "CEP",
+    "Solicitante",
+    "Vip",
+    "ViajanteMasterNacional",
+    "ViajanteMasterInternacional",
+    "SolicitanteMaster",
+    "MasterAdiantamento",
+    "MasterReembolso",
+    "Terceiro",
+    "CodigoIntegracao",
+    "Status",
 ]
 
 REQUIRED_OUTPUT_COLS = [
@@ -63,11 +84,3 @@ FICHA_MAP = {
     "TERCEIRO? (S/N)": "Terceiro",
     "Terceiro": "Terceiro",
 }
-
-
-def extract_digits_only(value):
-    try:
-        s = str(value)
-    except Exception:
-        return ""
-    return re.sub(r"\D", "", s)

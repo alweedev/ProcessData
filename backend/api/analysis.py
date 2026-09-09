@@ -7,7 +7,8 @@ from backend.core.logging import get_logger
 from backend.services.audit_service import AuditService
 from backend.services.processing_service import ProcessingService
 from backend.services.report_service import ReportService
-from backend.utils import gerar_nome_arquivo_temporario, validar_extensao_arquivo
+from backend.shared.file_utils import gerar_nome_arquivo_temporario, validar_extensao_arquivo
+from backend.shared.upload_validation import validar_conteudo_xlsx
 
 logger = get_logger()
 
@@ -31,6 +32,9 @@ def analysis_summary():
             path = gerar_nome_arquivo_temporario(file_item.filename, settings.UPLOAD_FOLDER)
             file_item.save(path)
             paths.append(path)
+            ok, msg = validar_conteudo_xlsx(path)
+            if not ok:
+                return jsonify({"error": msg}), 400
 
         login_choice = request.form.get("login_choice", "CPF")
         fluxo = request.form.get("fluxo", "SELF")
@@ -58,10 +62,12 @@ def analysis_summary():
             },
         )
 
-        return jsonify({
-            "report": report,
-            "preview": preview,
-        }), 200
+        return jsonify(
+            {
+                "report": report,
+                "preview": preview,
+            }
+        ), 200
     except Exception as exc:
         logger.exception("Erro em /api/analysis/summary")
         AuditService.record(
@@ -69,7 +75,7 @@ def analysis_summary():
             status="error",
             details={"message": str(exc)},
         )
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for path in paths:
             try:

@@ -1,22 +1,25 @@
 import os
-from flask import Blueprint, request, jsonify, send_file
+
+from flask import Blueprint, jsonify, request, send_file
+
 from backend.core.config import settings
 from backend.core.logging import get_logger
-from backend.services.processing_service import ProcessingService
-from backend.services.export_service import ExportService
 from backend.services.audit_service import AuditService
-from backend.utils import validar_extensao_arquivo, gerar_nome_arquivo_temporario
+from backend.services.export_service import ExportService
+from backend.services.processing_service import ProcessingService
+from backend.shared.file_utils import gerar_nome_arquivo_temporario, validar_extensao_arquivo
+from backend.shared.upload_validation import validar_conteudo_xlsx
 
 logger = get_logger()
 
-cadastro_bp = Blueprint('cadastro', __name__, url_prefix='/api')
+cadastro_bp = Blueprint("cadastro", __name__, url_prefix="/api")
 
 
-@cadastro_bp.route('/process_cadastro', methods=['POST'])
+@cadastro_bp.route("/process_cadastro", methods=["POST"])
 def api_process_cadastro():
     paths = []
     try:
-        uploaded = request.files.getlist('files[]') or request.files.getlist('files')
+        uploaded = request.files.getlist("files[]") or request.files.getlist("files")
         if not uploaded:
             return jsonify({"error": "Nenhum arquivo enviado"}), 400
 
@@ -30,9 +33,12 @@ def api_process_cadastro():
             p = gerar_nome_arquivo_temporario(f.filename, settings.UPLOAD_FOLDER)
             f.save(p)
             paths.append(p)
+            ok, msg = validar_conteudo_xlsx(p)
+            if not ok:
+                return jsonify({"error": msg}), 400
 
-        login_choice = request.form.get('login_choice', 'CPF')
-        fluxo = request.form.get('fluxo', 'SELF')
+        login_choice = request.form.get("login_choice", "CPF")
+        fluxo = request.form.get("fluxo", "SELF")
 
         errors, df_final = ProcessingService.process_records_from_files(
             paths,
@@ -61,10 +67,12 @@ def api_process_cadastro():
                 "fluxo": fluxo,
             },
         )
-        return send_file(output,
-                         download_name="saida_cadastro.xlsx",
-                         as_attachment=True,
-                         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        return send_file(
+            output,
+            download_name="saida_cadastro.xlsx",
+            as_attachment=True,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
     except Exception as e:
         logger.exception("Erro em /api/process_cadastro")
         AuditService.record(
@@ -72,7 +80,7 @@ def api_process_cadastro():
             status="error",
             details={"message": str(e)},
         )
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for p in paths:
             try:

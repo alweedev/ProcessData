@@ -2,54 +2,81 @@
 
 ## Objetivo
 
-Evoluir o projeto para uma arquitetura modular, legível e escalável, mantendo as regras de negócio atuais de cadastro, inativação e aprovação.
+Arquitetura modular, legível e testável, preservando as regras de negócio de
+cadastro, inativação e aprovação.
 
 ## Camadas
 
-- `backend/domain`: regras e contratos de negócio.
-- `backend/services`: orquestração de casos de uso.
-- `backend/shared`: utilitários compartilhados e normalização.
-- `backend/infra`: integrações técnicas e adaptação com arquivos/fontes.
-- `backend/api`: rotas HTTP e serialização de entrada/saída.
+- `backend/domain`: regras e contratos (`MODEL_COLS`, `FICHA_MAP`,
+  `REQUIRED_OUTPUT_COLS`) — **fonte única** desses dados.
+- `backend/services`: orquestração de casos de uso (`ProcessingService`,
+  `ValidationService`, `InactivationService`, `ExportService`, `AuditService`,
+  `ReportService`).
+- `backend/shared`: utilitários compartilhados — `text_utils` (normalização),
+  `cpf_utils` (limpeza, formatação, dígito verificador), `file_utils` (extensão,
+  nome temporário), `upload_validation` (sniff de conteúdo).
+- `backend/infra`: integrações técnicas (trilha de auditoria JSONL com rotação).
+- `backend/api`: rotas HTTP e serialização.
+- `backend/processor.py`: motor de **inativação** (`processar_inativacao_from_paths`).
 
-## Mudanças aplicadas
+## Estado da consolidação (set/2026)
 
-- Criação de serviços dedicados para processamento, validação, exportação e relatório de qualidade.
-- Endpoint de cadastro migrado para uso da camada de serviços.
-- Novo endpoint de análise: `POST /api/analysis/summary`.
-- Criação de testes para regras e normalizações críticas.
-- Migração da lógica de inativação para `backend/services/inactivation_service.py`.
-- Inclusão de trilha de auditoria persistente (JSONL) com API de histórico.
-- Extração da feature de histórico para módulo próprio de frontend.
+- O pipeline de **cadastro** roda exclusivamente por
+  `ProcessingService.process_records_from_files`. A versão legada
+  (`processor.processar_registros_from_files`) e `backend/validators.py` foram
+  removidas; os comportamentos válidos (validação `__geral__`, `Terceiro` com
+  dígitos, `DescricaoCCustoEmpresa` só sem acento, guarda de NaN no prefixo
+  FRONT, fold de acento no S/N) foram portados para os serviços com teste.
+- `backend/utils.py` foi consolidado em `backend/shared/*`.
+- `MODEL_COLS`/`FICHA_MAP` deixam de ter cópias divergentes: `processor.py`
+  importa de `backend.domain.rules`.
+- Suporte a `.docx` foi removido (função `extrair_docx` nunca existiu). Entrada:
+  `.xlsx`, `.xls`, `.xltx`.
 
-## Fluxos
+## Endpoints
 
-### Cadastro
-1. API recebe arquivos e valida extensão.
-2. Service processa regras e normaliza dados.
-3. Service exporta planilha final em Excel.
-4. API retorna arquivo pronto para carga.
+| Método | Rota | Uso |
+|---|---|---|
+| POST | `/api/process_cadastro` | gera a ficha de cadastro (xlsx) |
+| POST | `/api/analysis/summary` | relatório de qualidade + preview (JSON) |
+| POST | `/api/inativacao/buscar` | busca (encontrado/não encontrado) por CPF/nome/e-mail |
+| POST | `/api/preview_inativacao` | preview da ficha de inativação antes da geração |
+| POST | `/api/process_inativacao` | gera a ficha de inativação (xlsx) |
+| POST | `/api/aprovacao/remover/preview` | impacto da remoção de um aprovador |
+| POST | `/api/aprovacao/remover/export` | base de aprovação atualizada (xlsx) |
+| GET/DELETE | `/api/history` | trilha de auditoria (DELETE só localhost/token) |
+| GET | `/api/health` | health check |
 
-### Análise
-1. API recebe arquivos e valida extensão.
-2. Service processa os dados com regras atuais.
-3. Service gera resumo de qualidade:
-   - linhas totais
-   - válidas
-   - inválidas
-   - duplicadas
-   - vazios em campos críticos
-4. API retorna relatório e preview para UI.
+Removidos: `POST /api/inativacao/executar` (sucesso falso, sem consumidor) e
+`GET /health` (duplicava `/api/health`).
 
-## Diretrizes de evolução
+## Segurança
 
-- Não concentrar novas regras em `processor.py`.
-- Cada novo fluxo deve nascer em `domain + services + api`.
-- Evitar arquivos únicos grandes no frontend; separar por feature.
-- Manter cobertura mínima de testes para cada regra nova.
+- **Formula injection**: `ExportService` grava como texto explícito qualquer
+  célula que comece com `= + - @` / TAB / CR.
+- **XSS**: o preview de inativação escapa as células vindas da planilha.
+- **Uploads**: além da extensão, `validar_conteudo_xlsx` verifica assinatura
+  ZIP + estrutura OOXML (`.xls` fica a cargo do pandas/xlrd).
+- **Path traversal**: o servidor estático só entrega arquivos cujo caminho real
+  resolve para dentro de `frontend/`.
+- **CORS**: restrito à mesma origem por padrão; `CORS_ORIGINS` (env) libera
+  origens específicas.
+- **Histórico**: `DELETE /api/history` exige localhost ou `X-Admin-Token`.
+- **Auditoria**: JSONL rotacionado por tamanho (`HISTORY_MAX_BYTES`); leitura
+  limitada à cauda.
+- **Logs/erros**: respostas 5xx genéricas ao cliente (detalhe só no log do
+  servidor); logs não incluem nome/colunas.
+
+## Testes
+
+`python -m pytest -q` (suíte em `backend/tests/`). Fluxos críticos ponta-a-ponta
+em `tests/e2e/` (Playwright).
 
 ## Próxima fase
 
-- Migrar gradualmente inativação e aprovação para serviços específicos.
-- Continuar quebra do frontend em módulos por aba (`analise`, `cadastro`, `inativacao`, `aprovacao`, `historico`).
-- Integrar a aba de análise com endpoint de resumo de qualidade para visão operacional completa.
+- Migrar inativação e aprovação para serviços dedicados (hoje `processor.py` e
+  `api/aprovacao.py` concentram a lógica).
+- Ligar a aba **Análise** ao endpoint `/api/analysis/summary` (hoje o parsing é
+  client-side).
+- Avaliar FastAPI + Pydantic v2 + SQLAlchemy 2 + Alembic + PostgreSQL por
+  funcionalidade, mantendo compatibilidade durante a transição.

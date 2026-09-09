@@ -1,16 +1,17 @@
-import io
 import os
 import re
-import uuid
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 import pandas as pd
 from flask import Blueprint, jsonify, request, send_file
 
 from backend.core.config import settings
 from backend.core.logging import get_logger
-from backend.utils import format_cpf_for_output, limpar_cpf_raw, upper_no_accents, validar_extensao_arquivo, gerar_nome_arquivo_temporario
-
+from backend.services.export_service import ExportService
+from backend.shared.cpf_utils import format_cpf_for_output, is_valid_cpf, limpar_cpf_raw
+from backend.shared.file_utils import gerar_nome_arquivo_temporario, validar_extensao_arquivo
+from backend.shared.text_utils import upper_no_accents
+from backend.shared.upload_validation import validar_conteudo_xlsx
 
 logger = get_logger()
 
@@ -18,7 +19,7 @@ logger = get_logger()
 aprovacao_bp = Blueprint("aprovacao", __name__, url_prefix="/api/aprovacao")
 
 
-def _normalize_cpf_input(raw_cpf: Optional[str]) -> Tuple[str, str]:
+def _normalize_cpf_input(raw_cpf: str | None) -> tuple[str, str]:
     """Normaliza o CPF de entrada.
 
     Retorna (cpf_digits, cpf_formatado) ou lança ValueError em caso de CPF inválido.
@@ -30,12 +31,14 @@ def _normalize_cpf_input(raw_cpf: Optional[str]) -> Tuple[str, str]:
     digits = limpar_cpf_raw(raw_cpf)
     if len(digits) != 11:
         raise ValueError("CPF inválido. Informe 11 dígitos.")
+    if not is_valid_cpf(digits):
+        raise ValueError("CPF inválido (dígito verificador).")
 
     formatted = format_cpf_for_output(digits)
     return digits, formatted
 
 
-def _load_users_and_find_approver(users_path: str, cpf_digits: str) -> Tuple[pd.DataFrame, str]:
+def _load_users_and_find_approver(users_path: str, cpf_digits: str) -> tuple[pd.DataFrame, str]:
     """Carrega base de usuários e retorna o nome completo do aprovador.
 
     Lança ValueError se CPF não existir na base.
@@ -46,38 +49,61 @@ def _load_users_and_find_approver(users_path: str, cpf_digits: str) -> Tuple[pd.
     except Exception as exc:  # pragma: no cover - erro de IO
         raise ValueError(f"Falha ao ler base de usuários: {exc}") from exc
 
-    if "CPF" not in df_users.columns:
+    # Mapa de colunas normalizadas (case-insensitive, sem acentos/separadores)
+    norm_cols: dict[str, str] = {}
+    for col in df_users.columns:
+        key = upper_no_accents(str(col)).replace(" ", "").replace("-", "").replace("_", "")
+        norm_cols.setdefault(key, col)
+
+    cpf_col = norm_cols.get("CPF")
+    if not cpf_col:
         raise ValueError("Base de usuários não contém coluna 'CPF'.")
 
+    nome_completo_col = norm_cols.get("NOMECOMPLETO")
+    nome_col = norm_cols.get("NOME")
+    sobrenome_col = norm_cols.get("SOBRENOME")
+    if not nome_completo_col and not nome_col:
+        raise ValueError("Base de usuários não contém coluna de nome ('NomeCompleto' ou 'Nome').")
+
+    status_col = next((v for k, v in norm_cols.items() if "STATUS" in k), None)
+
     df_users = df_users.copy()
-    df_users["CPFdigits"] = df_users["CPF"].apply(limpar_cpf_raw)
+    df_users["CPFdigits"] = df_users[cpf_col].apply(limpar_cpf_raw)
     matches = df_users[df_users["CPFdigits"] == cpf_digits]
     if matches.empty:
         raise ValueError("CPF não encontrado na base de usuários.")
 
     row = matches.iloc[0]
-    nome_completo = str(row.get("NomeCompleto", "")).strip()
+
+    if status_col:
+        status_val = upper_no_accents(str(row.get(status_col, ""))).strip()
+        if status_val != "ATIVO":
+            raise ValueError(f"Aprovador não está ATIVO na base de usuários (Status: '{status_val or 'vazio'}').")
+
+    nome_completo = ""
+    if nome_completo_col:
+        nome_completo = str(row.get(nome_completo_col, "")).strip()
     if not nome_completo:
-        primeiro = str(row.get("Nome", "")).strip()
-        sobrenome = str(row.get("SobreNome", "")).strip()
+        primeiro = str(row.get(nome_col, "")).strip() if nome_col else ""
+        sobrenome = str(row.get(sobrenome_col, "")).strip() if sobrenome_col else ""
         nome_completo = f"{primeiro} {sobrenome}".strip()
 
     return df_users, nome_completo
 
 
-def _detect_approval_columns(df: pd.DataFrame) -> Dict[str, Any]:
+def _detect_approval_columns(df: pd.DataFrame) -> dict[str, Any]:
     """Detecta colunas relevantes da base de carga de aprovação.
 
     Usa nomes esperados, mas de forma case-insensitive.
     Detecta dinamicamente LoginAprovador_1..100.
     """
 
-    col_map: Dict[str, str] = {}
+    col_map: dict[str, str] = {}
     for col in df.columns:
         key = upper_no_accents(str(col)).replace(" ", "").replace("-", "").replace("_", "")
         col_map[key] = col
 
-    def pick(*candidates: str) -> Optional[str]:
+    def pick(*candidates: str) -> str | None:
         for cand in candidates:
             key = upper_no_accents(cand).replace(" ", "").replace("-", "").replace("_", "")
             if key in col_map:
@@ -95,12 +121,17 @@ def _detect_approval_columns(df: pd.DataFrame) -> Dict[str, Any]:
     segundo_master = pick("SegundoNivelMaster")
     traveler_name_col = pick("NomeViajante", "NomeCompletoViajante", "NomeCompleto")
 
-    approver_cols: List[str] = []
+    approver_cols: list[str] = []
     for col in df.columns:
         m = re.match(r"(?i)^LoginAprovador_(\d+)$", str(col))
         if m:
             approver_cols.append(col)
-    approver_cols.sort(key=lambda c: int(re.search(r"(\d+)$", str(c)).group(1)))
+
+    def _slot_num(c: str) -> int:
+        match = re.search(r"(\d+)$", str(c))
+        return int(match.group(1)) if match else 0
+
+    approver_cols.sort(key=_slot_num)
 
     return {
         "aprovacao_id": aprovacao_id,
@@ -118,10 +149,10 @@ def _detect_approval_columns(df: pd.DataFrame) -> Dict[str, Any]:
 
 
 def _get_or_create_structure(
-    store: Dict[str, Dict[str, Any]],
+    store: dict[str, dict[str, Any]],
     row: pd.Series,
-    cols: Dict[str, Any],
-) -> Optional[Dict[str, Any]]:
+    cols: dict[str, Any],
+) -> dict[str, Any] | None:
     """Obtém (ou cria) o registro agregado por AprovacaoId."""
 
     aprov_id_col = cols.get("aprovacao_id")
@@ -158,8 +189,8 @@ def _get_or_create_structure(
 
     aprov_por_upper = aprovacao_por_val.upper()
     if aprov_por_upper == "VIAJANTE":
-        traveler_out: Optional[str] = traveler_name_raw or None
-        cost_center_out: Optional[str] = None
+        traveler_out: str | None = traveler_name_raw or None
+        cost_center_out: str | None = None
     elif aprov_por_upper == "CCEMPRESA":
         traveler_out = None
         cost_center_out = cost_center or None
@@ -167,7 +198,7 @@ def _get_or_create_structure(
         traveler_out = traveler_name_raw or None
         cost_center_out = cost_center or None
 
-    record: Dict[str, Any] = {
+    record: dict[str, Any] = {
         "aprovacao_id": aprov_id,
         "aprovacao_por": aprovacao_por_val or None,
         "aprovacao": aprovacao_val or None,
@@ -187,30 +218,30 @@ def _get_or_create_structure(
 def _check_structures_without_approvers(
     df_base: pd.DataFrame,
     cpf_digits: str,
-    cols: Dict[str, Any],
-    target_ids: Set[str],
+    cols: dict[str, Any],
+    target_ids: set[str],
     remove_second_level: bool,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Verifica quais estruturas ficarão sem aprovadores após a remoção do CPF.
-    
+
     Retorna lista de estruturas que ficarão vazias (sem nenhum aprovador).
     """
-    approver_cols: List[str] = cols.get("approver_cols") or []
+    approver_cols: list[str] = cols.get("approver_cols") or []
     aprov_id_col = cols.get("aprovacao_id")
     login_segundo_col = cols.get("login_segundo")
-    
+
     if not aprov_id_col or not approver_cols:
         return []
-    
-    structures_without_approvers: List[Dict[str, Any]] = []
-    
-    for idx, row in df_base.iterrows():
+
+    structures_without_approvers: list[dict[str, Any]] = []
+
+    for _idx, row in df_base.iterrows():
         aprov_id = str(row.get(aprov_id_col, "")).strip()
         if not aprov_id or aprov_id not in target_ids:
             continue
-        
+
         # Contar aprovadores atuais (excluindo o CPF que será removido)
-        remaining_approvers: List[str] = []
+        remaining_approvers: list[str] = []
         for col in approver_cols:
             raw_login = str(row.get(col, "")).strip()
             if not raw_login:
@@ -219,7 +250,7 @@ def _check_structures_without_approvers(
             if limpar_cpf_raw(raw_login) == cpf_digits:
                 continue
             remaining_approvers.append(raw_login)
-        
+
         # Verificar segundo nível (se não estiver sendo removido)
         has_second_level = False
         if login_segundo_col and login_segundo_col in df_base.columns:
@@ -230,7 +261,7 @@ def _check_structures_without_approvers(
                     has_second_level = False
                 else:
                     has_second_level = True
-        
+
         # Se não sobrar nenhum aprovador, adiciona à lista de alertas
         if len(remaining_approvers) == 0 and not has_second_level:
             aprovacao_por_col = cols.get("aprovacao_por")
@@ -238,10 +269,10 @@ def _check_structures_without_approvers(
             desc_ccusto_col = cols.get("desc_ccusto")
             cod_ccusto_col = cols.get("cod_ccusto")
             traveler_col = cols.get("traveler_name_col")
-            
+
             aprovacao_por_val = str(row.get(aprovacao_por_col, "")).strip() if aprovacao_por_col else ""
             valor_val = str(row.get(valor_col, "")).strip() if valor_col else ""
-            
+
             # Contexto baseado em AprovacaoPor
             contexto = ""
             if aprovacao_por_val.upper() == "VIAJANTE":
@@ -256,42 +287,50 @@ def _check_structures_without_approvers(
                     contexto = cod_cc or desc_cc or valor_val
             else:
                 contexto = valor_val
-            
-            structures_without_approvers.append({
-                "aprovacaoId": aprov_id,
-                "aprovacaoPor": aprovacao_por_val,
-                "valor": valor_val,
-                "contexto": contexto,
-            })
-    
+
+            structures_without_approvers.append(
+                {
+                    "aprovacaoId": aprov_id,
+                    "aprovacaoPor": aprovacao_por_val,
+                    "valor": valor_val,
+                    "contexto": contexto,
+                }
+            )
+
     # Remover duplicados por aprovacaoId
-    seen: Set[str] = set()
-    unique_structures: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    unique_structures: list[dict[str, Any]] = []
     for s in structures_without_approvers:
         if s["aprovacaoId"] not in seen:
             seen.add(s["aprovacaoId"])
             unique_structures.append(s)
-    
+
     return unique_structures
 
 
 def _build_preview_for_cpf(
     df_base: pd.DataFrame,
     cpf_digits: str,
-    cols: Dict[str, Any],
+    cols: dict[str, Any],
     check_empty: bool = False,
     remove_second_level: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Gera estruturas afetadas e estatísticas de preview para um CPF."""
 
-    structures: Dict[str, Dict[str, Any]] = {}
+    structures: dict[str, dict[str, Any]] = {}
 
-    approver_cols: List[str] = cols.get("approver_cols") or []
+    approver_cols: list[str] = cols.get("approver_cols") or []
     aprov_id_col = cols.get("aprovacao_id")
     if not aprov_id_col or not approver_cols:
-        return {"structures": [], "total_structures": 0, "total_occurrences": 0, "affected_ids": [], "structures_without_approvers": []}
+        return {
+            "structures": [],
+            "total_structures": 0,
+            "total_occurrences": 0,
+            "affected_ids": [],
+            "structures_without_approvers": [],
+        }
 
-    id_vars: List[str] = []
+    id_vars: list[str] = []
     for key in [
         "aprovacao_id",
         "aprovacao_por",
@@ -345,13 +384,13 @@ def _build_preview_for_cpf(
                 rec["in_second_level"] = True
             rec["occurrences_count"] += 1
 
-    affected_ids: Set[str] = set(structures.keys())
+    affected_ids: set[str] = set(structures.keys())
     total_occurrences = int(sum(rec.get("occurrences_count", 0) for rec in structures.values()))
 
-    ordered_structs = sorted(structures.values(), key=lambda r: r.get("aprovacao_id"))
+    ordered_structs = sorted(structures.values(), key=lambda r: str(r.get("aprovacao_id") or ""))
 
     # Verificar estruturas que ficarão sem aprovadores
-    structures_without_approvers: List[Dict[str, Any]] = []
+    structures_without_approvers: list[dict[str, Any]] = []
     if check_empty and affected_ids:
         structures_without_approvers = _check_structures_without_approvers(
             df_base=df_base,
@@ -373,23 +412,26 @@ def _build_preview_for_cpf(
 def _remove_cpf_and_compact(
     df_base: pd.DataFrame,
     cpf_digits: str,
-    cols: Dict[str, Any],
-    target_ids: Set[str],
+    cols: dict[str, Any],
+    target_ids: set[str],
     remove_second_level: bool,
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Remove todas as ocorrências do CPF e compacta aprovadores 1..100."""
 
-    approver_cols: List[str] = cols.get("approver_cols") or []
+    approver_cols: list[str] = cols.get("approver_cols") or []
     aprov_id_col = cols.get("aprovacao_id")
     if not aprov_id_col or not approver_cols:
-        return df_base, {"structures_updated": 0, "occurrences_removed": 0}
+        return df_base, {"structures_updated": 0, "occurrences_removed": 0, "changed_indices": set(), "promotions": 0}
 
     df_out = df_base.copy()
     login_segundo_col = cols.get("login_segundo")
+    has_segundo = bool(login_segundo_col and login_segundo_col in df_out.columns)
     segundo_master_col = cols.get("segundo_master")
 
-    structures_updated: Set[str] = set()
+    structures_updated: set[str] = set()
+    changed_indices: set[Any] = set()
     occurrences_removed = 0
+    promotions = 0
 
     for idx, row in df_out.iterrows():
         aprov_id = str(row.get(aprov_id_col, "")).strip()
@@ -404,7 +446,7 @@ def _remove_cpf_and_compact(
                 has_cpf_main = True
                 break
 
-        raw_second = str(row.get(login_segundo_col, "")).strip() if login_segundo_col and login_segundo_col in df_out.columns else ""
+        raw_second = str(row.get(login_segundo_col, "")).strip() if has_segundo else ""
         has_cpf_second = bool(raw_second and limpar_cpf_raw(raw_second) == cpf_digits)
 
         if not has_cpf_main and not has_cpf_second:
@@ -414,8 +456,8 @@ def _remove_cpf_and_compact(
 
         # Remover CPF de LoginAprovador_1..100 e compactar
         if has_cpf_main:
-            original_vals: List[str] = [str(row.get(col, "")) for col in approver_cols]
-            kept: List[str] = []
+            original_vals: list[str] = [str(row.get(col, "")) for col in approver_cols]
+            kept: list[str] = []
             for v in original_vals:
                 digits = limpar_cpf_raw(v)
                 if digits == cpf_digits and digits:
@@ -430,13 +472,28 @@ def _remove_cpf_and_compact(
                 df_out.at[idx, col] = new_val
 
         # Opcionalmente remover do SEGUNDO_NIVEL
-        if remove_second_level and has_cpf_second and login_segundo_col and login_segundo_col in df_out.columns:
+        if remove_second_level and has_cpf_second and has_segundo:
             df_out.at[idx, login_segundo_col] = ""
             occurrences_removed += 1
             changed = True
 
+        # Promoção de nível: se o 1º nível ficou vazio e ainda há um aprovador
+        # de segundo nível (que não seja o CPF removido), ele sobe para o 1º nível.
+        # REGRAS_APROVACAO_INATIVACAO.md §2.4 Fase 3.
+        if has_segundo:
+            remaining_main = [
+                str(df_out.at[idx, col]).strip() for col in approver_cols if str(df_out.at[idx, col]).strip()
+            ]
+            current_second = str(df_out.at[idx, login_segundo_col]).strip()
+            if not remaining_main and current_second:
+                df_out.at[idx, approver_cols[0]] = current_second
+                df_out.at[idx, login_segundo_col] = ""
+                promotions += 1
+                changed = True
+
         if changed:
             structures_updated.add(aprov_id)
+            changed_indices.add(idx)
 
     # Garantir que SegundoNivelMaster permaneça vazio
     if segundo_master_col and segundo_master_col in df_out.columns:
@@ -445,14 +502,16 @@ def _remove_cpf_and_compact(
     stats = {
         "structures_updated": len(structures_updated),
         "occurrences_removed": int(occurrences_removed),
+        "promotions": int(promotions),
+        "changed_indices": changed_indices,
     }
     return df_out, stats
 
 
 @aprovacao_bp.route("/remover/preview", methods=["POST"])
 def aprovacao_remover_preview():
-    users_path: Optional[str] = None
-    base_path: Optional[str] = None
+    users_path: str | None = None
+    base_path: str | None = None
     try:
         users_file = request.files.get("users_file")
         base_file = request.files.get("base_file")
@@ -476,7 +535,7 @@ def aprovacao_remover_preview():
         is_valid, error_msg = validar_extensao_arquivo(users_file.filename)
         if not is_valid:
             return jsonify({"error": f"users_file: {error_msg}"}), 400
-        
+
         is_valid, error_msg = validar_extensao_arquivo(base_file.filename)
         if not is_valid:
             return jsonify({"error": f"base_file: {error_msg}"}), 400
@@ -488,6 +547,10 @@ def aprovacao_remover_preview():
         base_path = gerar_nome_arquivo_temporario(base_file.filename or "base.xlsx", settings.UPLOAD_FOLDER)
         users_file.save(users_path)
         base_file.save(base_path)
+        for _p in (users_path, base_path):
+            _ok, _msg = validar_conteudo_xlsx(_p)
+            if not _ok:
+                return jsonify({"error": _msg}), 400
 
         _, approver_name = _load_users_and_find_approver(users_path, cpf_digits)
 
@@ -495,28 +558,24 @@ def aprovacao_remover_preview():
         cols = _detect_approval_columns(df_base)
 
         preview = _build_preview_for_cpf(
-            df_base, 
-            cpf_digits, 
-            cols, 
-            check_empty=True, 
-            remove_second_level=remove_second_level
+            df_base, cpf_digits, cols, check_empty=True, remove_second_level=remove_second_level
         )
 
         # Converter estruturas internas para o formato esperado pelo frontend
-        raw_structures: List[Dict[str, Any]] = preview.get("structures", []) or []
+        raw_structures: list[dict[str, Any]] = preview.get("structures", []) or []
         structures_without_approvers = preview.get("structures_without_approvers", [])
         empty_ids = {s.get("aprovacaoId") for s in structures_without_approvers}
 
-        por_aprovacao_por: Dict[str, int] = {}
-        items: List[Dict[str, Any]] = []
+        por_aprovacao_por: dict[str, int] = {}
+        items: list[dict[str, Any]] = []
         for rec in raw_structures:
             aprovacao_por = (rec.get("aprovacao_por") or "").strip()
             chave_tipo = aprovacao_por or "OUTRO"
             por_aprovacao_por[chave_tipo] = por_aprovacao_por.get(chave_tipo, 0) + 1
 
             cost_center = rec.get("cost_center") or ""
-            cc_codigo: Optional[str] = None
-            cc_descricao: Optional[str] = None
+            cc_codigo: str | None = None
+            cc_descricao: str | None = None
             if cost_center:
                 # Dividir em "codigo - descricao" se possível
                 partes = [p.strip() for p in str(cost_center).split("-", 1)]
@@ -566,9 +625,9 @@ def aprovacao_remover_preview():
     except ValueError as ve:
         logger.warning(f"Preview aprovacao remover - erro de validação: {ve}")
         return jsonify({"error": str(ve)}), 400
-    except Exception as exc:  # pragma: no cover - proteção extra
+    except Exception:  # pragma: no cover - proteção extra
         logger.exception("Erro em /api/aprovacao/remover/preview")
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for path in [users_path, base_path]:
             try:
@@ -580,8 +639,8 @@ def aprovacao_remover_preview():
 
 @aprovacao_bp.route("/remover/export", methods=["POST"])
 def aprovacao_remover_export():
-    users_path: Optional[str] = None
-    base_path: Optional[str] = None
+    users_path: str | None = None
+    base_path: str | None = None
     try:
         users_file = request.files.get("users_file")
         base_file = request.files.get("base_file")
@@ -595,7 +654,7 @@ def aprovacao_remover_export():
         # selected_aprovacao_ids[] pode vir como múltiplos campos de formulário
         selected_ids_form = form.getlist("selected_aprovacao_ids[]") or form.getlist("selected_aprovacao_ids")
         selected_ids_json = (raw_json or {}).get("selected_aprovacao_ids") or []
-        selected_ids: Set[str] = set(str(x) for x in (selected_ids_form or selected_ids_json or []))
+        selected_ids: set[str] = set(str(x) for x in (selected_ids_form or selected_ids_json or []))
 
         remove_second_level_raw = form.get("remove_second_level")
         if remove_second_level_raw is None and raw_json is not None:
@@ -621,7 +680,7 @@ def aprovacao_remover_export():
         is_valid, error_msg = validar_extensao_arquivo(users_file.filename)
         if not is_valid:
             return jsonify({"error": f"users_file: {error_msg}"}), 400
-        
+
         is_valid, error_msg = validar_extensao_arquivo(base_file.filename)
         if not is_valid:
             return jsonify({"error": f"base_file: {error_msg}"}), 400
@@ -633,6 +692,10 @@ def aprovacao_remover_export():
         base_path = gerar_nome_arquivo_temporario(base_file.filename or "base.xlsx", settings.UPLOAD_FOLDER)
         users_file.save(users_path)
         base_file.save(base_path)
+        for _p in (users_path, base_path):
+            _ok, _msg = validar_conteudo_xlsx(_p)
+            if not _ok:
+                return jsonify({"error": _msg}), 400
 
         # Garante que o CPF existe na base de usuários (e obtém nome apenas para validação/coerência)
         _, _ = _load_users_and_find_approver(users_path, cpf_digits)
@@ -641,13 +704,9 @@ def aprovacao_remover_export():
         cols = _detect_approval_columns(df_base)
 
         preview = _build_preview_for_cpf(
-            df_base, 
-            cpf_digits, 
-            cols, 
-            check_empty=True, 
-            remove_second_level=remove_second_level
+            df_base, cpf_digits, cols, check_empty=True, remove_second_level=remove_second_level
         )
-        affected_ids_all: Set[str] = set(preview.get("affected_ids") or [])
+        affected_ids_all: set[str] = set(preview.get("affected_ids") or [])
         if not affected_ids_all:
             return jsonify({"error": "CPF não está presente em nenhuma estrutura de aprovação."}), 400
 
@@ -663,14 +722,16 @@ def aprovacao_remover_export():
         # Verificar se há estruturas que ficarão sem aprovadores
         structures_without_approvers = preview.get("structures_without_approvers", [])
         affected_empty = [s for s in structures_without_approvers if s.get("aprovacaoId") in target_ids]
-        
+
         if affected_empty and not ignore_empty_warning:
-            return jsonify({
-                "error": "Algumas estruturas ficarão sem nenhum aprovador após a remoção.",
-                "warning": True,
-                "estruturasSemAprovador": affected_empty,
-                "message": f"{len(affected_empty)} estrutura(s) ficará(ão) sem aprovadores. Deseja continuar mesmo assim?",
-            }), 400
+            return jsonify(
+                {
+                    "error": "Algumas estruturas ficarão sem nenhum aprovador após a remoção.",
+                    "warning": True,
+                    "estruturasSemAprovador": affected_empty,
+                    "message": f"{len(affected_empty)} estrutura(s) ficará(ão) sem aprovadores. Deseja continuar mesmo assim?",
+                }
+            ), 400
 
         df_updated, stats = _remove_cpf_and_compact(
             df_base=df_base,
@@ -680,58 +741,30 @@ def aprovacao_remover_export():
             remove_second_level=remove_second_level,
         )
 
-        # Filtrar apenas as estruturas que foram alteradas para reduzir tamanho e tempo
+        # Exporta todas as linhas das estruturas alvo (a Argo precisa da estrutura
+        # completa), mas só carimba Operacao=UPDATE nas linhas efetivamente
+        # alteradas pela remoção/compactação/promoção.
         aprovacao_id_col = cols.get("aprovacao_id")
         if aprovacao_id_col and aprovacao_id_col in df_updated.columns:
             df_export = df_updated[df_updated[aprovacao_id_col].astype(str).isin(target_ids)].copy()
         else:
             df_export = df_updated.copy()
 
-        # Adicionar/atualizar coluna Operacao com valor UPDATE em todas as linhas (como primeira coluna)
-        if "Operacao" in df_export.columns:
-            df_export["Operacao"] = "UPDATE"
-            # Mover para primeira posição se não estiver
-            cols_list = df_export.columns.tolist()
-            if cols_list[0] != "Operacao":
-                cols_list.remove("Operacao")
-                cols_list.insert(0, "Operacao")
-                df_export = df_export[cols_list]
-        else:
-            df_export.insert(0, "Operacao", "UPDATE")
+        changed_indices = stats.get("changed_indices") or set()
+        if "Operacao" not in df_export.columns:
+            df_export.insert(0, "Operacao", "")
+        changed_mask = df_export.index.isin(changed_indices)
+        df_export.loc[changed_mask, "Operacao"] = "UPDATE"
 
-        output = io.BytesIO()
-        try:
-            import openpyxl  # noqa: F401
-            from openpyxl.styles import Alignment, Font, PatternFill
-            with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                df_export.to_excel(writer, sheet_name="Aprovacao", index=False)
-                ws = writer.sheets["Aprovacao"]
+        # Mover Operacao para a primeira posição
+        cols_list = df_export.columns.tolist()
+        if cols_list and cols_list[0] != "Operacao":
+            cols_list.remove("Operacao")
+            cols_list.insert(0, "Operacao")
+            df_export = df_export[cols_list]
 
-                header_fill = PatternFill(start_color="FFDCE6F1", end_color="FFDCE6F1", fill_type="solid")
-                for cell in list(ws[1]):
-                    cell.font = Font(bold=True)
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                    cell.fill = header_fill
-
-                from openpyxl.utils import get_column_letter
-
-                for idx, col in enumerate(df_export.columns, 1):
-                    series = df_export[col].astype(str).fillna("")
-                    max_len = max(series.map(len).max(), len(str(col))) + 2
-                    max_len = min(max_len, 60)
-                    ws.column_dimensions[get_column_letter(idx)].width = max_len
-
-                ws.freeze_panes = "A2"
-                try:
-                    ws.auto_filter.ref = ws.dimensions
-                except Exception:
-                    pass
-
-            output.seek(0)
-        except Exception:  # pragma: no cover - fallback simples
-            output = io.BytesIO()
-            df_export.to_excel(output, index=False)
-            output.seek(0)
+        # Escrita/estilo/neutralização de fórmula centralizados no ExportService.
+        output = ExportService.to_excel_bytes(df_export, sheet_name="Aprovacao")
 
         filename = f"base_aprovacao_atualizada_{cpf_formatted.replace('-', '')}.xlsx"
         logger.info(
@@ -754,9 +787,9 @@ def aprovacao_remover_export():
     except ValueError as ve:
         logger.warning(f"Export aprovacao remover - erro de validação: {ve}")
         return jsonify({"error": str(ve)}), 400
-    except Exception as exc:  # pragma: no cover - proteção extra
+    except Exception:  # pragma: no cover - proteção extra
         logger.exception("Erro em /api/aprovacao/remover/export")
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for path in [users_path, base_path]:
             try:
