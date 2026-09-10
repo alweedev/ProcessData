@@ -5,8 +5,10 @@ import { defineConfig } from "vite";
 // Build de biblioteca (não um app Vite-servido): o resultado é injetado como
 // <script type="module">/<link> dentro de frontend/index.html, que o Flask já
 // serve como está (frontend/static/react/** fica acessível via /static/react/*
-// sem nenhuma mudança no backend). Nomes de saída fixos por enquanto (sem
-// hash) para simplificar a migração incremental; hash volta na limpeza final.
+// sem nenhuma mudança no backend). Nomes de saída fixos (app-react.js/.css);
+// cache-busting é feito pelo `?v=N` nas tags do index.html, bumpado a cada
+// release (mesmo esquema dos favicons). Ferramenta interna, base de usuários
+// pequena — não vale a máquina de filename com hash + reescrita do HTML.
 export default defineConfig({
   plugins: [react()],
   base: "/static/react/",
