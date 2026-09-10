@@ -1,25 +1,8 @@
 import { useMemo, useRef, useState } from "react";
+import { Modal } from "../../components/Modal";
 import { formatCpf, useInativacao } from "./useInativacao";
 
 const PAGE_SIZE = 10;
-
-function showHelp() {
-  const html = `
-    <div class="text-start">
-      <p class="mb-2 fw-semibold">Passos para inativação rápida</p>
-      <ol class="ps-2 small">
-        <li><strong>1º Passo:</strong> envie a base de usuários em Excel (.xlsx).</li>
-        <li><strong>2º Passo:</strong> cole <strong>CPFs</strong>, <strong>nomes completos</strong> ou <strong>e-mails</strong>, um por linha.</li>
-        <li><strong>3º Passo:</strong> use <em>Buscar</em> para conferir quem será afetado e os status atuais.</li>
-        <li><strong>4º Passo:</strong> finalize em <strong>Gerar</strong> para baixar o relatório da inativação.</li>
-      </ol>
-    </div>`;
-  if (window.Swal?.fire) {
-    window.Swal.fire({ title: "Inativação", html, confirmButtonText: "Fechar", width: 520 });
-  } else {
-    window.alert("Envie base, cole CPFs/nomes/e-mails, busque e gere o arquivo.");
-  }
-}
 
 function rowStatusClass(found: boolean, status: string): string {
   const s = (status || "").trim().toUpperCase();
@@ -35,6 +18,7 @@ export function InativacaoTab() {
   const [dragOver, setDragOver] = useState(false);
   const [resultSearch, setResultSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const term = resultSearch.trim().toLowerCase();
@@ -78,12 +62,30 @@ export function InativacaoTab() {
           type="button"
           aria-label="Como usar a inativação"
           title="Guia da inativação"
-          onClick={showHelp}
+          onClick={() => setHelpOpen(true)}
           className="tw:rounded-lg tw:border tw:border-info tw:px-3 tw:py-1.5 tw:text-sm tw:font-medium tw:text-info tw:hover:bg-info/10"
         >
           Como usar
         </button>
       </div>
+
+      <Modal open={helpOpen} onClose={() => setHelpOpen(false)} title="Inativação">
+        <p className="tw:mb-2 tw:font-semibold">Passos para inativação rápida</p>
+        <ol className="tw:list-decimal tw:space-y-1 tw:pl-5">
+          <li>
+            <strong>1º Passo:</strong> envie a base de usuários em Excel (.xlsx).
+          </li>
+          <li>
+            <strong>2º Passo:</strong> cole <strong>CPFs</strong>, <strong>nomes completos</strong> ou <strong>e-mails</strong>, um por linha.
+          </li>
+          <li>
+            <strong>3º Passo:</strong> use <em>Buscar</em> para conferir quem será afetado e os status atuais.
+          </li>
+          <li>
+            <strong>4º Passo:</strong> finalize em <strong>Gerar</strong> para baixar o relatório da inativação.
+          </li>
+        </ol>
+      </Modal>
 
       <div
         id="inativacao_base_uploadArea"

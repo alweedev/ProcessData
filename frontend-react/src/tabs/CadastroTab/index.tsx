@@ -1,30 +1,14 @@
 import { useState } from "react";
 import { FileDropzone } from "../../components/FileDropzone";
+import { Modal } from "../../components/Modal";
 import { usePersistedState } from "../../hooks/usePersistedState";
 import { useCadastro } from "./useCadastro";
-
-function showHelp() {
-  const html = `
-    <div class="text-start">
-      <ol class="ps-2 small">
-        <li><strong>1º Passo:</strong> carregue a planilha Excel (<strong>.xlsx/.xls</strong>) já preenchida.</li>
-        <li><strong>2º Passo:</strong> escolha o <strong>tipo de login</strong> (CPF ou e-mail) e o <strong>fluxo</strong> (SELF ou FRONT).</li>
-        <li><strong>3º Passo:</strong> clique em <em>Gerar</em> para processar e obter o arquivo pronto para carga.</li>
-        <li><strong>4º Passo:</strong> acompanhe e recupere execuções no <strong>Histórico</strong> quando precisar.</li>
-      </ol>
-      <p class="small text-muted mb-0">Dica: revise os dados antes de enviar para evitar retrabalho.</p>
-    </div>`;
-  if (window.Swal?.fire) {
-    window.Swal.fire({ title: "Como usar carga cadastro", html, confirmButtonText: "Fechar", width: 500 });
-  } else {
-    window.alert("Envie a base, escolha login e fluxo, e gere o arquivo.");
-  }
-}
 
 export function CadastroTab() {
   const cadastro = useCadastro();
   const [prefs, setPrefs] = usePersistedState("cadastro_prefs", { login_choice: "CPF", fluxo: "SELF" });
   const [resetKey, setResetKey] = useState(0);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   function clear() {
     cadastro.clear();
@@ -44,12 +28,32 @@ export function CadastroTab() {
           type="button"
           aria-label="Como usar o cadastro em lote"
           title="Guia do cadastro em lote"
-          onClick={showHelp}
+          onClick={() => setHelpOpen(true)}
           className="tw:rounded-lg tw:border tw:border-info tw:px-3 tw:py-1.5 tw:text-sm tw:font-medium tw:text-info tw:hover:bg-info/10"
         >
           Como usar
         </button>
       </div>
+
+      <Modal open={helpOpen} onClose={() => setHelpOpen(false)} title="Como usar carga cadastro">
+        <ol className="tw:list-decimal tw:space-y-1 tw:pl-5">
+          <li>
+            <strong>1º Passo:</strong> carregue a planilha Excel (<strong>.xlsx/.xls</strong>) já preenchida.
+          </li>
+          <li>
+            <strong>2º Passo:</strong> escolha o <strong>tipo de login</strong> (CPF ou e-mail) e o <strong>fluxo</strong> (SELF ou FRONT).
+          </li>
+          <li>
+            <strong>3º Passo:</strong> clique em <em>Gerar</em> para processar e obter o arquivo pronto para carga.
+          </li>
+          <li>
+            <strong>4º Passo:</strong> acompanhe e recupere execuções no <strong>Histórico</strong> quando precisar.
+          </li>
+        </ol>
+        <p className="tw:mt-2 tw:text-slate-500 tw:dark:text-slate-400">
+          Dica: revise os dados antes de enviar para evitar retrabalho.
+        </p>
+      </Modal>
 
       <FileDropzone
         key={resetKey}

@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { FileDropzone } from "../../components/FileDropzone";
+import { Modal } from "../../components/Modal";
 import { pushToast } from "../../toast/toastStore";
 import { useEstruturas, type PreviewItem } from "./useEstruturas";
 
@@ -41,37 +43,18 @@ function FileFeedback({ file, onClear }: { file: File | null; onClear: () => voi
 export function EstruturasTab() {
   const e = useEstruturas();
   const allSelected = e.items.length > 0 && e.selectedIds.size === e.items.length;
+  const [confirm, setConfirm] = useState<{ mode: "all" | "selected"; empty: { aprovacaoId: string }[] } | null>(null);
 
   async function handleExport(mode: "all" | "selected") {
     const emptyStructures = await e.doExport(mode);
-    if (!emptyStructures) return;
+    if (emptyStructures) setConfirm({ mode, empty: emptyStructures });
+  }
 
-    const listaHtml = emptyStructures
-      .map((s) => `<li>AprovacaoId: <strong>${String(s.aprovacaoId)}</strong></li>`)
-      .join("");
-    const result = window.Swal?.fire
-      ? ((await window.Swal.fire({
-          title: "Atenção!",
-          html: `
-            <p>Algumas estruturas ficarão sem nenhum aprovador após a remoção.</p>
-            <p>As seguintes estruturas ficarão <strong>sem nenhum aprovador</strong>:</p>
-            <ul class="text-start" style="max-height: 200px; overflow-y: auto;">${listaHtml}</ul>
-            <p class="text-danger fw-bold">Deseja continuar mesmo assim?</p>
-          `,
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonColor: "#d33",
-          cancelButtonColor: "#6c757d",
-          confirmButtonText: "Sim, continuar",
-          cancelButtonText: "Cancelar",
-        })) as { isConfirmed?: boolean })
-      : { isConfirmed: window.confirm("Algumas estruturas ficarão sem aprovador. Continuar mesmo assim?") };
-
-    if (result.isConfirmed) {
-      await e.doExport(mode, true);
-    } else {
-      pushToast("Exportação cancelada.", "info");
-    }
+  async function confirmExport() {
+    if (!confirm) return;
+    const { mode } = confirm;
+    setConfirm(null);
+    await e.doExport(mode, true);
   }
 
   return (
@@ -288,6 +271,47 @@ export function EstruturasTab() {
           </div>
         </div>
       )}
+
+      <Modal
+        open={confirm !== null}
+        onClose={() => {
+          setConfirm(null);
+          pushToast("Exportação cancelada.", "info");
+        }}
+        title="Atenção!"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirm(null);
+                pushToast("Exportação cancelada.", "info");
+              }}
+              className="tw:rounded-lg tw:border tw:border-black/15 tw:px-4 tw:py-1.5 tw:text-sm tw:font-medium tw:dark:border-white/15 tw:dark:text-slate-200"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              data-testid="aprovacao-confirm-continuar"
+              onClick={confirmExport}
+              className="tw:rounded-lg tw:bg-danger tw:px-4 tw:py-1.5 tw:text-sm tw:font-medium tw:text-white tw:hover:brightness-95"
+            >
+              Sim, continuar
+            </button>
+          </>
+        }
+      >
+        <p>Algumas estruturas ficarão sem nenhum aprovador após a remoção:</p>
+        <ul className="tw:my-2 tw:max-h-52 tw:list-disc tw:overflow-y-auto tw:pl-5">
+          {confirm?.empty.map((s) => (
+            <li key={s.aprovacaoId}>
+              AprovacaoId: <strong>{s.aprovacaoId}</strong>
+            </li>
+          ))}
+        </ul>
+        <p className="tw:font-bold tw:text-danger">Deseja continuar mesmo assim?</p>
+      </Modal>
     </div>
   );
 }

@@ -47,11 +47,12 @@ test("avisa quando uma estrutura ficará sem aprovador e permite continuar", asy
   await expect(page.locator("#aprovacao_approver_name")).toContainText("Aprovador Um");
 
   await page.locator("#aprovacao_remove_all_btn").click();
-  await expect(page.locator(".swal2-confirm")).toBeVisible();
+  const confirmBtn = page.locator('[data-testid="aprovacao-confirm-continuar"]');
+  await expect(confirmBtn).toBeVisible();
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.locator(".swal2-confirm").click(),
+    confirmBtn.click(),
   ]);
   expect(download.suggestedFilename()).toBe("base_aprovacao_atualizada.xlsx");
 });
