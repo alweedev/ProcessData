@@ -22,7 +22,6 @@ function applyTheme(mode: Mode) {
   // de `body.dark`/`body[data-bs-theme]` até a limpeza final (Fase 6).
   document.body.classList.toggle("dark", isDark);
   document.body.setAttribute("data-bs-theme", isDark ? "dark" : "light");
-  window.__applyRasterInvertToUploadZones?.();
 }
 
 export function ThemeToggle() {

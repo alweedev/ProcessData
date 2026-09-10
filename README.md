@@ -23,7 +23,7 @@ O projeto foi criado a partir de uma **necessidade real do dia a dia profissiona
 - Cadastro de usuários em massa
 - Inativação de usuários a partir de base do cliente
 - Geração de planilhas finais padronizadas, prontas para carga na plataforma Argo
-- Interface web com abas de Análise, Cadastro, Inativação e Histórico
+- Interface web (React) com abas de Cadastro, Inativação, Estruturas de aprovação e Histórico
 - Backend preparado para execução local e deploy
 
 ---
@@ -61,8 +61,10 @@ ProcessData/
 │  └─ tests/          # suite pytest
 │
 ├─ frontend/
-│  ├─ index.html
-│  └─ static/{css,js}/   # js: app.v2.js + modulos por aba (analise, inativacao, history)
+│  ├─ index.html         # shell servido pelo Flask; monta o bundle React
+│  └─ static/react/      # build do frontend React (Vite) — reconstruido por `npm run build:react`
+│
+├─ frontend-react/     # projeto Vite + React + Tailwind (fonte da UI)
 │
 ├─ tests/e2e/         # Playwright (fluxos criticos)
 ├─ pyproject.toml

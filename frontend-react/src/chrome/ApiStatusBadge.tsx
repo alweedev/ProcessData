@@ -46,10 +46,7 @@ function StatusIcon({ state }: { state: ApiState }) {
 }
 
 async function checkHealth(): Promise<boolean> {
-  const base = window.API_BASE ? window.API_BASE.replace(/\/$/, "") : "";
-  const candidates = [`${base}/api/health`, base ? `${base}/` : "/"];
-  for (const url of candidates) {
-    if (!url || url.endsWith("//")) continue;
+  for (const url of ["/api/health", "/"]) {
     try {
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 6000);
