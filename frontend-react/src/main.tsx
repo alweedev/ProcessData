@@ -5,6 +5,7 @@ import "./toast/legacyBridge"; // efeito colateral: instala window.showToast
 import "./history/historyStore"; // efeito colateral: instala window.addToHistory
 import { AppChrome } from "./chrome/AppChrome";
 import { CadastroTab } from "./tabs/CadastroTab";
+import { EstruturasTab } from "./tabs/EstruturasTab";
 import { HistoricoTab } from "./tabs/HistoricoTab";
 import { InativacaoTab } from "./tabs/InativacaoTab";
 import { ToastViewport } from "./toast/ToastViewport";
@@ -26,6 +27,7 @@ const MOUNTS: Mount[] = [
   { selector: "#historico", Component: HistoricoTab },
   { selector: "#inativacao", Component: InativacaoTab },
   { selector: "#cadastro", Component: CadastroTab },
+  { selector: "#estruturas", Component: EstruturasTab },
 ];
 
 function mount() {
