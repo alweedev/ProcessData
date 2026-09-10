@@ -40,6 +40,8 @@
       onerror="this.remove()"
     />
     <link rel="stylesheet" href="static/css/custom.css" />
+    <!-- Migração React (aba por aba) -->
+    <link rel="stylesheet" href="static/react/app-react.css" />
     <!-- XLSX will be lazy-loaded on demand -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
     <script
@@ -758,5 +760,7 @@
     <script src="static/js/history/index.js" defer></script>
     <script src="static/js/app.v2.js" defer></script>
     <script src="static/js/inativacao/index.js" defer></script>
+    <!-- Migração React (aba por aba): monta apenas as abas já migradas -->
+    <script type="module" src="static/react/app-react.js" defer></script>
   </body>
 </html>

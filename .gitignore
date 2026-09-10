@@ -53,6 +53,9 @@ playwright-report/
 test-results/
 /playwright/.cache/
 
+# Build gerado do frontend React (Vite) — reconstruído por `npm run build:react`
+frontend/static/react/
+
 # =========================
 # Sistema operacional
 # =========================

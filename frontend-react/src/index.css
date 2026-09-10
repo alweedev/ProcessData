@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* Tailwind v4 é media-query-first por padrão; habilita a variante `dark:`
+   controlada por classe (.dark em <html>), já que o tema é alternado por um
+   toggle manual, não só por prefers-color-scheme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Gradiente de marca (teal -> cyan), tokens de custom.css atual */
+  --color-brand-from: #00b3bb;
+  --color-brand-to: #00cdd7;
+
+  --color-accent: #0d6efd;
+  --color-accent-hover: #0b5ed7;
+  --color-accent-dark: #3b82f6;
+  --color-accent-dark-hover: #2b6cb0;
+
+  --color-danger: #dc3545;
+  --color-danger-hover: #c82333;
+  --color-danger-dark: #ff646d;
+  --color-danger-dark-hover: #ff4752;
+
+  --color-warning: #ffc107;
+  --color-warning-dark: #ffca5c;
+
+  --color-success: #198754;
+  --color-success-dark: #4ade80;
+
+  --color-info: #0dcaf0;
+  --color-info-dark: #31a0ff;
+
+  --color-surface: #ffffff;
+  --color-surface-alt: #f3f5f7;
+  --color-surface-dark: #0f1720;
+  --color-surface-dark-alt: #182230;
+
+  --color-app-bg: #f8f9fa;
+  --color-app-bg-dark: #0b0e13;
+
+  --font-sans: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}

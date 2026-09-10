@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "description": "Testes end-to-end (Playwright) do ProcessData",
   "scripts": {
+    "build:react": "npm --prefix frontend-react run build",
+    "dev:react": "npm --prefix frontend-react run build -- --watch",
+    "pretest:e2e": "npm run build:react",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed"
   },
