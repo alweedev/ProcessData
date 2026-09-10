@@ -391,117 +391,7 @@
           role="tabpanel"
           aria-labelledby="inativacao-tab"
         >
-          <div class="card shadow-sm fade-in">
-            <div class="card-body">
-              <h2 class="card-title h4 fw-bold mb-3">
-                Inativação
-              </h2>
-              <div class="mb-2">
-                <button id="inativacao_help_btn" class="btn btn-outline-info help-btn" type="button" aria-label="Como usar a inativação" title="Guia da inativação">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="margin-right:0.375rem;"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01"/><circle cx="12" cy="12" r="9"/></svg>
-                  <span>Como usar</span>
-                </button>
-              </div>
-              <!-- Zona de upload da base para inativação: keyboard-accessible -->
-              <div
-                class="border border-primary border-2 border-dashed rounded p-4 text-center upload_dropZone mb-4"
-                id="inativacao_base_uploadArea"
-                aria-live="polite"
-                tabindex="0"
-                role="button"
-                aria-label="Upload da base de inativacao. Pressione para selecionar arquivo"
-              >
-                <i class="bi bi-file-earmark-excel upload_svg" aria-hidden="true"></i>
-                <p class="text-muted mb-3">Arraste a base (.xlsx) ou Selecione o arquivo.</p>
-                <input
-                  type="file" 
-                  accept=".xlsx,.xls"
-                  class="d-none"
-                  id="inativacao_base"
-                  aria-label="Selecionar base para inativação"
-                  aria-hidden="true"
-                />
-                <button onclick="document.getElementById('inativacao_base').click()" class="btn btn-primary" title="Selecionar planilha base de usuários">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 me-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V7m0 0l-4 4m4-4l4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M20 16.5A3.5 3.5 0 0016.5 13h-9A3.5 3.5 0 004 16.5 3.5 3.5 0 007.5 20h9a3.5 3.5 0 003.5-3.5z"/></svg>Selecionar
-                </button>
-                <div id="inativacao_base_feedback" class="upload-feedback-wrapper mt-3" aria-live="polite">
-                  <span class="upload-feedback-content"></span>
-                  <button id="inativacao_clear_base_btn" type="button" class="upload-clear-icon d-none" title="Remover base" aria-label="Limpar base enviada">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                  </button>
-                </div>
-              </div>
-              <!-- Removido upload da lista: entrada apenas via textarea abaixo -->
-              <div class="mt-3">
-                <label for="lista_text" class="form-label fw-bold" title="Campo para entrada manual">Informe abaixo como deseja localizar os usuários.</label>
-                <textarea id="lista_text" class="form-control" rows="4" placeholder="Ex: João Silva\12345678901\usuario@example.com" aria-describedby="lista_valid_summary lista_duplicates_warning" title="Insira (nomes, CPFs ou e-mails) e eles serão validados automaticamente"></textarea>
-                <div id="lista_valid_summary" class="mt-2 small"></div>
-                <div id="lista_duplicates_warning" class="mt-1 text-warning small"></div>
-              </div>
-              <div class="progress mt-3 d-none" id="inativacao_progress">
-                <div
-                  class="progress-bar progress-bar-striped progress-bar-animated"
-                  role="progressbar"
-                  style="width: 0%"
-                  aria-valuenow="0"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                  id="inativacao_progressBar"
-                ></div>
-              </div>
-              <div
-                class="d-flex justify-content-center my-4 d-none"
-                id="inativacao_loading"
-              >
-                <div
-                  class="spinner-border text-primary"
-                  role="status"
-                  aria-label="Carregando inativação"
-                ></div>
-              </div>
-              <div id="inativacao_fileNames" class="file-names mt-2"></div>
-              <button id="inativacao_btn" class="btn btn-primary mt-4" aria-label="Buscar usuários para inativação" title="Executar a busca de itens digitados na base">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 me-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35"/><circle cx="11" cy="11" r="7"/></svg>Buscar Usuários
-              </button>
-              <div id="inativacao_status" class="mt-3" aria-live="polite"></div>
-              <div id="inativacao_debug" class="mt-3 text-danger" aria-live="assertive"></div>
-
-              <!-- Resultados da busca -->
-              <div id="inativacao_results_controls" class="mt-4 d-none">
-                <div class="row g-2 align-items-center">
-                  <div class="col-12 col-md-6">
-                    <input id="result_search" class="form-control w-100" placeholder="Filtrar por nome ou CPF" aria-label="Filtrar resultados" />
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <div class="d-flex justify-content-md-end">
-                      <button id="inativacao_generate_btn" class="btn btn-success d-none" aria-label="Gerar inativação" title="Processar e baixar o relatório final">
-                        Gerar Inativação
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div id="inativacao_results" class="table-responsive mt-3 d-none">
-                <table class="table table-hover table-bordered table-sticky" id="results_table">
-                  <thead class="table-light">
-                    <tr>
-                      <th scope="col">Nome Completo</th>
-                      <th scope="col" style="white-space:nowrap;">CPF</th>
-                      <th scope="col">E-mail</th>
-                      <th scope="col">Status Atual</th>
-                    </tr>
-                  </thead>
-                  <tbody id="results_body"></tbody>
-                </table>
-              </div>
-              <div id="results_pagination" class="d-flex justify-content-between align-items-center d-none">
-                <button id="page_prev" class="btn btn-sm btn-outline-secondary">Anterior</button>
-                <span id="page_info" class="small text-muted">Página 1</span>
-                <button id="page_next" class="btn btn-sm btn-outline-secondary">Próxima</button>
-              </div>
-            </div>
-          </div>
+          <!-- Montado pelo React (Fase 2 da migração): src/tabs/InativacaoTab -->
         </div>
 
         <div
@@ -723,7 +613,6 @@
 
     <script src="static/js/analise/help.js" defer></script>
     <script src="static/js/app.v2.js" defer></script>
-    <script src="static/js/inativacao/index.js" defer></script>
     <!--
       Migração React (aba por aba): monta apenas as abas já migradas.
       Em dev, rode `npm run dev:react` (vite dev com HMR) e ative

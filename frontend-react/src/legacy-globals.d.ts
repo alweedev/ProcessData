@@ -10,5 +10,9 @@ declare global {
     addToHistory?: (action: string) => void;
     /** Prefixo opcional para chamadas /api/* (definido pelo app legado, se houver). */
     API_BASE?: string;
+    /** SweetAlert2, carregado via CDN (script global, sem tipos) até a Fase 6. */
+    Swal?: {
+      fire: (options: Record<string, unknown>) => Promise<unknown>;
+    };
   }
 }
