@@ -63,3 +63,23 @@ def test_process_inativacao_endpoint_400_when_no_match(client):
     }
     resp = client.post("/api/process_inativacao", data=data, content_type="multipart/form-data")
     assert resp.status_code == 400
+
+
+def test_internal_bug_is_not_reported_as_business_no_match(client, monkeypatch):
+    """Um bug interno em processar_inativacao_from_paths deve virar 500
+    (erro real), nunca o 400 de 'nenhum dado encontrado' (que enganaria o
+    usuário fazendo parecer que a base/lista simplesmente não bateram)."""
+    from backend.services.inactivation_service import InactivationService
+
+    def boom(*a, **k):
+        raise RuntimeError("bug interno inesperado")
+
+    monkeypatch.setattr(InactivationService, "process_from_dataframes", boom)
+
+    data = {
+        "base": xlsx_upload(_base(), "base.xlsx"),
+        "lista": xlsx_upload(pd.DataFrame([{"CPF": valid_cpf(1)}]), "lista.xlsx"),
+    }
+    resp = client.post("/api/process_inativacao", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 500
+    assert "interno" in resp.get_json()["error"].lower()

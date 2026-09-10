@@ -51,6 +51,31 @@ def test_cadastro_happy_path_returns_xlsx(client):
     assert "-" in str(rows[0]["Login"])
 
 
+def test_cadastro_success_audit_keeps_row_validation_errors(client):
+    from backend.services.audit_service import AuditService
+
+    df = pd.DataFrame(
+        [
+            {
+                "CPF": valid_cpf(11),
+                "NOME COMPLETO": "Carlos Teste",
+                "EMAIL": "carlos-sem-dominio-valido",
+                "EMPRESA": "Empresa A",
+                "Centro de custo": "CC1",
+                "SOLICITANTE? (S/N)": "S",
+            },
+        ]
+    )
+    data = {"files[]": xlsx_upload(df, "cadastro.xlsx"), "login_choice": "CPF", "fluxo": "SELF"}
+    resp = client.post("/api/process_cadastro", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+
+    events = AuditService.list_events(limit=5)
+    latest = next(e for e in events if e["event_type"] == "cadastro" and e["status"] == "success")
+    assert latest["details"]["invalid_rows"] >= 1
+    assert latest["details"]["errors"]
+
+
 def test_cadastro_bool_and_blank_rows(tmp_path):
     df = pd.DataFrame(
         [

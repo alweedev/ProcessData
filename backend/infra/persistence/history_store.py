@@ -4,6 +4,9 @@ from collections import deque
 from datetime import datetime, timezone
 
 from backend.core.config import settings
+from backend.core.logging import get_logger
+
+logger = get_logger()
 
 
 class HistoryStore:
@@ -26,16 +29,22 @@ class HistoryStore:
 
     @staticmethod
     def append(event: dict):
-        path = HistoryStore._file_path()
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        if os.path.exists(path):
-            HistoryStore._rotate_if_needed(path)
-        payload = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            **(event or {}),
-        }
-        with open(path, "a", encoding="utf-8") as fp:
-            fp.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        # Auditoria é best-effort: uma falha aqui (disco cheio, permissão, path
+        # inválido) nunca pode virar uma exceção não tratada dentro do bloco
+        # except de uma rota, substituindo a resposta 500 controlada.
+        try:
+            path = HistoryStore._file_path()
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            if os.path.exists(path):
+                HistoryStore._rotate_if_needed(path)
+            payload = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                **(event or {}),
+            }
+            with open(path, "a", encoding="utf-8") as fp:
+                fp.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        except OSError:
+            logger.warning("Falha ao gravar trilha de auditoria", exc_info=True)
 
     @staticmethod
     def list_all(limit: int = 200):

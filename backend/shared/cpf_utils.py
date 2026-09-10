@@ -4,7 +4,15 @@ import re
 def clean_cpf(value):
     if value is None:
         return ""
-    return re.sub(r"\D", "", str(value))
+    text = str(value).strip()
+    # openpyxl/pandas às vezes devolvem célula numérica como float ("...909.0");
+    # sem isso o "0" espúrio vira um 12º dígito.
+    if text.endswith(".0") and text[:-2].isdigit():
+        text = text[:-2]
+    digits = re.sub(r"\D", "", text)
+    # Planilhas tratando CPF como número perdem zeros à esquerda; restaura o
+    # tamanho padrão de 11 dígitos (mesma defesa usada em processor.py).
+    return digits.zfill(11) if digits else ""
 
 
 # Alias histórico (backend.utils.limpar_cpf_raw)

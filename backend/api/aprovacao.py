@@ -485,7 +485,7 @@ def _remove_cpf_and_compact(
                 str(df_out.at[idx, col]).strip() for col in approver_cols if str(df_out.at[idx, col]).strip()
             ]
             current_second = str(df_out.at[idx, login_segundo_col]).strip()
-            if not remaining_main and current_second:
+            if not remaining_main and current_second and limpar_cpf_raw(current_second) != cpf_digits:
                 df_out.at[idx, approver_cols[0]] = current_second
                 df_out.at[idx, login_segundo_col] = ""
                 promotions += 1

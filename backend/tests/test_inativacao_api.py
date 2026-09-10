@@ -35,6 +35,21 @@ def test_preview_inativacao_ok(client):
     assert os.listdir(settings.UPLOAD_FOLDER) == []
 
 
+def test_preview_inativacao_detects_accented_lista_column(client):
+    """Regressão: /preview_inativacao pulava normalize_lista_columns quando a
+    lista vinha como arquivo, então uma coluna acentuada ('NÓME COMPLETO')
+    não era detectada aqui mesmo já funcionando em /process_inativacao."""
+    base = _base_df()
+    lista = pd.DataFrame([{"NÓME COMPLETO": "Ana Souza"}])
+    data = {
+        "base": xlsx_upload(base, "base.xlsx"),
+        "lista": xlsx_upload(lista, "lista.xlsx"),
+    }
+    resp = client.post("/api/preview_inativacao", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    assert resp.get_json()["count"] >= 1
+
+
 def test_preview_inativacao_bad_extension(client):
     data = {
         "base": (xlsx_upload(_base_df())[0], "base.txt"),

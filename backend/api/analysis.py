@@ -45,6 +45,15 @@ def analysis_summary():
             fluxo=fluxo,
         )
 
+        if (df_final is None or df_final.empty) and errors:
+            detail = "; ".join(f"{p}: {msg}" for p, msg in errors.items())
+            AuditService.record(
+                event_type="analysis_summary",
+                status="error",
+                details={"files": len(uploaded), "message": detail},
+            )
+            return jsonify({"error": f"Falha ao processar arquivo(s): {detail}"}), 400
+
         report = ReportService.build_quality_report(df_final, errors)
         preview = []
         if df_final is not None and not df_final.empty:

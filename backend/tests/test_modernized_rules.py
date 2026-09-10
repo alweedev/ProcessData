@@ -16,6 +16,16 @@ def test_cpf_normalization_and_formatting():
     assert format_cpf_for_output("12345678909") == "123456789-09"
 
 
+def test_clean_cpf_strips_float_stringified_excel_cell():
+    # openpyxl/pandas podem devolver célula numérica como "12345678909.0"
+    assert clean_cpf("12345678909.0") == "12345678909"
+
+
+def test_clean_cpf_restores_lost_leading_zero():
+    # Excel tratando CPF como número descarta o zero à esquerda
+    assert clean_cpf("1234567890") == "01234567890"
+
+
 def test_text_normalization_and_name_split():
     assert upper_no_accents("José da Silva") == "JOSE DA SILVA"
     assert sanitize_output_text("João / Silva", None) == "JOAO / SILVA"
@@ -70,6 +80,34 @@ def test_processing_service_generates_output_for_self_flow():
         assert result["Login"].tolist()[0].startswith("111222333-") or result["Login"].tolist()[0].startswith(
             "111222333"
         )
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
+def test_nivel_correction_from_validate_row_is_persisted_in_output():
+    """Nivel='OPER' deve ser normalizado para 'OPERACIONAL' na planilha final,
+    não apenas na cópia interna usada pela validação (row de iterrows())."""
+    df = pd.DataFrame(
+        [
+            {
+                "CPF": "11122233344",
+                "NOME COMPLETO": "Ana Souza",
+                "SOLICITANTE? (S/N)": "S",
+                "EMAIL": "ana@empresa.com",
+                "EMPRESA": "Empresa A",
+                "NIVEL": "OPER",
+            },
+        ]
+    )
+
+    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+        df.to_excel(tmp.name, index=False)
+        tmp_path = tmp.name
+
+    try:
+        _errors, result = ProcessingService.process_records_from_files([tmp_path], login_choice="CPF", fluxo="SELF")
+        assert result["Nivel"].tolist() == ["OPERACIONAL"]
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)

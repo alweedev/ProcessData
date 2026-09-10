@@ -1755,7 +1755,7 @@ document.addEventListener("DOMContentLoaded", function () {
       cadastroUploadArea.addEventListener('drop', (e) => {
         e.preventDefault();
         cadastroUploadArea.classList.remove('dragover');
-        if (e.dataTransfer && e.dataTransfer.files) {
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
           cadastroFiles.files = e.dataTransfer.files;
           if (validateCadastroFiles()) updateCadastroFeedback();
         }
@@ -1812,6 +1812,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
           if (!files || !files.files || !files.files.length) {
             throw new Error('Selecione pelo menos um arquivo');
+          }
+          if (!validateCadastroFiles()) {
+            throw new Error('Seleção de arquivos inválida (limite de arquivos ou tamanho excedido)');
           }
 
           const loginChoice = loginChoiceEl ? loginChoiceEl.value : 'CPF';

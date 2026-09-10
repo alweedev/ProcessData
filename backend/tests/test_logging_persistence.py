@@ -27,6 +27,19 @@ def test_history_rotation(monkeypatch):
     assert seq and seq[0] == 59
 
 
+def test_append_failure_does_not_raise(monkeypatch):
+    """Uma falha de I/O ao gravar a auditoria não pode propagar como exceção
+    (isso substituiria uma resposta 500 controlada por um erro não tratado)."""
+    from backend.infra.persistence.history_store import HistoryStore
+
+    def boom(*a, **k):
+        raise OSError("disco cheio")
+
+    monkeypatch.setattr(os, "makedirs", boom)
+
+    HistoryStore.append({"event_type": "evt", "status": "success", "details": {}})
+
+
 def test_500_response_is_generic(client, monkeypatch):
     from backend.services.processing_service import ProcessingService
 

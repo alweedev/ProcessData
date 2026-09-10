@@ -57,3 +57,21 @@ def test_analysis_summary_surfaces_geral_when_required_column_empty(client, tmp_
     resp = client.post("/api/analysis/summary", data=data, content_type="multipart/form-data")
     assert resp.status_code == 200, resp.get_data(as_text=True)
     assert resp.get_json()["report"]["general_errors"]
+
+
+def test_analysis_summary_reports_error_when_all_files_fail_to_parse(client, monkeypatch):
+    import pandas as pd
+    from _helpers import xlsx_upload
+
+    from backend.services.processing_service import ProcessingService
+
+    def fake_process(paths, **kwargs):
+        return {paths[0]: "arquivo corrompido"}, pd.DataFrame(columns=["Login"])
+
+    monkeypatch.setattr(ProcessingService, "process_records_from_files", fake_process)
+
+    df = pd.DataFrame([{"NOME COMPLETO": "Ana Um", "EMAIL": "a@x.com"}])
+    data = {"files[]": xlsx_upload(df, "in.xlsx"), "login_choice": "EMAIL", "fluxo": "SELF"}
+    resp = client.post("/api/analysis/summary", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 400, resp.get_data(as_text=True)
+    assert "error" in resp.get_json()

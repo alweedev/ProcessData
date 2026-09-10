@@ -123,6 +123,31 @@ def test_second_level_promoted(client):
     assert data[0]["Operacao"] == "UPDATE"
 
 
+def test_second_level_not_promoted_when_same_cpf_being_removed(client):
+    """Se o próprio CPF removido também está no segundo nível (mantido por
+    remove_second_level=false), ele não pode ser promovido de volta ao 1º
+    nível — isso reintroduziria o aprovador que a operação removeu."""
+    base = _base_df(
+        [
+            {
+                "AprovacaoId": "A",
+                "LoginAprovador_1": APPROVER,
+                "LoginAprovador_2": "",
+                "LoginAprovador_SEGUNDO_NIVEL": APPROVER,
+            }
+        ]
+    )
+    resp = _post_export(client, _users_df(), base, APPROVER, remove_second_level="false")
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    wb = load_workbook(io.BytesIO(resp.data))
+    ws = wb.active
+    header = [c.value for c in ws[1]]
+    data = [dict(zip(header, [c.value for c in row])) for row in ws.iter_rows(min_row=2)]
+    assert len(data) == 1
+    assert str(data[0]["LoginAprovador_1"] or "") == ""
+    assert str(data[0]["LoginAprovador_SEGUNDO_NIVEL"] or "").replace(".", "").replace("-", "") == APPROVER
+
+
 def test_update_only_on_changed_rows(client):
     base = _base_df(
         [

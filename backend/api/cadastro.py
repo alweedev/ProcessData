@@ -65,6 +65,8 @@ def api_process_cadastro():
                 "columns": int(df_final.shape[1]),
                 "login_choice": login_choice,
                 "fluxo": fluxo,
+                "invalid_rows": len(errors),
+                "errors": errors,
             },
         )
         return send_file(

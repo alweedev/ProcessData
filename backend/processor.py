@@ -289,6 +289,7 @@ def processar_inativacao_from_paths(df_base: pd.DataFrame, df_lista: pd.DataFram
 
     except Exception as e:
         logger.error(f"Erro em processar_inativacao_from_paths: {e}")
-        # garantir que stats sempre tenha total_matches válido mesmo em caso de erro
-        error_stats = {"error": str(e), "cpf_matches": 0, "name_matches": 0, "total_matches": 0, "inactive_matches": {}}
-        return pd.DataFrame(columns=MODEL_COLS), error_stats
+        # Não converter um bug interno em "nenhum resultado encontrado": propaga
+        # para que o handler da rota responda 500 (erro real) em vez de 400
+        # (mensagem de negócio "nada encontrado"), que enganaria o usuário.
+        raise

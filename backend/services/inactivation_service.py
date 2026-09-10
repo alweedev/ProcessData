@@ -11,9 +11,30 @@ logger = get_logger()
 
 class InactivationService:
     @staticmethod
+    def build_lista_from_text(lista_text: str) -> pd.DataFrame:
+        """Constrói o DataFrame de 'lista' a partir de texto colado (uma linha
+        por CPF/nome/e-mail). Usado por /process_inativacao e /preview_inativacao
+        para que os dois fluxos classifiquem cada linha da mesma forma."""
+        lista_items = [item.strip() for item in (lista_text or "").split("\n") if item.strip()]
+        email_pat = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", re.IGNORECASE)
+        rows = []
+        for it in lista_items:
+            digits = re.sub(r"\D", "", it)
+            if email_pat.match(it):
+                rows.append({"CPF": "", "NomeCompleto": "", "Email": it})
+            elif len(digits) == 11:
+                rows.append({"CPF": it, "NomeCompleto": "", "Email": ""})
+            else:
+                rows.append({"CPF": "", "NomeCompleto": it, "Email": ""})
+        df_lista = pd.DataFrame(rows)
+        if "Email" not in df_lista.columns:
+            df_lista["Email"] = ""
+        return df_lista
+
+    @staticmethod
     def normalize_lista_columns(df_lista: pd.DataFrame) -> pd.DataFrame:
         try:
-            norm_map = {re.sub(r"\s+", " ", str(c)).strip().upper(): c for c in df_lista.columns}
+            norm_map = {upper_no_accents(re.sub(r"\s+", " ", str(c))).strip(): c for c in df_lista.columns}
 
             cpf_src = next((v for k, v in norm_map.items() if "CPF" in k), None)
             if "CPF" not in df_lista.columns:
@@ -162,11 +183,14 @@ class InactivationService:
                 {"id": None, "nome": "", "cpf": cpf, "email": "", "status_atual": "Não localizado", "found": False}
             )
 
-        not_found_names = [name for name in valid_names_norm if name not in found_name_norms]
-        for name in not_found_names:
-            results.append(
-                {"id": None, "nome": name, "cpf": "", "email": "", "status_atual": "Não localizado", "found": False}
-            )
+        not_found_names_raw = [
+            raw for raw, norm in zip(valid_names_raw, valid_names_norm) if norm not in found_name_norms
+        ]
+        for raw, norm in zip(valid_names_raw, valid_names_norm):
+            if norm not in found_name_norms:
+                results.append(
+                    {"id": None, "nome": raw, "cpf": "", "email": "", "status_atual": "Não localizado", "found": False}
+                )
 
         not_found_emails = [email for email in valid_emails if email.strip().lower() not in found_emails]
         for email in not_found_emails:
@@ -181,7 +205,7 @@ class InactivationService:
             "items": results,
             "total": len(results),
             "duplicates": duplicates,
-            "not_found": not_found_cpfs + valid_names_raw + not_found_emails,
+            "not_found": not_found_cpfs + not_found_names_raw + not_found_emails,
         }
 
     @staticmethod

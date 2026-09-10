@@ -1,5 +1,4 @@
 import os
-import re
 
 import pandas as pd
 from flask import Blueprint, jsonify, request, send_file
@@ -158,31 +157,13 @@ def api_process_inativacao():
             df_lista = InactivationService.normalize_lista_columns(df_lista)
         else:
             logger.info("Processando lista a partir de texto")
-            lista_items = [item.strip() for item in lista_text.split("\n") if item.strip()]
-            if not lista_items:
+            df_lista = InactivationService.build_lista_from_text(lista_text)
+            if df_lista.empty:
                 return jsonify({"error": "Texto de lista vazio ou sem CPF/Nome/E-mail válidos"}), 400
-            email_pat = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", re.IGNORECASE)
-            rows = []
-            for it in lista_items:
-                digits = re.sub(r"\D", "", it)
-                if email_pat.match(it):
-                    rows.append({"CPF": "", "NomeCompleto": "", "Email": it})
-                elif len(digits) == 11:
-                    rows.append({"CPF": it, "NomeCompleto": "", "Email": ""})
-                else:
-                    rows.append({"CPF": "", "NomeCompleto": it, "Email": ""})
-            df_lista = pd.DataFrame(rows)
-            if "Email" not in df_lista.columns:
-                df_lista["Email"] = ""
 
         df_base = pd.read_excel(base_path, dtype=str).fillna("")
 
-        out = InactivationService.process_from_dataframes(df_base, df_lista)
-        if isinstance(out, tuple) and len(out) == 2:
-            out_df, stats = out
-        else:
-            out_df = out
-            stats = {}
+        out_df, stats = InactivationService.process_from_dataframes(df_base, df_lista)
 
         logger.info("DataFrame de inativação gerado: %s linhas x %s colunas", out_df.shape[0], out_df.shape[1])
         if out_df.empty:
@@ -276,34 +257,17 @@ def api_preview_inativacao():
             if not ok:
                 return jsonify({"error": msg}), 400
             df_lista = pd.read_excel(lista_path, dtype=str).fillna("")
+            df_lista = InactivationService.normalize_lista_columns(df_lista)
         else:
             if not lista_text:
                 return jsonify({"error": "Envie a lista como arquivo ou cole nomes/CPFs no campo de texto"}), 400
-            lista_items = [item.strip() for item in lista_text.split("\n") if item.strip()]
-            if not lista_items:
+            df_lista = InactivationService.build_lista_from_text(lista_text)
+            if df_lista.empty:
                 return jsonify({"error": "Texto de lista vazio ou sem CPF/Nome/E-mail válidos"}), 400
-            email_pat = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", re.IGNORECASE)
-            rows = []
-            for it in lista_items:
-                digits = re.sub(r"\D", "", it)
-                if email_pat.match(it):
-                    rows.append({"CPF": "", "NomeCompleto": "", "Email": it})
-                elif len(digits) == 11:
-                    rows.append({"CPF": it, "NomeCompleto": "", "Email": ""})
-                else:
-                    rows.append({"CPF": "", "NomeCompleto": it, "Email": ""})
-            df_lista = pd.DataFrame(rows)
-            if "Email" not in df_lista.columns:
-                df_lista["Email"] = ""
 
         df_base = pd.read_excel(base_path, dtype=str).fillna("")
 
-        out = InactivationService.process_from_dataframes(df_base, df_lista)
-        if isinstance(out, tuple) and len(out) == 2:
-            out_df, stats = out
-        else:
-            out_df = out
-            stats = {}
+        out_df, stats = InactivationService.process_from_dataframes(df_base, df_lista)
 
         try:
             count = (

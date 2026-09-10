@@ -125,6 +125,8 @@ class ProcessingService:
             msgs = ValidationService.validate_row(row)
             if msgs:
                 errors[idx] = "; ".join(msgs)
+            if "Nivel" in row.index:
+                df_final.at[idx, "Nivel"] = row["Nivel"]
 
         geral = ValidationService.validate_dataframe(df_final)
         if geral:

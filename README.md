@@ -57,7 +57,6 @@ ProcessData/
 │  ├─ shared/         # utilitarios (texto, cpf, arquivos, validacao de upload)
 │  ├─ infra/          # persistencia (trilha de auditoria JSONL)
 │  ├─ processor.py    # motor de inativacao (processar_inativacao_from_paths)
-│  ├─ utils.py        # re-export de backend.shared.* (compat)
 │  ├─ app.py          # factory Flask
 │  └─ tests/          # suite pytest
 │
