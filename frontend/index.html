@@ -13,7 +13,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png?v=3" />
     <link rel="manifest" href="site.webmanifest?v=3" />
     <!-- Pré-aplicação de tema para evitar FOUC -->
-    <script>try{const stored=localStorage.getItem('theme');const prefers=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;const mode= stored? stored : (prefers? 'dark':'light');document.documentElement.setAttribute('data-initial-theme',mode);document.addEventListener('DOMContentLoaded',()=>{document.body.setAttribute('data-bs-theme',mode);if(mode==='dark') document.body.classList.add('dark');});}catch(e){/* noop */}</script>
+    <script>try{const stored=localStorage.getItem('pd_theme');const prefers=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;const mode= stored? stored : (prefers? 'dark':'light');document.documentElement.setAttribute('data-initial-theme',mode);}catch(e){/* noop */}</script>
     <!-- Tailwind (modo CDN apenas para utilities e @layer) -->
     <script src="https://cdn.tailwindcss.com" defer></script>
     <!-- Alpine.js para reatividade leve -->
@@ -66,46 +66,8 @@
           </div>
         </a>
         <div class="d-flex align-items-center gap-2">
-          <button
-            id="apiStatusBtn"
-            class="btn btn-outline-secondary api-status-btn"
-            data-bs-toggle="tooltip"
-            data-bs-title="Status da API"
-            aria-label="Status da API"
-            disabled
-          >
-            <!-- Heroicon: check-circle (online) / x-circle (offline) -->
-            <svg id="apiStatusIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <!-- Initial icon will be replaced dynamically; shows network nodes -->
-              <circle cx="12" cy="12" r="9" />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.5l4.5 2 4.5-2M12 10.5v5M8 15.5h8" />
-            </svg>
-            <span id="apiStatusText">API</span>
-          </button>
-          <button
-            id="themeToggle"
-            class="btn btn-dark"
-            data-bs-toggle="tooltip"
-            data-bs-title="Alternar tema"
-            aria-label="Alternar tema"
-          >
-            <!-- Heroicon sun/moon morph container -->
-            <span id="themeIcon" class="theme-icon-wrapper" aria-hidden="true">
-              <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 theme-sun" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.657-6.343l1.414-1.414M4.929 19.071l1.414-1.414m0-11.314L4.93 4.93m13.657 13.657l1.414 1.414"/><circle cx="12" cy="12" r="4"/></svg>
-              <svg id="iconMoon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 theme-moon d-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-            </span>
-          </button>
-          <button
-            id="motionToggle"
-            class="btn btn-outline-secondary"
-            data-bs-toggle="tooltip"
-            data-bs-title="Reduzir movimentos"
-            aria-label="Reduzir movimentos"
-            style="display: inline-flex; align-items: center; gap: 0.5rem;"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true" style="flex-shrink: 0;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3C7.03 3 3 7.03 3 12c0 1.76.57 3.39 1.53 4.72L16.72 4.53A8.963 8.963 0 0012 3z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a8.963 8.963 0 00-1.53-4.72L7.28 19.47A8.963 8.963 0 0012 21c4.97 0 9-4.03 9-9z"/></svg>
-            <span>Animações: Ativas</span>
-          </button>
+          <!-- Montado pelo React (Fase 0 da migração): status de API, tema, animações -->
+          <div id="appChromeControls" class="d-flex align-items-center gap-2"></div>
           <!-- Botão Limpar premium (aparece após upload) -->
           <button id="clearAllBtn" x-show="showClear" x-transition.opacity.duration.300ms class="btn btn-gradient-clear ms-2 d-none" aria-label="Limpar ficha, tabela e buscas" @click="showClear=false" data-clear-button>
             <span class="clear-icon" aria-hidden="true">

@@ -41,6 +41,8 @@ document.addEventListener("DOMContentLoaded", function () {
       console.debug("applyRasterInvertToUploadZones", error);
     }
   }
+  // Chamado pelo ThemeToggle (React, Fase 0 da migração) após alternar o tema.
+  try { window.__applyRasterInvertToUploadZones = applyRasterInvertToUploadZones; } catch(_) {}
 
   async function ensureXlsx() {
     if (window.XLSX) return;
@@ -151,23 +153,11 @@ document.addEventListener("DOMContentLoaded", function () {
     return parsed;
   }
 
-  function showToast(message, type = "success") {
-    const toastContainer = document.getElementById("toastContainer");
-    if (!toastContainer) return console.warn("toastContainer não encontrado");
-    const background =
-      type === "success" ? "success" : type === "info" ? "info" : "danger";
-    const toast = document.createElement("div");
-    toast.className = `toast align-items-center text-white bg-${background} border-0`;
-    toast.setAttribute("role", "status");
-    toast.setAttribute("aria-live", "polite");
-    toast.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button></div>`;
-    toastContainer.appendChild(toast);
-    const instance = new bootstrap.Toast(toast, { delay: 3600 });
-    instance.show();
-    toast.addEventListener("hidden.bs.toast", () => toast.remove());
-  }
-  // Expor globalmente para outros scripts (ex: inativacao/index.js)
-  try { window.showToast = showToast; } catch(_) {}
+  // showToast: implementado pelo React (src/toast/legacyBridge.ts, Fase 0 da
+  // migração), que expõe window.showToast. Continua chamável como `showToast(...)`
+  // aqui porque este script roda em escopo clássico (não-module) e todo o
+  // código abaixo só executa em DOMContentLoaded, depois que o bundle React
+  // (carregado por último, também deferred) já instalou a ponte.
 
   // ===== Upload banner animations helpers =====
   function setBannerContent(elem, html) {
@@ -264,165 +254,10 @@ document.addEventListener("DOMContentLoaded", function () {
     )}</div></div>`;
   }
 
-  // ===== THEME & ACCESSIBILITY CONTROLS =====
-  const THEME_KEY = "app_theme";
-  const themeToggle = document.getElementById("themeToggle");
-  const iconSun = document.getElementById("iconSun");
-  const iconMoon = document.getElementById("iconMoon");
-
-  function applyTheme(mode, persist = true) {
-    const nextMode = mode === "dark" ? "dark" : "light";
-    const isDark = nextMode === "dark";
-    document.body.classList.toggle("dark", isDark);
-    document.body.setAttribute("data-bs-theme", isDark ? "dark" : "light");
-    iconSun?.classList.toggle("d-none", isDark);
-    iconMoon?.classList.toggle("d-none", !isDark);
-    themeToggle?.setAttribute(
-      "aria-label",
-      isDark ? "Alternar para tema claro" : "Alternar para tema escuro"
-    );
-    if (persist) {
-      localStorage.setItem(THEME_KEY, nextMode);
-    }
-    applyRasterInvertToUploadZones();
-  }
-
-  if (themeToggle) {
-    const storedTheme = localStorage.getItem(THEME_KEY);
-    const prefersDark = window.matchMedia
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches
-      : false;
-    const initialTheme = storedTheme || (prefersDark ? "dark" : "light");
-    applyTheme(initialTheme, false);
-    themeToggle.addEventListener("click", () => {
-      const nextMode = document.body.classList.contains("dark")
-        ? "light"
-        : "dark";
-      applyTheme(nextMode, true);
-    });
-  }
-
-  const MOTION_KEY = "motion_pref";
-  const motionToggle = document.getElementById("motionToggle");
-  const motionLabel = motionToggle?.querySelector("span");
-
-  function applyMotionPreference(reduced, persist = true) {
-    document.body.classList.toggle("reduce-motion", !!reduced);
-    if (motionLabel) {
-      motionLabel.textContent = reduced
-        ? "Animações: Reduzidas"
-        : "Animações: Ativas";
-    }
-    if (persist) {
-      localStorage.setItem(MOTION_KEY, reduced ? "reduce" : "full");
-    }
-  }
-
-  if (motionToggle) {
-    const storedMotion = localStorage.getItem(MOTION_KEY);
-    const prefersReduced = window.matchMedia
-      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      : false;
-    const initialMotion = storedMotion
-      ? storedMotion === "reduce"
-      : prefersReduced;
-    applyMotionPreference(initialMotion, false);
-    motionToggle.addEventListener("click", () => {
-      const nextValue = !document.body.classList.contains("reduce-motion");
-      applyMotionPreference(nextValue, true);
-    });
-  }
-
-  // ===== API STATUS MONITOR =====
-  const apiStatusBtn = document.getElementById("apiStatusBtn");
-  const apiStatusIcon = document.getElementById("apiStatusIcon");
-  const apiStatusText = document.getElementById("apiStatusText");
-  let apiStatusInterval = null;
-  let lastApiState = "unknown";
-
-  const apiIcons = {
-    // Stylized hub (central circle) with connected nodes for online
-    online: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 9V5M12 19v-4M9 12H5M19 12h-4M9.6 9.6l-2.8-2.8M16.4 9.6l2.8-2.8M9.6 14.4l-2.8 2.8M16.4 14.4l2.8 2.8"/>',
-    // Offline: broken link chain with warning slash
-    offline: '<circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 13.5l3-3m1 1.5l2.2 2.2M14.5 10.5L16 9m-8 6l-1.5 1.5M9 8.8L7.5 7.3"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12"/>',
-    // Checking: spinner arc + pulse dot
-    checking: '<circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a9 9 0 019 9"/><circle cx="12" cy="12" r="2"/>'
-  };
-
-  function setApiStatusVisual(state) {
-    if (!apiStatusBtn || !apiStatusIcon || !apiStatusText) return;
-    apiStatusBtn.classList.remove("api-online", "api-offline", "api-checking");
-    apiStatusBtn.classList.add(`api-${state}`);
-    apiStatusIcon.innerHTML = apiIcons[state] || apiIcons.offline;
-    apiStatusIcon.classList.toggle("spin-rotating", state === "checking");
-    const textMap = {
-      online: "API Online",
-      offline: "API Offline",
-      checking: "Verificando...",
-    };
-    apiStatusText.textContent = textMap[state] || "API";
-    apiStatusBtn.removeAttribute("disabled");
-  }
-
-  async function pingApi(manual = false) {
-    if (!apiStatusBtn || !apiStatusIcon) return;
-    setApiStatusVisual("checking");
-
-    const base = window.API_BASE ? window.API_BASE.replace(/\/$/, "") : "";
-
-    const candidates = [
-      `${base}/api/health`,
-      base ? `${base}/` : "/",
-    ];
-
-    async function tryFetch(url) {
-      const controller = window.AbortController ? new AbortController() : null;
-      const timeoutId = controller ? setTimeout(() => controller.abort(), 6000) : null;
-      try {
-        const res = await fetch(url, { method: "GET", signal: controller?.signal });
-        if (timeoutId) clearTimeout(timeoutId);
-        return res.ok;
-      } catch (e) {
-        if (timeoutId) clearTimeout(timeoutId);
-        return false;
-      }
-    }
-
-    for (const url of candidates) {
-      // Skip duplicate URLs
-      if (!url || (typeof url === "string" && url.endsWith("//"))) continue;
-      // If one succeeds, mark online and stop
-      /* eslint-disable no-await-in-loop */
-      const ok = await tryFetch(url);
-      if (ok) {
-        handleApiResult(true, manual);
-        return;
-      }
-    }
-    handleApiResult(false, manual);
-  }
-
-  function handleApiResult(isOnline, notify) {
-    const state = isOnline ? "online" : "offline";
-    setApiStatusVisual(state);
-    if (notify || lastApiState !== state) {
-      showToast(
-        isOnline ? "API Online" : "API Offline",
-        isOnline ? "success" : "danger"
-      );
-    }
-    lastApiState = state;
-  }
-
-  if (apiStatusBtn && apiStatusIcon && apiStatusText) {
-    apiStatusBtn.addEventListener("click", () => pingApi(true));
-    pingApi(false);
-    apiStatusInterval = setInterval(() => pingApi(false), 45000);
-    window.addEventListener("beforeunload", () => {
-      if (apiStatusInterval) clearInterval(apiStatusInterval);
-    });
-  }
-
+  // Tema, animações e status de API: migrados pro React na Fase 0
+  // (src/chrome/{ThemeToggle,MotionToggle,ApiStatusBadge}.tsx). O aplicativo
+  // React monta em #appChromeControls e chama
+  // window.__applyRasterInvertToUploadZones() após alternar o tema.
   applyRasterInvertToUploadZones();
 
   class AnaliseWorkspace {

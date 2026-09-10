@@ -10,6 +10,13 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   base: "/static/react/",
+  // Build de biblioteca não aplica o `define` padrão de process.env.NODE_ENV
+  // que o modo "app" do Vite faz automaticamente para libs como React/ReactDOM
+  // (elas checam isso em runtime) — sem isso o bundle lança
+  // "ReferenceError: process is not defined" assim que carrega no browser.
+  define: {
+    "process.env.NODE_ENV": '"production"',
+  },
   build: {
     outDir: "../frontend/static/react",
     emptyOutDir: true,

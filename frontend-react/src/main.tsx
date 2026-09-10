@@ -1,24 +1,28 @@
 import type { ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import "./toast/legacyBridge"; // efeito colateral: instala window.showToast
+import { AppChrome } from "./chrome/AppChrome";
+import { ToastViewport } from "./toast/ToastViewport";
 
 /**
- * Cada aba migrada soma uma entrada aqui. O elemento do seletor é o próprio
- * <div class="tab-pane" id="..."> que o Bootstrap tab-JS já controla (mostra/
- * esconde via classe) — só os FILHOS são substituídos pelo React, o nó
- * externo continua sendo gerenciado pelo markup legado enquanto ele existir.
+ * Cada aba/pedaço de chrome migrado soma uma entrada aqui. O elemento do
+ * seletor continua existindo e sendo controlado pelo markup legado (ex.: o
+ * <div class="tab-pane"> que o Bootstrap tab-JS mostra/esconde) — só os
+ * FILHOS são substituídos pelo React.
  */
-interface MigratedTab {
+interface Mount {
   selector: string;
   Component: ComponentType;
 }
 
-const MIGRATED_TABS: MigratedTab[] = [
-  // Fase 0 (AppShell) e as fases seguintes somam entradas aqui.
+const MOUNTS: Mount[] = [
+  { selector: "#appChromeControls", Component: AppChrome },
+  { selector: "#toastContainer", Component: ToastViewport },
 ];
 
-function mountTabs() {
-  for (const { selector, Component } of MIGRATED_TABS) {
+function mount() {
+  for (const { selector, Component } of MOUNTS) {
     const el = document.querySelector(selector);
     if (!el) continue;
     el.innerHTML = "";
@@ -27,7 +31,7 @@ function mountTabs() {
 }
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", mountTabs);
+  document.addEventListener("DOMContentLoaded", mount);
 } else {
-  mountTabs();
+  mount();
 }
