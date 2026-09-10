@@ -722,7 +722,45 @@
     <script src="static/js/history/index.js" defer></script>
     <script src="static/js/app.v2.js" defer></script>
     <script src="static/js/inativacao/index.js" defer></script>
-    <!-- Migração React (aba por aba): monta apenas as abas já migradas -->
-    <script type="module" src="static/react/app-react.js" defer></script>
+    <!--
+      Migração React (aba por aba): monta apenas as abas já migradas.
+      Em dev, rode `npm run dev:react` (vite dev com HMR) e ative
+      `localStorage.setItem('pd_dev_hmr','1')` no console do navegador +
+      recarregue a página para carregar do dev server em vez do build
+      estático. Sem a flag (padrão, e sempre em produção/CI), carrega o
+      build de frontend/static/react/.
+    -->
+    <script type="module" src="static/react/app-react.js" defer id="pd-react-entry"></script>
+    <script>
+      (function () {
+        var dev = false;
+        try {
+          dev = localStorage.getItem("pd_dev_hmr") === "1";
+        } catch (e) {
+          /* noop */
+        }
+        if (!dev) return;
+        var current = document.getElementById("pd-react-entry");
+        if (current) current.remove();
+        var devHost = "http://localhost:5173/static/react";
+        var preamble = document.createElement("script");
+        preamble.type = "module";
+        preamble.textContent =
+          'import RefreshRuntime from "' + devHost + '/@react-refresh";' +
+          "RefreshRuntime.injectIntoGlobalHook(window);" +
+          "window.$RefreshReg$ = () => {};" +
+          "window.$RefreshSig$ = () => (type) => type;" +
+          "window.__vite_plugin_react_preamble_installed__ = true;";
+        document.body.appendChild(preamble);
+        var client = document.createElement("script");
+        client.type = "module";
+        client.src = devHost + "/@vite/client";
+        document.body.appendChild(client);
+        var main = document.createElement("script");
+        main.type = "module";
+        main.src = devHost + "/src/main.tsx";
+        document.body.appendChild(main);
+      })();
+    </script>
   </body>
 </html>
