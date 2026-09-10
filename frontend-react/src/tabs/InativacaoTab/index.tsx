@@ -6,9 +6,9 @@ const PAGE_SIZE = 10;
 
 function rowStatusClass(found: boolean, status: string): string {
   const s = (status || "").trim().toUpperCase();
-  if (!found) return "tw:bg-warning/15";
-  if (s === "ATIVO") return "tw:bg-success/10";
-  if (s) return "tw:bg-danger/10";
+  if (!found) return "bg-warning/15";
+  if (s === "ATIVO") return "bg-success/10";
+  if (s) return "bg-danger/10";
   return "";
 }
 
@@ -54,24 +54,24 @@ export function InativacaoTab() {
   const showResults = inativacao.results.length > 0 || inativacao.searching;
 
   return (
-    <div className="tw:rounded-xl tw:border tw:border-black/10 tw:bg-surface tw:p-4 tw:shadow-sm tw:dark:border-white/10 tw:dark:bg-surface-dark tw:sm:p-6">
-      <div className="tw:mb-3 tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
-        <h2 className="tw:text-lg tw:font-semibold tw:text-slate-900 tw:dark:text-slate-100">Inativação</h2>
+    <div className="rounded-xl border border-black/10 bg-surface p-4 shadow-sm dark:border-white/10 dark:bg-surface-dark sm:p-6">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Inativação</h2>
         <button
           id="inativacao_help_btn"
           type="button"
           aria-label="Como usar a inativação"
           title="Guia da inativação"
           onClick={() => setHelpOpen(true)}
-          className="tw:rounded-lg tw:border tw:border-info tw:px-3 tw:py-1.5 tw:text-sm tw:font-medium tw:text-info tw:hover:bg-info/10"
+          className="rounded-lg border border-info px-3 py-1.5 text-sm font-medium text-info hover:bg-info/10"
         >
           Como usar
         </button>
       </div>
 
       <Modal open={helpOpen} onClose={() => setHelpOpen(false)} title="Inativação">
-        <p className="tw:mb-2 tw:font-semibold">Passos para inativação rápida</p>
-        <ol className="tw:list-decimal tw:space-y-1 tw:pl-5">
+        <p className="mb-2 font-semibold">Passos para inativação rápida</p>
+        <ol className="list-decimal space-y-1 pl-5">
           <li>
             <strong>1º Passo:</strong> envie a base de usuários em Excel (.xlsx).
           </li>
@@ -110,11 +110,11 @@ export function InativacaoTab() {
           const file = e.dataTransfer.files?.[0];
           if (file) pickFile(file);
         }}
-        className={`tw:mb-4 tw:rounded-lg tw:border-2 tw:border-dashed tw:p-6 tw:text-center tw:transition-colors ${
-          dragOver ? "tw:border-accent tw:bg-accent/5" : "tw:border-accent/40"
-        } tw:dark:border-accent-dark/40`}
+        className={`mb-4 rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
+          dragOver ? "border-accent bg-accent/5" : "border-accent/40"
+        } dark:border-accent-dark/40`}
       >
-        <p className="tw:mb-3 tw:text-sm tw:text-slate-500 tw:dark:text-slate-400">
+        <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
           Arraste a base (.xlsx) ou selecione o arquivo.
         </p>
         <input
@@ -123,20 +123,20 @@ export function InativacaoTab() {
           accept=".xlsx,.xls"
           id="inativacao_base"
           aria-label="Selecionar base para inativação"
-          className="tw:hidden"
+          className="hidden"
           onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
         />
         <button
           type="button"
           title="Selecionar planilha base de usuários"
           onClick={() => fileInputRef.current?.click()}
-          className="tw:rounded-lg tw:bg-accent tw:px-4 tw:py-2 tw:text-sm tw:font-medium tw:text-white tw:hover:bg-accent-hover"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
         >
           Selecionar
         </button>
-        <div id="inativacao_base_feedback" aria-live="polite" className="tw:mt-3">
+        <div id="inativacao_base_feedback" aria-live="polite" className="mt-3">
           {inativacao.baseFile && (
-            <span className="tw:inline-flex tw:items-center tw:gap-2 tw:rounded-full tw:bg-success/10 tw:px-3 tw:py-1 tw:text-sm tw:text-success">
+            <span className="inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-sm text-success">
               {inativacao.baseFile.name}
               <button
                 id="inativacao_clear_base_btn"
@@ -147,7 +147,7 @@ export function InativacaoTab() {
                   e.stopPropagation();
                   clearBase();
                 }}
-                className="tw:text-success tw:hover:text-danger"
+                className="text-success hover:text-danger"
               >
                 ✕
               </button>
@@ -156,8 +156,8 @@ export function InativacaoTab() {
         </div>
       </div>
 
-      <div className="tw:mt-3">
-        <label htmlFor="lista_text" className="tw:mb-1 tw:block tw:text-sm tw:font-medium tw:text-slate-700 tw:dark:text-slate-200">
+      <div className="mt-3">
+        <label htmlFor="lista_text" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
           Informe abaixo como deseja localizar os usuários.
         </label>
         <textarea
@@ -168,23 +168,23 @@ export function InativacaoTab() {
           title="Insira (nomes, CPFs ou e-mails) e eles serão validados automaticamente"
           value={inativacao.listText}
           onChange={(e) => inativacao.setListText(e.target.value)}
-          className="tw:w-full tw:rounded-lg tw:border tw:border-black/10 tw:bg-white tw:p-3 tw:text-sm tw:text-slate-900 tw:outline-none tw:focus:border-accent tw:focus:ring-2 tw:focus:ring-accent/25 tw:dark:border-white/10 tw:dark:bg-surface-dark-alt tw:dark:text-slate-100"
+          className="w-full rounded-lg border border-black/10 bg-white p-3 text-sm text-slate-900 outline-none focus:border-accent focus:ring-2 focus:ring-accent/25 dark:border-white/10 dark:bg-surface-dark-alt dark:text-slate-100"
         />
-        <div id="lista_valid_summary" className="tw:mt-2 tw:text-sm tw:text-slate-500 tw:dark:text-slate-400">
-          <span className="tw:rounded tw:bg-accent/10 tw:px-2 tw:py-0.5 tw:text-accent tw:dark:text-accent-dark">
+        <div id="lista_valid_summary" className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          <span className="rounded bg-accent/10 px-2 py-0.5 text-accent dark:text-accent-dark">
             {inativacao.classification.totalValid}
           </span>{" "}
           itens válidos (CPF, Nome Completo ou E-mail)
         </div>
         {inativacao.classification.duplicates.length > 0 && (
-          <div id="lista_duplicates_warning" className="tw:mt-1 tw:text-sm tw:text-warning">
+          <div id="lista_duplicates_warning" className="mt-1 text-sm text-warning">
             CPFs duplicados: {inativacao.classification.duplicates.join(", ")}
           </div>
         )}
       </div>
 
       {inativacao.generating && (
-        <div id="inativacao_progress" className="tw:mt-3 tw:h-2 tw:overflow-hidden tw:rounded-full tw:bg-black/10 tw:dark:bg-white/10">
+        <div id="inativacao_progress" className="mt-3 h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
           <div
             id="inativacao_progressBar"
             role="progressbar"
@@ -192,7 +192,7 @@ export function InativacaoTab() {
             aria-valuemin={0}
             aria-valuemax={100}
             style={{ width: `${inativacao.progress}%` }}
-            className="tw:h-full tw:bg-accent tw:transition-[width]"
+            className="h-full bg-accent transition-[width]"
           />
         </div>
       )}
@@ -203,21 +203,21 @@ export function InativacaoTab() {
         title="Executar a busca de itens digitados na base"
         disabled={!inativacao.canSearch || inativacao.searching}
         onClick={handleSearch}
-        className="tw:mt-4 tw:rounded-lg tw:bg-accent tw:px-4 tw:py-2 tw:text-sm tw:font-medium tw:text-white tw:hover:bg-accent-hover tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
+        className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
         {inativacao.searching ? "Buscando..." : "Buscar Usuários"}
       </button>
 
-      <div id="inativacao_status" className="tw:mt-3 tw:text-sm tw:text-slate-500 tw:dark:text-slate-400" aria-live="polite" />
+      <div id="inativacao_status" className="mt-3 text-sm text-slate-500 dark:text-slate-400" aria-live="polite" />
       {inativacao.debugMsg && (
-        <div id="inativacao_debug" className="tw:mt-3 tw:text-sm tw:text-danger" aria-live="assertive">
+        <div id="inativacao_debug" className="mt-3 text-sm text-danger" aria-live="assertive">
           {inativacao.debugMsg}
         </div>
       )}
 
       {showResults && (
         <>
-          <div id="inativacao_results_controls" className="tw:mt-4 tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+          <div id="inativacao_results_controls" className="mt-4 flex flex-wrap items-center gap-2">
             <input
               id="result_search"
               placeholder="Filtrar por nome ou CPF"
@@ -227,7 +227,7 @@ export function InativacaoTab() {
                 setResultSearch(e.target.value);
                 setPage(1);
               }}
-              className="tw:min-w-[220px] tw:flex-1 tw:rounded-lg tw:border tw:border-black/10 tw:bg-white tw:px-3 tw:py-1.5 tw:text-sm tw:text-slate-900 tw:outline-none tw:focus:border-accent tw:focus:ring-2 tw:focus:ring-accent/25 tw:dark:border-white/10 tw:dark:bg-surface-dark-alt tw:dark:text-slate-100"
+              className="min-w-[220px] flex-1 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-accent focus:ring-2 focus:ring-accent/25 dark:border-white/10 dark:bg-surface-dark-alt dark:text-slate-100"
             />
             {inativacao.results.length > 0 && (
               <button
@@ -236,27 +236,27 @@ export function InativacaoTab() {
                 title="Processar e baixar o relatório final"
                 disabled={inativacao.generating}
                 onClick={handleGenerate}
-                className="tw:rounded-lg tw:bg-success tw:px-4 tw:py-2 tw:text-sm tw:font-medium tw:text-white tw:hover:brightness-95 tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
+                className="rounded-lg bg-success px-4 py-2 text-sm font-medium text-white hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {inativacao.generating ? "Gerando..." : "Gerar Inativação"}
               </button>
             )}
           </div>
 
-          <div id="inativacao_results" className="tw:mt-3 tw:overflow-x-auto tw:rounded-lg tw:border tw:border-black/10 tw:dark:border-white/10">
-            <table id="results_table" className="tw:w-full tw:text-sm">
-              <thead className="tw:bg-black/[.03] tw:dark:bg-white/[.04]">
+          <div id="inativacao_results" className="mt-3 overflow-x-auto rounded-lg border border-black/10 dark:border-white/10">
+            <table id="results_table" className="w-full text-sm">
+              <thead className="bg-black/[.03] dark:bg-white/[.04]">
                 <tr>
-                  <th scope="col" className="tw:px-3 tw:py-2 tw:text-left tw:font-medium tw:text-slate-600 tw:dark:text-slate-300">
+                  <th scope="col" className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-300">
                     Nome Completo
                   </th>
-                  <th scope="col" className="tw:whitespace-nowrap tw:px-3 tw:py-2 tw:text-left tw:font-medium tw:text-slate-600 tw:dark:text-slate-300">
+                  <th scope="col" className="whitespace-nowrap px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-300">
                     CPF
                   </th>
-                  <th scope="col" className="tw:px-3 tw:py-2 tw:text-left tw:font-medium tw:text-slate-600 tw:dark:text-slate-300">
+                  <th scope="col" className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-300">
                     E-mail
                   </th>
-                  <th scope="col" className="tw:px-3 tw:py-2 tw:text-left tw:font-medium tw:text-slate-600 tw:dark:text-slate-300">
+                  <th scope="col" className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-300">
                     Status Atual
                   </th>
                 </tr>
@@ -266,35 +266,35 @@ export function InativacaoTab() {
                   <tr
                     key={`${r.cpf}-${i}`}
                     data-cpf={r.cpf}
-                    className={`tw:border-t tw:border-black/5 tw:dark:border-white/5 ${rowStatusClass(r.found, r.status_atual)}`}
+                    className={`border-t border-black/5 dark:border-white/5 ${rowStatusClass(r.found, r.status_atual)}`}
                   >
-                    <td className="tw:px-3 tw:py-1.5 tw:text-slate-800 tw:dark:text-slate-100">{r.nome}</td>
-                    <td className="tw:px-3 tw:py-1.5 tw:font-mono tw:text-slate-800 tw:dark:text-slate-100">{formatCpf(r.cpf)}</td>
-                    <td className="tw:px-3 tw:py-1.5 tw:text-slate-800 tw:dark:text-slate-100">{r.email}</td>
-                    <td className="tw:px-3 tw:py-1.5 tw:text-slate-800 tw:dark:text-slate-100">{r.status_atual}</td>
+                    <td className="px-3 py-1.5 text-slate-800 dark:text-slate-100">{r.nome}</td>
+                    <td className="px-3 py-1.5 font-mono text-slate-800 dark:text-slate-100">{formatCpf(r.cpf)}</td>
+                    <td className="px-3 py-1.5 text-slate-800 dark:text-slate-100">{r.email}</td>
+                    <td className="px-3 py-1.5 text-slate-800 dark:text-slate-100">{r.status_atual}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          <div id="results_pagination" className="tw:mt-2 tw:flex tw:items-center tw:justify-between">
+          <div id="results_pagination" className="mt-2 flex items-center justify-between">
             <button
               id="page_prev"
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="tw:rounded-lg tw:border tw:border-black/15 tw:px-3 tw:py-1 tw:text-sm tw:disabled:cursor-not-allowed tw:disabled:opacity-40 tw:dark:border-white/15 tw:dark:text-slate-200"
+              className="rounded-lg border border-black/15 px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/15 dark:text-slate-200"
             >
               Anterior
             </button>
-            <span id="page_info" className="tw:text-sm tw:text-slate-500 tw:dark:text-slate-400">
+            <span id="page_info" className="text-sm text-slate-500 dark:text-slate-400">
               Página {page} de {totalPages}
             </span>
             <button
               id="page_next"
               disabled={page >= totalPages}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="tw:rounded-lg tw:border tw:border-black/15 tw:px-3 tw:py-1 tw:text-sm tw:disabled:cursor-not-allowed tw:disabled:opacity-40 tw:dark:border-white/15 tw:dark:text-slate-200"
+              className="rounded-lg border border-black/15 px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/15 dark:text-slate-200"
             >
               Próxima
             </button>

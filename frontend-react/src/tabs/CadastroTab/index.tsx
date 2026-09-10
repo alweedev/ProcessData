@@ -20,23 +20,23 @@ export function CadastroTab() {
   }
 
   return (
-    <div className="tw:rounded-xl tw:border tw:border-black/10 tw:bg-surface tw:p-4 tw:shadow-sm tw:dark:border-white/10 tw:dark:bg-surface-dark tw:sm:p-6">
-      <div className="tw:mb-3 tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
-        <h2 className="tw:text-lg tw:font-semibold tw:text-slate-900 tw:dark:text-slate-100">Cadastro Carga</h2>
+    <div className="rounded-xl border border-black/10 bg-surface p-4 shadow-sm dark:border-white/10 dark:bg-surface-dark sm:p-6">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Cadastro Carga</h2>
         <button
           id="cadastro_help_btn"
           type="button"
           aria-label="Como usar o cadastro em lote"
           title="Guia do cadastro em lote"
           onClick={() => setHelpOpen(true)}
-          className="tw:rounded-lg tw:border tw:border-info tw:px-3 tw:py-1.5 tw:text-sm tw:font-medium tw:text-info tw:hover:bg-info/10"
+          className="rounded-lg border border-info px-3 py-1.5 text-sm font-medium text-info hover:bg-info/10"
         >
           Como usar
         </button>
       </div>
 
       <Modal open={helpOpen} onClose={() => setHelpOpen(false)} title="Como usar carga cadastro">
-        <ol className="tw:list-decimal tw:space-y-1 tw:pl-5">
+        <ol className="list-decimal space-y-1 pl-5">
           <li>
             <strong>1º Passo:</strong> carregue a planilha Excel (<strong>.xlsx/.xls</strong>) já preenchida.
           </li>
@@ -50,7 +50,7 @@ export function CadastroTab() {
             <strong>4º Passo:</strong> acompanhe e recupere execuções no <strong>Histórico</strong> quando precisar.
           </li>
         </ol>
-        <p className="tw:mt-2 tw:text-slate-500 tw:dark:text-slate-400">
+        <p className="mt-2 text-slate-500 dark:text-slate-400">
           Dica: revise os dados antes de enviar para evitar retrabalho.
         </p>
       </Modal>
@@ -68,9 +68,9 @@ export function CadastroTab() {
           if (!accepted) setResetKey((k) => k + 1);
         }}
       >
-        <div id="cadastro_uploadFeedback" aria-live="polite" className="tw:mt-3">
+        <div id="cadastro_uploadFeedback" aria-live="polite" className="mt-3">
           {cadastro.files.length > 0 && (
-            <span className="tw:inline-flex tw:items-center tw:gap-2 tw:rounded-full tw:bg-success/10 tw:px-3 tw:py-1 tw:text-sm tw:text-success">
+            <span className="inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-sm text-success">
               {cadastro.files.map((f) => f.name).join(", ")}
               <button
                 id="cadastro_clear_btn"
@@ -81,7 +81,7 @@ export function CadastroTab() {
                   e.stopPropagation();
                   clear();
                 }}
-                className="tw:text-success tw:hover:text-danger"
+                className="text-success hover:text-danger"
               >
                 ✕
               </button>
@@ -90,9 +90,9 @@ export function CadastroTab() {
         </div>
       </FileDropzone>
 
-      <div className="tw:mt-4 tw:grid tw:gap-3 tw:sm:grid-cols-2">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div>
-          <label htmlFor="cadastro_login_choice" className="tw:mb-1 tw:block tw:text-sm tw:font-medium tw:text-slate-700 tw:dark:text-slate-200">
+          <label htmlFor="cadastro_login_choice" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
             Tipo de login
           </label>
           <select
@@ -101,14 +101,14 @@ export function CadastroTab() {
             title="Selecionar formato principal de acesso"
             value={prefs.login_choice}
             onChange={(e) => setPrefs({ login_choice: e.target.value })}
-            className="tw:w-full tw:rounded-lg tw:border tw:border-black/10 tw:bg-white tw:px-3 tw:py-1.5 tw:text-sm tw:text-slate-900 tw:outline-none tw:focus:border-accent tw:dark:border-white/10 tw:dark:bg-surface-dark-alt tw:dark:text-slate-100"
+            className="w-full rounded-lg border border-black/10 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-accent dark:border-white/10 dark:bg-surface-dark-alt dark:text-slate-100"
           >
             <option value="CPF">CPF</option>
             <option value="EMAIL">E-MAIL</option>
           </select>
         </div>
         <div>
-          <label htmlFor="cadastro_fluxo" className="tw:mb-1 tw:block tw:text-sm tw:font-medium tw:text-slate-700 tw:dark:text-slate-200">
+          <label htmlFor="cadastro_fluxo" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
             Fluxo
           </label>
           <select
@@ -117,7 +117,7 @@ export function CadastroTab() {
             title="Definir processo operacional (SELF ou FRONT)"
             value={prefs.fluxo}
             onChange={(e) => setPrefs({ fluxo: e.target.value })}
-            className="tw:w-full tw:rounded-lg tw:border tw:border-black/10 tw:bg-white tw:px-3 tw:py-1.5 tw:text-sm tw:text-slate-900 tw:outline-none tw:focus:border-accent tw:dark:border-white/10 tw:dark:bg-surface-dark-alt tw:dark:text-slate-100"
+            className="w-full rounded-lg border border-black/10 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-accent dark:border-white/10 dark:bg-surface-dark-alt dark:text-slate-100"
           >
             <option value="SELF">SELF</option>
             <option value="FRONT">FRONT</option>
@@ -126,7 +126,7 @@ export function CadastroTab() {
       </div>
 
       {cadastro.generating && (
-        <div id="cadastro_progress" className="tw:mt-4 tw:h-2 tw:overflow-hidden tw:rounded-full tw:bg-black/10 tw:dark:bg-white/10">
+        <div id="cadastro_progress" className="mt-4 h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
           <div
             id="cadastro_progressBar"
             role="progressbar"
@@ -134,7 +134,7 @@ export function CadastroTab() {
             aria-valuemin={0}
             aria-valuemax={100}
             style={{ width: `${cadastro.progress}%` }}
-            className="tw:h-full tw:bg-accent tw:transition-[width]"
+            className="h-full bg-accent transition-[width]"
           />
         </div>
       )}
@@ -145,16 +145,16 @@ export function CadastroTab() {
         title="Processar a planilha e gerar arquivo tratado"
         disabled={cadastro.generating}
         onClick={handleSubmit}
-        className="tw:mt-4 tw:rounded-lg tw:bg-accent tw:px-4 tw:py-2 tw:text-sm tw:font-medium tw:text-white tw:hover:bg-accent-hover tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
+        className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
         {cadastro.generating ? "Processando..." : "Gerar"}
       </button>
 
-      <div id="cadastro_status" className="tw:mt-3 tw:text-sm" aria-live="polite">
-        {cadastro.done && <span className="tw:text-success">✔ Concluído</span>}
+      <div id="cadastro_status" className="mt-3 text-sm" aria-live="polite">
+        {cadastro.done && <span className="text-success">✔ Concluído</span>}
       </div>
       {cadastro.debugMsg && (
-        <div id="cadastro_debug" className="tw:mt-3 tw:text-sm tw:text-danger" aria-live="assertive">
+        <div id="cadastro_debug" className="mt-3 text-sm text-danger" aria-live="assertive">
           {cadastro.debugMsg}
         </div>
       )}

@@ -32,22 +32,21 @@ export function MotionToggle() {
   return (
     <button
       id="motionToggle"
-      className="btn btn-outline-secondary"
-      data-bs-toggle="tooltip"
-      data-bs-title="Reduzir movimentos"
+      type="button"
       aria-label="Reduzir movimentos"
-      style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
+      title="Reduzir movimentos"
+      aria-pressed={reduced}
       onClick={toggle}
+      className="inline-flex items-center gap-2 rounded-lg border border-black/15 px-3 py-2 text-sm text-slate-700 hover:bg-black/5 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/10"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className="h-5 w-5"
+        className="h-5 w-5 shrink-0"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
         strokeWidth={1.8}
         aria-hidden="true"
-        style={{ flexShrink: 0 }}
       >
         <path
           strokeLinecap="round"

@@ -1,25 +1,11 @@
-/* Prefixo obrigatório: o `<script src="cdn.tailwindcss.com">` legado (ainda
-   usado pelas abas não migradas até a Fase 6) roda seu próprio JIT no
-   browser e injeta CSS "sem camada" (fora de @layer) pra qualquer classe
-   Tailwind que vir a existir no DOM ao vivo — inclusive as que o NOSSO
-   build gera, já que ele escaneia a página inteira, não só o HTML que ele
-   mesmo processou. CSS sem camada sempre vence sobre @layer, não importa
-   especificidade/ordem, então um `dark:text-slate-100` nosso perdia sempre
-   pra versão (quebrada, media-query) que o CDN gerava pro mesmo nome de
-   classe. Com o prefixo `tw:`, nossas classes (ex.: `tw:text-slate-900`)
-   nunca colidem com o que o CDN reconhece/gera. Todo componente React deve
-   usar classes com esse prefixo. Remover o prefixo só na Fase 6, quando o
-   CDN sair de vez.
-*/
-@import "tailwindcss" prefix(tw);
+@import "tailwindcss";
 
-/* Tailwind v4 é media-query-first por padrão; habilita a variante `dark:`
-   controlada por classe (.dark em <html>), já que o tema é alternado por um
-   toggle manual, não só por prefers-color-scheme. */
+/* Dark mode por classe (.dark em <html>), aplicada pelo script anti-FOUC no
+   <head> e pelo ThemeToggle — não só por prefers-color-scheme. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Gradiente de marca (teal -> cyan), tokens de custom.css atual */
+  /* Gradiente de marca (teal -> cyan) */
   --color-brand-from: #00b3bb;
   --color-brand-to: #00cdd7;
 
@@ -51,4 +37,23 @@
   --color-app-bg-dark: #0b0e13;
 
   --font-sans: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-app-bg);
+    color: #212529;
+    font-family: var(--font-sans);
+  }
+  :where(.dark) body {
+    background-color: var(--color-app-bg-dark);
+    color: #e6eef8;
+  }
+  /* Toggle "Reduzir movimentos" (MotionToggle seta .reduce-motion em <body>). */
+  body.reduce-motion *,
+  body.reduce-motion *::before,
+  body.reduce-motion *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }

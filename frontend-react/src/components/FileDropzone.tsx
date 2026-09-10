@@ -44,11 +44,11 @@ export function FileDropzone({ id, containerId, accept, multiple, ariaLabel, des
         setDragOver(false);
         if (e.dataTransfer.files?.length) onFiles(e.dataTransfer.files);
       }}
-      className={`tw:rounded-lg tw:border-2 tw:border-dashed tw:p-6 tw:text-center tw:transition-colors ${
-        dragOver ? "tw:border-accent tw:bg-accent/5" : "tw:border-accent/40"
-      } tw:dark:border-accent-dark/40`}
+      className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
+        dragOver ? "border-accent bg-accent/5" : "border-accent/40"
+      } dark:border-accent-dark/40`}
     >
-      <p className="tw:mb-3 tw:text-sm tw:text-slate-500 tw:dark:text-slate-400">{description}</p>
+      <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">{description}</p>
       <input
         ref={inputRef}
         type="file"
@@ -56,7 +56,7 @@ export function FileDropzone({ id, containerId, accept, multiple, ariaLabel, des
         accept={accept}
         multiple={multiple}
         aria-label={ariaLabel}
-        className="tw:hidden"
+        className="hidden"
         onChange={(e) => {
           if (e.target.files?.length) onFiles(e.target.files);
         }}
@@ -64,7 +64,7 @@ export function FileDropzone({ id, containerId, accept, multiple, ariaLabel, des
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="tw:rounded-lg tw:bg-accent tw:px-4 tw:py-2 tw:text-sm tw:font-medium tw:text-white tw:hover:bg-accent-hover"
+        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
       >
         Selecionar
       </button>

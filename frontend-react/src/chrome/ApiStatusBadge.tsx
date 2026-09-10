@@ -88,19 +88,26 @@ export function ApiStatusBadge() {
     };
   }, [ping]);
 
+  const tone =
+    state === "online"
+      ? "border-success/40 text-success"
+      : state === "offline"
+        ? "border-danger/40 text-danger"
+        : "border-black/15 text-slate-500 dark:border-white/15 dark:text-slate-400";
+
   return (
     <button
       id="apiStatusBtn"
-      className={`btn btn-outline-secondary api-status-btn api-${state}`}
-      data-bs-toggle="tooltip"
-      data-bs-title="Status da API"
+      type="button"
       aria-label="Status da API"
+      title="Status da API"
       onClick={() => ping(true)}
+      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold uppercase ${tone}`}
     >
       <svg
         id="apiStatusIcon"
         xmlns="http://www.w3.org/2000/svg"
-        className={`h-5 w-5${state === "checking" ? " spin-rotating" : ""}`}
+        className={`h-4 w-4${state === "checking" ? " animate-spin" : ""}`}
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"

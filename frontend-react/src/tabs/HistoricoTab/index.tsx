@@ -48,19 +48,19 @@ export function HistoricoTab() {
   }
 
   return (
-    <div className="tw:rounded-xl tw:border tw:border-black/10 tw:bg-surface tw:p-4 tw:shadow-sm tw:dark:border-white/10 tw:dark:bg-surface-dark tw:sm:p-6">
-      <div className="tw:mb-1 tw:flex tw:flex-wrap tw:items-center tw:gap-2">
-        <h2 className="tw:text-lg tw:font-semibold tw:text-slate-900 tw:dark:text-slate-100">Histórico</h2>
-        <span className="tw:rounded-full tw:bg-gradient-to-r tw:from-brand-from tw:to-brand-to tw:px-2.5 tw:py-0.5 tw:text-xs tw:font-medium tw:text-white">
+    <div className="rounded-xl border border-black/10 bg-surface p-4 shadow-sm dark:border-white/10 dark:bg-surface-dark sm:p-6">
+      <div className="mb-1 flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Histórico</h2>
+        <span className="rounded-full bg-gradient-to-r from-brand-from to-brand-to px-2.5 py-0.5 text-xs font-medium text-white">
           Beta
         </span>
-        <span className="tw:text-xs tw:text-slate-500 tw:dark:text-slate-400">Em desenvolvimento</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">Em desenvolvimento</span>
       </div>
-      <p className="tw:mb-4 tw:text-sm tw:text-slate-600 tw:dark:text-slate-300">
+      <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
         Painel cronológico das últimas operações realizadas no navegador.
       </p>
 
-      <div className="tw:mb-3 tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <input
           id="historico_search"
           type="search"
@@ -68,14 +68,14 @@ export function HistoricoTab() {
           aria-label="Filtrar histórico"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="tw:min-w-[220px] tw:flex-1 tw:rounded-lg tw:border tw:border-black/10 tw:bg-white tw:px-3 tw:py-1.5 tw:text-sm tw:text-slate-900 tw:outline-none tw:focus:border-accent tw:focus:ring-2 tw:focus:ring-accent/25 tw:dark:border-white/10 tw:dark:bg-surface-dark-alt tw:dark:text-slate-100"
+          className="min-w-[220px] flex-1 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-accent focus:ring-2 focus:ring-accent/25 dark:border-white/10 dark:bg-surface-dark-alt dark:text-slate-100"
         />
         <button
           id="historico_export_csv"
           type="button"
           title="Baixar itens visíveis em CSV"
           onClick={exportCsv}
-          className="tw:rounded-lg tw:border tw:border-accent tw:px-3 tw:py-1.5 tw:text-sm tw:font-medium tw:text-accent tw:hover:bg-accent/10 tw:dark:border-accent-dark tw:dark:text-accent-dark"
+          className="rounded-lg border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 dark:border-accent-dark dark:text-accent-dark"
         >
           Exportar CSV
         </button>
@@ -84,7 +84,7 @@ export function HistoricoTab() {
           type="button"
           title="Baixar itens visíveis em JSON"
           onClick={exportJson}
-          className="tw:rounded-lg tw:border tw:border-black/15 tw:px-3 tw:py-1.5 tw:text-sm tw:font-medium tw:text-slate-700 tw:hover:bg-black/5 tw:dark:border-white/15 tw:dark:text-slate-200 tw:dark:hover:bg-white/5"
+          className="rounded-lg border border-black/15 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-black/5 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5"
         >
           Exportar JSON
         </button>
@@ -94,7 +94,7 @@ export function HistoricoTab() {
           aria-label="Limpar histórico"
           title="Remover todos os itens"
           onClick={handleClear}
-          className="tw:ml-auto tw:flex tw:items-center tw:gap-1.5 tw:rounded-lg tw:bg-gradient-to-r tw:from-[#ff416c] tw:to-[#ff4b2b] tw:px-3 tw:py-1.5 tw:text-sm tw:font-medium tw:text-white tw:hover:brightness-105"
+          className="ml-auto flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#ff416c] to-[#ff4b2b] px-3 py-1.5 text-sm font-medium text-white hover:brightness-105"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -112,30 +112,30 @@ export function HistoricoTab() {
         </button>
       </div>
 
-      <div id="historico_summary" className="tw:mb-2 tw:text-xs tw:text-slate-500 tw:dark:text-slate-400" aria-live="polite">
+      <div id="historico_summary" className="mb-2 text-xs text-slate-500 dark:text-slate-400" aria-live="polite">
         {`Itens visíveis: ${filtered.length} (local: ${state.localCount} | API: ${state.serverCount})`}
       </div>
 
-      <div className="tw:overflow-x-auto tw:rounded-lg tw:border tw:border-black/10 tw:dark:border-white/10" id="historico_table_wrap">
-        <table id="historico_table" aria-describedby="historico_summary" className="tw:w-full tw:text-sm">
-          <thead className="tw:bg-black/[.03] tw:dark:bg-white/[.04]">
+      <div className="overflow-x-auto rounded-lg border border-black/10 dark:border-white/10" id="historico_table_wrap">
+        <table id="historico_table" aria-describedby="historico_summary" className="w-full text-sm">
+          <thead className="bg-black/[.03] dark:bg-white/[.04]">
             <tr>
-              <th scope="col" className="tw:whitespace-nowrap tw:px-3 tw:py-2 tw:text-left tw:font-medium tw:text-slate-600 tw:dark:text-slate-300">
+              <th scope="col" className="whitespace-nowrap px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-300">
                 Data/Hora
               </th>
-              <th scope="col" className="tw:px-3 tw:py-2 tw:text-left tw:font-medium tw:text-slate-600 tw:dark:text-slate-300">
+              <th scope="col" className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-300">
                 Ação
               </th>
             </tr>
           </thead>
           <tbody id="historico_tbody">
             {filtered.map((item, i) => (
-              <tr key={`${item.ts}-${i}`} className="tw:border-t tw:border-black/5 tw:dark:border-white/5">
-                <td className="tw:whitespace-nowrap tw:px-3 tw:py-1.5 tw:text-slate-500 tw:dark:text-slate-400">{formatTs(item.ts)}</td>
-                <td className="tw:px-3 tw:py-1.5 tw:text-slate-800 tw:dark:text-slate-100">
+              <tr key={`${item.ts}-${i}`} className="border-t border-black/5 dark:border-white/5">
+                <td className="whitespace-nowrap px-3 py-1.5 text-slate-500 dark:text-slate-400">{formatTs(item.ts)}</td>
+                <td className="px-3 py-1.5 text-slate-800 dark:text-slate-100">
                   {item.text}
                   {item.source === "server" && (
-                    <span className="tw:ml-1.5 tw:rounded tw:bg-black/5 tw:px-1.5 tw:py-0.5 tw:text-[11px] tw:text-slate-600 tw:dark:bg-white/10 tw:dark:text-slate-300">
+                    <span className="ml-1.5 rounded bg-black/5 px-1.5 py-0.5 text-[11px] text-slate-600 dark:bg-white/10 dark:text-slate-300">
                       API
                     </span>
                   )}

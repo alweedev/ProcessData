@@ -4,236 +4,33 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ProcessData</title>
-    <!-- Favicon / Site icon -->
     <link rel="shortcut icon" type="image/x-icon" href="img/favicon.ico?v=3" />
     <link rel="icon" type="image/x-icon" href="img/favicon.ico?v=3" />
-    <!-- Removed SVG logo reference -->
     <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png?v=3" />
     <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png?v=3" />
     <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png?v=3" />
     <link rel="manifest" href="site.webmanifest?v=3" />
-    <!-- Pré-aplicação de tema para evitar FOUC -->
-    <script>try{const stored=localStorage.getItem('pd_theme');const prefers=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;const mode= stored? stored : (prefers? 'dark':'light');document.documentElement.setAttribute('data-initial-theme',mode);}catch(e){/* noop */}</script>
-    <!--
-      Tailwind CDN (modo Play, só pras abas legadas ainda não migradas).
-      Desliga o preflight/reset dele: é CSS "sem camada" injetado via JS, que
-      sempre vence sobre QUALQUER CSS em @layer (inclusive o Tailwind v4 do
-      nosso próprio build em frontend-react/), não importa layer="legacy"
-      nos links — isso zerava border/padding de elementos como <input> nos
-      componentes React mesmo depois de resolver o conflito de cor. Bootstrap
-      já entrega reset equivalente pras abas legadas, então desligar aqui não
-      perde nada. Sai de vez só na Fase 6, quando o CDN for removido.
-    -->
-    <script src="https://cdn.tailwindcss.com" defer></script>
-    <script defer>
-      // O CDN carrega seu motor de forma assíncrona por trás do <script> principal
-      // (não fica pronto no fim da execução síncrona dele) — por isso espera
-      // window.tailwind existir em vez de configurar direto na sequência.
-      (function waitForTailwind() {
-        if (window.tailwind) {
-          tailwind.config = { corePlugins: { preflight: false } };
-        } else {
-          setTimeout(waitForTailwind, 10);
-        }
-      })();
+    <!-- Aplica o tema antes do 1º paint (evita flash). O ThemeToggle assume depois. -->
+    <script>
+      try {
+        var stored = localStorage.getItem("pd_theme");
+        var prefers = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var mode = stored ? stored : prefers ? "dark" : "light";
+        if (mode === "dark") document.documentElement.classList.add("dark");
+      } catch (e) {
+        /* noop */
+      }
     </script>
-    <!--
-      layer="legacy": sem isso, o CSS do Bootstrap (sem @layer) sempre vence
-      sobre o Tailwind (que o v4 sempre gera dentro de @layer), não importa
-      especificidade — regra do CSS Cascade Layers, não uma questão de
-      seletor. Isso fazia até um simples `<h2 class="tw:dark:text-slate-100">`
-      nosso perder pra `h1,h2,...{color:var(--bs-heading-color)}` do
-      Bootstrap. Colocando Bootstrap/CSS legado numa camada nomeada,
-      declarada aqui (bem antes de app-react.css carregar as camadas do
-      Tailwind), essa camada fica com prioridade mais baixa automaticamente.
-      Sai de vez só na Fase 6, quando o Bootstrap for removido.
-    -->
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-      layer="legacy"
-      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-      crossorigin="anonymous"
-      onload="this.rel='stylesheet'"
-      onerror="this.remove()"
-    />
-    <link rel="stylesheet" layer="legacy" href="static/css/animations.css" />
-    <link
-      rel="stylesheet"
-      layer="legacy"
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
-      onload="this.rel='stylesheet'"
-      onerror="this.remove()"
-    />
-    <link rel="stylesheet" layer="legacy" href="static/css/custom.css" />
-    <!-- Migração React (aba por aba) -->
     <link rel="stylesheet" href="static/react/app-react.css" />
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-      crossorigin="anonymous"
-      defer
-    ></script>
   </head>
-  <body class="bg-light transition-colors duration-300" data-bs-theme="light">
-    <div class="container py-4" id="mainContent">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <a id="brand" class="me-3 d-flex align-items-center text-decoration-none" href="#" onclick="document.querySelector('#cadastro-tab').click(); return false;">
-          <div id="brand-icon" class="brand-icon me-2" aria-hidden="true" title="ProcessData">
-            <div class="brand-icon-inner">
-              <i class="bi bi-robot" aria-hidden="true"></i>
-            </div>
-            <div class="brand-icon-ring"></div>
-          </div>
-          <div class="brand-title-wrapper">
-            <h1 class="h4 mb-0 brand-title">ProcessData</h1>
-          </div>
-        </a>
-        <div class="d-flex align-items-center gap-2">
-          <!-- Montado pelo React (Fase 0 da migração): status de API, tema, animações -->
-          <div id="appChromeControls" class="d-flex align-items-center gap-2"></div>
-        </div>
-      </div>
-
-      <ul class="nav nav-tabs mb-1" id="myTab" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button
-            class="nav-link active"
-            id="cadastro-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#cadastro"
-            type="button"
-            role="tab"
-            aria-controls="cadastro"
-            aria-selected="true"
-          >
-            Cadastro
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button
-            class="nav-link"
-            id="inativacao-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#inativacao"
-            type="button"
-            role="tab"
-            aria-controls="inativacao"
-            aria-selected="false"
-          >
-            Inativação
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button
-            class="nav-link"
-            id="estruturas-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#estruturas"
-            type="button"
-            role="tab"
-            aria-controls="estruturas"
-            aria-selected="false"
-          >
-            Estruturas de aprovação
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button
-            class="nav-link"
-            id="historico-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#historico"
-            type="button"
-            role="tab"
-            aria-controls="historico"
-            aria-selected="false"
-          >
-            Histórico
-          </button>
-        </li>
-      </ul>
-
-      <div class="tab-content">
-        <div
-          class="tab-pane fade show active"
-          id="cadastro"
-          role="tabpanel"
-          aria-labelledby="cadastro-tab"
-        >
-          <!-- Montado pelo React (Fase 3 da migração): src/tabs/CadastroTab -->
-        </div>
-
-        <div
-          class="tab-pane fade"
-          id="inativacao"
-          role="tabpanel"
-          aria-labelledby="inativacao-tab"
-        >
-          <!-- Montado pelo React (Fase 2 da migração): src/tabs/InativacaoTab -->
-        </div>
-
-        <div
-          class="tab-pane fade"
-          id="estruturas"
-          role="tabpanel"
-          aria-labelledby="estruturas-tab"
-        >
-          <!-- Montado pelo React (Fase 4 da migração): src/tabs/EstruturasTab -->
-        </div>
-
-        <div
-          class="tab-pane fade"
-          id="historico"
-          role="tabpanel"
-          aria-labelledby="historico-tab"
-        >
-          <!-- Montado pelo React (Fase 1 da migração): src/tabs/HistoricoTab -->
-        </div>
-      </div>
-    </div>
-    <!-- Container de toasts: aria-live para anunciar mensagens a leitores de tela -->
-    <div
-      id="toastContainer"
-      class="position-fixed bottom-0 end-0 p-3"
-      style="z-index: 1100"
-      aria-live="polite"
-      aria-atomic="false"
-    ></div>
-    <svg style="display: none">
-      <defs>
-        <symbol id="icon-imageUpload" clip-rule="evenodd" viewBox="0 0 96 96">
-          <path
-            d="M47 6a21 21 0 0 0-12.3 3.8c-2.7 2.1-4.4 5-4.7 7.1-5.8 1.2-10.3 5.6-10.3 10.6 0 6 5.8 11 13 11h12.6V22.7l-7.1 6.8c-.4.3-.9.5-1.4.5-1 0-2-.8-2-1.7 0-.4.3-.9.6-1.2l10.3-8.8c.3-.4.8-.6 1.3-.6.6 0 1 .2 1.4.6l10.2 8.8c.4.3.6.8.6 1.2 0 1-.9 1.7-2 1.7-.5 0-1-.2-1.3-.5l-7.2-6.8v15.6h14.4c6.1 0 11.2-4.1 11.2-9.4 0-5-4-8.8-9.5-9.4C63.8 11.8 56 5.8 47 6Zm-1.7 42.7V38.4h3.4v10.3c0 .8-.7 1.5-1.7 1.5s-1.7-.7-1.7-1.5Z M27 49c-4 0-7 2-7 6v29c0 3 3 6 6 6h42c3 0 6-3 6-6V55c0-4-3-6-7-6H28Zm41 3c1 0 3 1 3 3v19l-13-6a2 2 0 0 0-2 0L44 79l-10-5a2 2 0 0 0-2 0l-9 7V55c0-2 2-3 4-3h41Z M40 62c0 2-2 4-5 4s-5-2-5-4 2-4 5-4 5 2 5 4Z"
-          />
-        </symbol>
-      </defs>
-    </svg>
-    <!-- Footer -->
-    <footer class="app-footer">
-      <div class="footer-content">
-        <span class="footer-copyright">
-          © 2026 ProcessData
-        </span>
-        <span class="footer-version">
-          <span class="version-badge">v1.0.0</span>
-        </span>
-        <span class="footer-author">
-          Desenvolvido por
-          <a href="https://www.linkedin.com/in/alejandro-gabriel/" target="_blank" rel="noopener noreferrer" class="footer-link">
-            Alejandro Gabriel
-          </a>
-        </span>
-      </div>
-    </footer>
+  <body>
+    <div id="root"></div>
 
     <!--
-      Migração React (aba por aba): monta apenas as abas já migradas.
       Em dev, rode `npm run dev:react` (vite dev com HMR) e ative
-      `localStorage.setItem('pd_dev_hmr','1')` no console do navegador +
-      recarregue a página para carregar do dev server em vez do build
-      estático. Sem a flag (padrão, e sempre em produção/CI), carrega o
-      build de frontend/static/react/.
+      `localStorage.setItem('pd_dev_hmr','1')` no console + recarregue para
+      carregar do dev server em vez do build estático. Sem a flag (padrão, e
+      sempre em produção/CI), carrega o build de frontend/static/react/.
     -->
     <script type="module" src="static/react/app-react.js" defer id="pd-react-entry"></script>
     <script>
@@ -251,7 +48,9 @@
         var preamble = document.createElement("script");
         preamble.type = "module";
         preamble.textContent =
-          'import RefreshRuntime from "' + devHost + '/@react-refresh";' +
+          'import RefreshRuntime from "' +
+          devHost +
+          '/@react-refresh";' +
           "RefreshRuntime.injectIntoGlobalHook(window);" +
           "window.$RefreshReg$ = () => {};" +
           "window.$RefreshSig$ = () => (type) => type;" +
