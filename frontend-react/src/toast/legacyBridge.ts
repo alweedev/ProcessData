@@ -9,6 +9,12 @@ import { pushToast, type ToastType } from "./toastStore";
  * implementação legada.
  */
 window.showToast = (message: string, type?: string) => {
-  const normalized: ToastType = type === "info" ? "info" : type === "danger" ? "danger" : "success";
+  // Mesma regra da implementação legada: só "success" (ou ausente) e "info"
+  // têm cor própria — qualquer outro valor (danger, warning, error...) virava
+  // vermelho lá, então mantemos o mesmo mapeamento aqui.
+  let normalized: ToastType;
+  if (type === undefined || type === "success") normalized = "success";
+  else if (type === "info") normalized = "info";
+  else normalized = "danger";
   pushToast(String(message ?? ""), normalized);
 };

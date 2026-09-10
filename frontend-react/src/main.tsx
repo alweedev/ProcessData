@@ -2,7 +2,9 @@ import type { ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import "./toast/legacyBridge"; // efeito colateral: instala window.showToast
+import "./history/historyStore"; // efeito colateral: instala window.addToHistory
 import { AppChrome } from "./chrome/AppChrome";
+import { HistoricoTab } from "./tabs/HistoricoTab";
 import { ToastViewport } from "./toast/ToastViewport";
 
 /**
@@ -19,6 +21,7 @@ interface Mount {
 const MOUNTS: Mount[] = [
   { selector: "#appChromeControls", Component: AppChrome },
   { selector: "#toastContainer", Component: ToastViewport },
+  { selector: "#historico", Component: HistoricoTab },
 ];
 
 function mount() {

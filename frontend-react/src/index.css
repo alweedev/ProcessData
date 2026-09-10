@@ -1,4 +1,17 @@
-@import "tailwindcss";
+/* Prefixo obrigatório: o `<script src="cdn.tailwindcss.com">` legado (ainda
+   usado pelas abas não migradas até a Fase 6) roda seu próprio JIT no
+   browser e injeta CSS "sem camada" (fora de @layer) pra qualquer classe
+   Tailwind que vir a existir no DOM ao vivo — inclusive as que o NOSSO
+   build gera, já que ele escaneia a página inteira, não só o HTML que ele
+   mesmo processou. CSS sem camada sempre vence sobre @layer, não importa
+   especificidade/ordem, então um `dark:text-slate-100` nosso perdia sempre
+   pra versão (quebrada, media-query) que o CDN gerava pro mesmo nome de
+   classe. Com o prefixo `tw:`, nossas classes (ex.: `tw:text-slate-900`)
+   nunca colidem com o que o CDN reconhece/gera. Todo componente React deve
+   usar classes com esse prefixo. Remover o prefixo só na Fase 6, quando o
+   CDN sair de vez.
+*/
+@import "tailwindcss" prefix(tw);
 
 /* Tailwind v4 é media-query-first por padrão; habilita a variante `dark:`
    controlada por classe (.dark em <html>), já que o tema é alternado por um
