@@ -39,9 +39,9 @@ O projeto foi criado a partir de uma **necessidade real do dia a dia profissiona
 - xlrd
 
 ### Frontend
-- HTML
-- CSS
-- JavaScript
+- React 19 + TypeScript
+- Vite
+- Tailwind CSS
 
 ---
 
