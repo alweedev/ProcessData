@@ -1,9 +1,22 @@
 """Utilitários de arquivo: validação de extensão e nome temporário."""
 
 import os
+import re
 import uuid
 
 _DEFAULT_ALLOWED = {".xlsx", ".xls", ".xltx"}
+_UNSAFE_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def _sanitize_filename_part(name: str) -> str:
+    """Reduz `name` a um componente de arquivo seguro: descarta qualquer
+    diretório embutido (`/` ou `\\`, o filename de um upload multipart é
+    controlado pelo cliente) e troca caracteres fora de [A-Za-z0-9._-] por
+    `_`, prevenindo path traversal ao montar o caminho do temporário."""
+    name = name.replace("\\", "/").rsplit("/", 1)[-1]
+    name = name.lstrip(".").strip()
+    name = _UNSAFE_CHARS.sub("_", name)
+    return name or "file"
 
 
 def validar_extensao_arquivo(filename: str, allowed_extensions: set[str] | None = None) -> tuple[bool, str]:
@@ -33,8 +46,7 @@ def validar_extensao_arquivo(filename: str, allowed_extensions: set[str] | None 
 
 def gerar_nome_arquivo_temporario(filename: str, upload_folder: str) -> str:
     """Gera um caminho único para arquivo temporário, preservando a extensão."""
-    if not filename:
-        filename = "file"
+    filename = _sanitize_filename_part(filename or "file")
 
     if "." in filename:
         name_part, ext = filename.rsplit(".", 1)

@@ -1,9 +1,12 @@
 """Hardening de entrada: conteúdo de upload + path traversal no frontend (P8c, P8d)."""
 
 import io
+import os
 
 import pandas as pd
 from _helpers import valid_cpf, xlsx_upload
+
+from backend.shared.file_utils import gerar_nome_arquivo_temporario
 
 
 def test_fake_xlsx_rejected(client):
@@ -49,3 +52,18 @@ def test_frontend_serves_index(client):
     resp = client.get("/")
     assert resp.status_code == 200
     assert b"ProcessData" in resp.data
+
+
+def test_temp_filename_blocks_path_traversal(tmp_path):
+    upload_folder = str(tmp_path / "uploads")
+    evil_names = [
+        "../../../../etc/passwd.xlsx",
+        "..\\..\\windows\\win.ini",
+        "/etc/passwd",
+        "....//....//evil.xlsx",
+    ]
+    root = os.path.realpath(upload_folder)
+    for name in evil_names:
+        path = gerar_nome_arquivo_temporario(name, upload_folder)
+        resolved = os.path.realpath(path)
+        assert resolved == root or resolved.startswith(root + os.sep), (name, path)
