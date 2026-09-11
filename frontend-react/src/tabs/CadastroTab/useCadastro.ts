@@ -1,9 +1,11 @@
-import { useState } from "react";
-import { postFormForBlob } from "../../lib/api";
+import { useRef, useState } from "react";
+import { postAnalysisSummary, postFormForBlob, type QualityReport } from "../../lib/api";
+import { addRun } from "../../runs/runsStore";
 import { pushToast } from "../../toast/toastStore";
 
 const MAX_FILES = 5;
 const MAX_SIZE = 10 * 1024 * 1024;
+const VALIDATE_TIMEOUT_MS = 15000;
 
 export function validateCadastroFiles(files: File[]): string | null {
   if (files.length > MAX_FILES) return `Máximo de ${MAX_FILES} arquivos por envio.`;
@@ -13,12 +15,22 @@ export function validateCadastroFiles(files: File[]): string | null {
   return null;
 }
 
+interface ValidationState {
+  status: "idle" | "loading" | "done" | "error";
+  report: QualityReport | null;
+  error: string | null;
+}
+
+const IDLE_VALIDATION: ValidationState = { status: "idle", report: null, error: null };
+
 export function useCadastro() {
   const [files, setFiles] = useState<File[]>([]);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
   const [debugMsg, setDebugMsg] = useState("");
+  const [validation, setValidation] = useState<ValidationState>(IDLE_VALIDATION);
+  const abortRef = useRef<AbortController | null>(null);
 
   /** Retorna `false` quando a seleção é rejeitada (arquivos demais / grandes
    *  demais) — o chamador deve então forçar a limpeza do <input> nativo,
@@ -29,17 +41,63 @@ export function useCadastro() {
     if (error) {
       pushToast(error, "danger");
       setFiles([]);
+      setValidation(IDLE_VALIDATION);
       return false;
     }
     setDone(false);
+    setValidation(IDLE_VALIDATION);
     setFiles(candidates);
     return true;
+  }
+
+  function removeFile(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setDone(false);
+    setValidation(IDLE_VALIDATION);
   }
 
   function clear() {
     setFiles([]);
     setDone(false);
     setDebugMsg("");
+    setValidation(IDLE_VALIDATION);
+    abortRef.current?.abort();
+  }
+
+  /** Validação prévia (informativa): roda o pipeline no backend via
+   *  `/api/analysis/summary` e mostra o relatório. NUNCA bloqueia a geração. */
+  async function validate(loginChoice: string, fluxo: string) {
+    if (!files.length) {
+      pushToast("Selecione ao menos um arquivo para validar.", "danger");
+      return;
+    }
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const timeoutId = window.setTimeout(() => controller.abort(), VALIDATE_TIMEOUT_MS);
+    setValidation({ status: "loading", report: null, error: null });
+    try {
+      const summary = await postAnalysisSummary(files, loginChoice, fluxo, controller.signal);
+      setValidation({ status: "done", report: summary.report, error: null });
+    } catch (err) {
+      if (controller.signal.aborted) {
+        setValidation({
+          status: "error",
+          report: null,
+          error: "Validação cancelada ou expirada — a geração não depende disso.",
+        });
+      } else {
+        const message = err instanceof Error ? err.message : String(err);
+        setValidation({
+          status: "error",
+          report: null,
+          error: `Não foi possível validar agora (${message}) — a geração não depende disso.`,
+        });
+        pushToast("Não foi possível validar a planilha agora.", "info");
+      }
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
   }
 
   async function submit(loginChoice: string, fluxo: string, onSuccess?: () => void) {
@@ -56,6 +114,8 @@ export function useCadastro() {
     setDone(false);
     setDebugMsg("");
     setProgress(0);
+    const firstName = files[0].name;
+    const count = files.length;
     try {
       const fd = new FormData();
       for (const f of files) fd.append("files[]", f);
@@ -69,11 +129,17 @@ export function useCadastro() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
       setDone(true);
       setFiles([]);
+      setValidation(IDLE_VALIDATION);
+      addRun({
+        operation: "cadastro",
+        inputSummary: [count === 1 ? firstName : `${count} arquivos`, `Login ${loginChoice} · Fluxo ${fluxo}`],
+        outputFilename: "saida_cadastro.xlsx",
+        blobUrl: url,
+      });
       pushToast(`Cadastro processado! Opções: ${loginChoice}, ${fluxo}.`, "success");
-      window.addToHistory?.(`Cadastro gerado: ${files[0].name} - ${new Date().toLocaleString("pt-BR")}`);
+      window.addToHistory?.(`Cadastro gerado: ${firstName} - ${new Date().toLocaleString("pt-BR")}`);
       onSuccess?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -85,5 +151,5 @@ export function useCadastro() {
     }
   }
 
-  return { files, pickFiles, clear, submit, generating, progress, done, debugMsg };
+  return { files, pickFiles, removeFile, clear, validate, validation, submit, generating, progress, done, debugMsg };
 }

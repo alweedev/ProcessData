@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { addRun } from "../../runs/runsStore";
 import { pushToast } from "../../toast/toastStore";
 
 export interface PreviewItem {
@@ -192,7 +193,15 @@ export function useEstruturas() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      addRun({
+        operation: "estruturas",
+        inputSummary: [
+          `CPF ${cpf}`,
+          mode === "all" ? "Remoção de todas as estruturas" : `${selectedIds.size} estrutura(s) selecionada(s)`,
+        ],
+        outputFilename: "base_aprovacao_atualizada.xlsx",
+        blobUrl: url,
+      });
       setStatus({ message: "Base de aprovação atualizada gerada com sucesso.", isError: false });
       pushToast("Base de aprovação atualizada gerada com sucesso.", "success");
       return null;

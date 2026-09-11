@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { postFormForBlob, postFormJson } from "../../lib/api";
+import { addRun } from "../../runs/runsStore";
 import { pushToast } from "../../toast/toastStore";
 
 export interface InativacaoResult {
@@ -126,7 +127,12 @@ export function useInativacao() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      addRun({
+        operation: "inativacao",
+        inputSummary: [baseFile.name, `${classification.totalValid} item(ns) na lista`],
+        outputFilename: "saida_inativacao.xlsx",
+        blobUrl: url,
+      });
       pushToast("Inativação processada.", "success");
       onDone?.();
     } catch (err) {

@@ -4,50 +4,118 @@
    <head> e pelo ThemeToggle — não só por prefers-color-scheme. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ---------------------------------------------------------------------------
+   Design tokens.
+
+   Os utilitários do Tailwind (bg-surface, text-text, border-border, ...) são
+   gerados a partir das vars em @theme, que apontam para as --pd-* de runtime.
+   Só as --pd-* trocam entre claro (:root) e escuro (.dark), então os
+   componentes não precisam de variante `dark:`. O script anti-FOUC coloca
+   `.dark` no <html> antes do 1º paint, então as --pd-* já valem os valores
+   escuros nesse momento.
+   --------------------------------------------------------------------------- */
 @theme {
-  /* Gradiente de marca (teal -> cyan) */
+  --color-bg: var(--pd-bg);
+  --color-surface: var(--pd-surface);
+  --color-surface-2: var(--pd-surface-2);
+  --color-surface-sunken: var(--pd-surface-sunken);
+  --color-border: var(--pd-border);
+  --color-border-strong: var(--pd-border-strong);
+
+  --color-text: var(--pd-text);
+  --color-text-muted: var(--pd-text-muted);
+  --color-text-subtle: var(--pd-text-subtle);
+
+  --color-brand: var(--pd-brand);
   --color-brand-from: #00b3bb;
   --color-brand-to: #00cdd7;
 
-  --color-accent: #0d6efd;
-  --color-accent-hover: #0b5ed7;
-  --color-accent-dark: #3b82f6;
-  --color-accent-dark-hover: #2b6cb0;
+  --color-accent: var(--pd-accent);
+  --color-accent-hover: var(--pd-accent-hover);
+  --color-accent-fg: #ffffff;
 
-  --color-danger: #dc3545;
-  --color-danger-hover: #c82333;
-  --color-danger-dark: #ff646d;
-  --color-danger-dark-hover: #ff4752;
+  --color-success: var(--pd-success);
+  --color-success-soft: var(--pd-success-soft);
+  --color-warning: var(--pd-warning);
+  --color-warning-soft: var(--pd-warning-soft);
+  --color-danger: var(--pd-danger);
+  --color-danger-hover: var(--pd-danger-hover);
+  --color-danger-soft: var(--pd-danger-soft);
+  --color-info: var(--pd-info);
+  --color-info-soft: var(--pd-info-soft);
 
-  --color-warning: #ffc107;
-  --color-warning-dark: #ffca5c;
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.1);
+  --shadow-card-hover: 0 6px 20px rgb(16 24 40 / 0.1);
+  --shadow-pop: 0 12px 32px rgb(16 24 40 / 0.18);
 
-  --color-success: #198754;
-  --color-success-dark: #4ade80;
+  /* Stack do sistema — "Segoe UI Variable" no Windows 11 (público-alvo),
+     "system-ui"/-apple-system cobrem macOS/Linux sem baixar nada. */
+  --font-sans:
+    "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
 
-  --color-info: #0dcaf0;
-  --color-info-dark: #31a0ff;
+:root {
+  --pd-bg: #f4f6f8;
+  --pd-surface: #ffffff;
+  --pd-surface-2: #f2f4f7;
+  --pd-surface-sunken: #e9edf1;
+  --pd-border: #e2e5ea;
+  --pd-border-strong: #ccd2da;
 
-  --color-surface: #ffffff;
-  --color-surface-alt: #f3f5f7;
-  --color-surface-dark: #0f1720;
-  --color-surface-dark-alt: #182230;
+  --pd-text: #1a1d21;
+  --pd-text-muted: #59616c;
+  --pd-text-subtle: #838b97;
 
-  --color-app-bg: #f8f9fa;
-  --color-app-bg-dark: #0b0e13;
+  --pd-brand: #008a9c;
+  --pd-accent: #2563eb;
+  --pd-accent-hover: #1d4ed8;
 
-  --font-sans: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  --pd-success: #157347;
+  --pd-success-soft: #e6f4ec;
+  --pd-warning: #a86a12;
+  --pd-warning-soft: #f8efdd;
+  --pd-danger: #d32f3c;
+  --pd-danger-hover: #b52530;
+  --pd-danger-soft: #fbe8ea;
+  --pd-info: #0b7594;
+  --pd-info-soft: #e2f1f6;
+}
+
+/* Sem :where() aqui de propósito: precisa da mesma especificidade de :root
+   (ambos 0,1,0) pra o .dark, declarado depois, vencer quando <html class="dark">. */
+.dark {
+  --pd-bg: #0a0d12;
+  --pd-surface: #111820;
+  --pd-surface-2: #19232f;
+  --pd-surface-sunken: #0c1219;
+  --pd-border: #202b38;
+  --pd-border-strong: #2d3d4e;
+
+  --pd-text: #e7eef7;
+  --pd-text-muted: #9aa6b3;
+  --pd-text-subtle: #6a7480;
+
+  --pd-brand: #22d3ee;
+  --pd-accent: #3b82f6;
+  --pd-accent-hover: #60a5fa;
+
+  --pd-success: #4ade80;
+  --pd-success-soft: #10251a;
+  --pd-warning: #fbbf24;
+  --pd-warning-soft: #2a2011;
+  --pd-danger: #fb7185;
+  --pd-danger-hover: #f43f5e;
+  --pd-danger-soft: #2b1518;
+  --pd-info: #38bdf8;
+  --pd-info-soft: #0b2530;
 }
 
 @layer base {
   body {
-    background-color: var(--color-app-bg);
-    color: #212529;
+    background-color: var(--color-bg);
+    color: var(--color-text);
     font-family: var(--font-sans);
-  }
-  :where(.dark) body {
-    background-color: var(--color-app-bg-dark);
-    color: #e6eef8;
+    -webkit-font-smoothing: antialiased;
   }
   /* Toggle "Reduzir movimentos" (MotionToggle seta .reduce-motion em <body>). */
   body.reduce-motion *,
@@ -55,5 +123,16 @@
   body.reduce-motion *::after {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+@keyframes pd-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

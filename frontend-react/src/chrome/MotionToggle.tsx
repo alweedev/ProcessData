@@ -37,7 +37,7 @@ export function MotionToggle() {
       title="Reduzir movimentos"
       aria-pressed={reduced}
       onClick={toggle}
-      className="inline-flex items-center gap-2 rounded-lg border border-black/15 px-3 py-2 text-sm text-slate-700 hover:bg-black/5 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/10"
+      className="inline-flex items-center gap-2 rounded-lg border border-border-strong px-3 py-2 text-sm text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -59,7 +59,7 @@ export function MotionToggle() {
           d="M21 12a8.963 8.963 0 00-1.53-4.72L7.28 19.47A8.963 8.963 0 0012 21c4.97 0 9-4.03 9-9z"
         />
       </svg>
-      <span>{reduced ? "Animações: Reduzidas" : "Animações: Ativas"}</span>
+      <span className="hidden sm:inline">{reduced ? "Animações: Reduzidas" : "Animações: Ativas"}</span>
     </button>
   );
 }

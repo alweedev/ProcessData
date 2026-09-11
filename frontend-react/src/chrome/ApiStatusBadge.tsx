@@ -1,7 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { pushToast } from "../toast/toastStore";
-
-type ApiState = "online" | "offline" | "checking";
+import { checkApiHealth, useApiHealth, type ApiState } from "../health/apiHealthStore";
 
 const TEXT: Record<ApiState, string> = {
   online: "API Online",
@@ -45,55 +42,15 @@ function StatusIcon({ state }: { state: ApiState }) {
   );
 }
 
-async function checkHealth(): Promise<boolean> {
-  for (const url of ["/api/health", "/"]) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 6000);
-      // eslint-disable-next-line no-await-in-loop
-      const res = await fetch(url, { method: "GET", signal: controller.signal });
-      window.clearTimeout(timeoutId);
-      if (res.ok) return true;
-    } catch {
-      /* tenta o próximo candidato */
-    }
-  }
-  return false;
-}
-
 export function ApiStatusBadge() {
-  const [state, setState] = useState<ApiState>("checking");
-  const lastState = useRef<ApiState>("checking");
-  const cancelledRef = useRef(false);
-
-  const ping = useCallback(async (manual: boolean) => {
-    setState("checking");
-    const ok = await checkHealth();
-    if (cancelledRef.current) return;
-    const next: ApiState = ok ? "online" : "offline";
-    setState(next);
-    if (manual || lastState.current !== next) {
-      pushToast(ok ? "API Online" : "API Offline", ok ? "success" : "danger");
-    }
-    lastState.current = next;
-  }, []);
-
-  useEffect(() => {
-    cancelledRef.current = false;
-    ping(false);
-    const interval = window.setInterval(() => ping(false), 45000);
-    return () => {
-      cancelledRef.current = true;
-      window.clearInterval(interval);
-    };
-  }, [ping]);
+  const state = useApiHealth();
 
   const tone =
     state === "online"
       ? "border-success/40 text-success"
       : state === "offline"
         ? "border-danger/40 text-danger"
-        : "border-black/15 text-slate-500 dark:border-white/15 dark:text-slate-400";
+        : "border-border-strong text-text-subtle";
 
   return (
     <button
@@ -101,7 +58,7 @@ export function ApiStatusBadge() {
       type="button"
       aria-label="Status da API"
       title="Status da API"
-      onClick={() => ping(true)}
+      onClick={() => void checkApiHealth(true)}
       className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold uppercase ${tone}`}
     >
       <svg
@@ -116,7 +73,7 @@ export function ApiStatusBadge() {
       >
         <StatusIcon state={state} />
       </svg>
-      <span id="apiStatusText">{TEXT[state]}</span>
+      <span id="apiStatusText" className="hidden sm:inline">{TEXT[state]}</span>
     </button>
   );
 }

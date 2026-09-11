@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 interface FileDropzoneProps {
   id: string;
@@ -8,7 +8,11 @@ interface FileDropzoneProps {
   ariaLabel: string;
   description: string;
   onFiles: (files: FileList) => void;
-  /** Renderizado abaixo do botão "Selecionar" — cada aba cuida do próprio feedback (nome do arquivo, chip de status etc.). */
+  /** Quando fornecido, o <input> nativo é reconstruído (via DataTransfer) pra
+   *  espelhar essa lista — permite "remover 1 arquivo" mantendo `input.files`
+   *  em sincronia com o estado do hook. */
+  syncFiles?: File[];
+  /** Renderizado abaixo do botão "Selecionar" — cada aba cuida do próprio feedback. */
   children?: ReactNode;
 }
 
@@ -17,9 +21,26 @@ interface FileDropzoneProps {
  * teclado) — unifica o padrão que Cadastro/Inativação/Estruturas
  * reimplementavam de forma independente no app legado.
  */
-export function FileDropzone({ id, containerId, accept, multiple, ariaLabel, description, onFiles, children }: FileDropzoneProps) {
+export function FileDropzone({
+  id,
+  containerId,
+  accept,
+  multiple,
+  ariaLabel,
+  description,
+  onFiles,
+  syncFiles,
+  children,
+}: FileDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+
+  useEffect(() => {
+    if (!syncFiles || !inputRef.current) return;
+    const dt = new DataTransfer();
+    for (const file of syncFiles) dt.items.add(file);
+    inputRef.current.files = dt.files;
+  }, [syncFiles]);
 
   return (
     <div
@@ -45,10 +66,10 @@ export function FileDropzone({ id, containerId, accept, multiple, ariaLabel, des
         if (e.dataTransfer.files?.length) onFiles(e.dataTransfer.files);
       }}
       className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
-        dragOver ? "border-accent bg-accent/5" : "border-accent/40"
-      } dark:border-accent-dark/40`}
+        dragOver ? "border-accent bg-accent/5" : "border-border-strong hover:border-accent/50"
+      }`}
     >
-      <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">{description}</p>
+      <p className="mb-3 text-sm text-text-muted">{description}</p>
       <input
         ref={inputRef}
         type="file"
@@ -64,7 +85,7 @@ export function FileDropzone({ id, containerId, accept, multiple, ariaLabel, des
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-fg transition-colors hover:bg-accent-hover"
       >
         Selecionar
       </button>
