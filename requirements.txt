@@ -7,6 +7,6 @@ xlrd>=2.0.1
 # Dev / CI
 pytest>=8.0
 pytest-cov
-ruff>=0.6
+ruff>=0.16.6
 mypy>=1.11
 # Testes end-to-end (Playwright) usam Node/npm, não pip: ver tests/e2e/README.md
