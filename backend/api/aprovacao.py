@@ -9,8 +9,7 @@ from backend.core.logging import get_logger
 from backend.services.approval_service import ApprovalService
 from backend.services.audit_service import AuditService
 from backend.services.export_service import ExportService
-from backend.shared.file_utils import gerar_nome_arquivo_temporario, validar_extensao_arquivo
-from backend.shared.upload_validation import validar_conteudo_xlsx
+from backend.shared.upload_validation import save_and_validate_upload
 
 logger = get_logger()
 
@@ -41,26 +40,14 @@ def aprovacao_remover_preview():
         if not users_file or not base_file:
             return jsonify({"error": "Envie 'users_file' e 'base_file' (arquivos Excel)."}), 400
 
-        # Validar extensões dos arquivos
-        is_valid, error_msg = validar_extensao_arquivo(users_file.filename)
-        if not is_valid:
-            return jsonify({"error": f"users_file: {error_msg}"}), 400
-
-        is_valid, error_msg = validar_extensao_arquivo(base_file.filename)
-        if not is_valid:
-            return jsonify({"error": f"base_file: {error_msg}"}), 400
-
         cpf_digits, cpf_formatted = ApprovalService.normalize_cpf_input(cpf_raw)
 
-        # Salvar temporários
-        users_path = gerar_nome_arquivo_temporario(users_file.filename or "users.xlsx", settings.UPLOAD_FOLDER)
-        base_path = gerar_nome_arquivo_temporario(base_file.filename or "base.xlsx", settings.UPLOAD_FOLDER)
-        users_file.save(users_path)
-        base_file.save(base_path)
-        for _p in (users_path, base_path):
-            _ok, _msg = validar_conteudo_xlsx(_p)
-            if not _ok:
-                return jsonify({"error": _msg}), 400
+        users_path, err = save_and_validate_upload(users_file, settings.UPLOAD_FOLDER, label="users_file")
+        if err:
+            return jsonify({"error": err}), 400
+        base_path, err = save_and_validate_upload(base_file, settings.UPLOAD_FOLDER, label="base_file")
+        if err:
+            return jsonify({"error": err}), 400
 
         _, approver_name = ApprovalService.load_users_and_find_approver(users_path, cpf_digits)
 
@@ -186,26 +173,14 @@ def aprovacao_remover_export():
         if not users_file or not base_file:
             return jsonify({"error": "Envie 'users_file' e 'base_file' (arquivos Excel)."}), 400
 
-        # Validar extensões dos arquivos
-        is_valid, error_msg = validar_extensao_arquivo(users_file.filename)
-        if not is_valid:
-            return jsonify({"error": f"users_file: {error_msg}"}), 400
-
-        is_valid, error_msg = validar_extensao_arquivo(base_file.filename)
-        if not is_valid:
-            return jsonify({"error": f"base_file: {error_msg}"}), 400
-
         cpf_digits, cpf_formatted = ApprovalService.normalize_cpf_input(cpf_raw)
 
-        # Salvar temporários
-        users_path = gerar_nome_arquivo_temporario(users_file.filename or "users.xlsx", settings.UPLOAD_FOLDER)
-        base_path = gerar_nome_arquivo_temporario(base_file.filename or "base.xlsx", settings.UPLOAD_FOLDER)
-        users_file.save(users_path)
-        base_file.save(base_path)
-        for _p in (users_path, base_path):
-            _ok, _msg = validar_conteudo_xlsx(_p)
-            if not _ok:
-                return jsonify({"error": _msg}), 400
+        users_path, err = save_and_validate_upload(users_file, settings.UPLOAD_FOLDER, label="users_file")
+        if err:
+            return jsonify({"error": err}), 400
+        base_path, err = save_and_validate_upload(base_file, settings.UPLOAD_FOLDER, label="base_file")
+        if err:
+            return jsonify({"error": err}), 400
 
         # Garante que o CPF existe na base de usuários (e obtém nome apenas para validação/coerência)
         _, _ = ApprovalService.load_users_and_find_approver(users_path, cpf_digits)
@@ -292,7 +267,6 @@ def aprovacao_remover_export():
             event_type="aprovacao_remocao",
             status="success",
             details={
-                "cpf": cpf_formatted,
                 "structures_updated": stats.get("structures_updated"),
                 "occurrences_removed": stats.get("occurrences_removed"),
             },

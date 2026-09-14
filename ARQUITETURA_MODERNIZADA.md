@@ -32,6 +32,9 @@ cadastro, inativação e aprovação.
   importa de `backend.domain.rules`.
 - Suporte a `.docx` foi removido (função `extrair_docx` nunca existiu). Entrada:
   `.xlsx`, `.xls`, `.xltx`.
+- A lógica de **aprovação** (normalização de CPF, detecção de colunas, cálculo
+  de impacto, remoção/compactação) saiu de `api/aprovacao.py` pra
+  `ApprovalService`, no mesmo padrão de `ExportService`/`InactivationService`.
 
 ## Endpoints
 
@@ -74,9 +77,12 @@ em `tests/e2e/` (Playwright).
 
 ## Próxima fase
 
-- Migrar inativação e aprovação para serviços dedicados (hoje `processor.py` e
-  `api/aprovacao.py` concentram a lógica).
-- Ligar a aba **Análise** ao endpoint `/api/analysis/summary` (hoje o parsing é
-  client-side).
-- Avaliar FastAPI + Pydantic v2 + SQLAlchemy 2 + Alembic + PostgreSQL por
-  funcionalidade, mantendo compatibilidade durante a transição.
+- Sem migração de framework planejada no curto prazo: a stack atual (Flask +
+  services) está estável, testada (82/82 pytest, Playwright verde) e sem sinal
+  de dor de crescimento no código. Avaliar FastAPI + Pydantic v2 + SQLAlchemy 2
+  + Alembic + PostgreSQL fica registrado, mas parado até existir um driver
+  concreto (ex: multi-tenant, autenticação, consulta SQL no histórico) — não
+  faz sentido pagar esse custo pra um único cliente interno.
+- Foco atual é manter a ferramenta sólida pro uso interno (a aba **Análise**
+  foi removida na Fase 5 da migração do frontend, então deixou de haver
+  pendência de ligá-la a `/api/analysis/summary`).
