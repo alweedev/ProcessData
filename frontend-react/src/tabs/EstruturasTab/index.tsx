@@ -51,30 +51,60 @@ function FileFeedback({ file, onClear }: { file: File | null; onClear: () => voi
 
 export function EstruturasTab() {
   const e = useEstruturas();
+  const isSubstituir = e.mode === "substituir";
   const allSelected = e.items.length > 0 && e.selectedIds.size === e.items.length;
-  const [confirm, setConfirm] = useState<{ mode: "all" | "selected"; empty: { aprovacaoId: string }[] } | null>(null);
+  const [confirm, setConfirm] = useState<{ exportMode: "all" | "selected"; affected: { aprovacaoId: string }[] } | null>(
+    null,
+  );
 
   useRegisterPrimaryAction(e.previewLoading ? null : () => void e.preview());
 
-  async function handleExport(mode: "all" | "selected") {
-    const emptyStructures = await e.doExport(mode);
-    if (emptyStructures) setConfirm({ mode, empty: emptyStructures });
+  async function handleExport(exportMode: "all" | "selected") {
+    const affected = await e.doExport(exportMode);
+    if (affected) setConfirm({ exportMode, affected });
   }
 
   async function confirmExport() {
     if (!confirm) return;
-    const { mode } = confirm;
+    const { exportMode } = confirm;
     setConfirm(null);
-    await e.doExport(mode, true);
+    await e.doExport(exportMode, true);
   }
 
   return (
     <div>
       <PageHeader
         title="Estruturas de aprovação"
-        description="Remova um aprovador específico das estruturas a partir do CPF e recompacte."
+        description={
+          isSubstituir
+            ? "Substitua um aprovador por outro nas estruturas onde ele aparece, mantendo a posição/nível."
+            : "Remova um aprovador específico das estruturas a partir do CPF e recompacte."
+        }
         icon={<IconSitemap className="h-5 w-5" />}
       />
+
+      <div className="mb-4 inline-flex rounded-lg border border-border bg-surface-2 p-1">
+        <button
+          type="button"
+          id="aprovacao_mode_remover"
+          onClick={() => e.setMode("remover")}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            !isSubstituir ? "bg-surface text-text shadow-sm" : "text-text-muted hover:text-text"
+          }`}
+        >
+          Remover
+        </button>
+        <button
+          type="button"
+          id="aprovacao_mode_substituir"
+          onClick={() => e.setMode("substituir")}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            isSubstituir ? "bg-surface text-text shadow-sm" : "text-text-muted hover:text-text"
+          }`}
+        >
+          Substituir
+        </button>
+      </div>
 
       <Card>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -108,7 +138,7 @@ export function EstruturasTab() {
           <div className="min-w-[16rem]">
             <Field
               id="aprovacao_cpf"
-              label="CPF do aprovador"
+              label={isSubstituir ? "CPF do aprovador atual" : "CPF do aprovador"}
               hint={<span id="aprovacao_cpf_help">Ex: 123.456.789-00 ou 12345678900.</span>}
             >
               <TextInput
@@ -120,6 +150,23 @@ export function EstruturasTab() {
               />
             </Field>
           </div>
+          {isSubstituir && (
+            <div className="min-w-[16rem]">
+              <Field
+                id="aprovacao_new_cpf"
+                label="CPF do novo aprovador"
+                hint={<span id="aprovacao_new_cpf_help">Quem assume o lugar do aprovador atual.</span>}
+              >
+                <TextInput
+                  id="aprovacao_new_cpf"
+                  placeholder="Digite o CPF"
+                  aria-describedby="aprovacao_new_cpf_help"
+                  value={e.newCpf}
+                  onChange={(ev) => e.setNewCpf(ev.target.value)}
+                />
+              </Field>
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <Button
               id="aprovacao_preview_btn"
@@ -128,15 +175,27 @@ export function EstruturasTab() {
             >
               {e.previewLoading ? "Verificando..." : "Verificar"}
             </Button>
-            <label className="flex items-center gap-1.5 text-sm text-text-muted">
-              <input
-                type="checkbox"
-                id="aprovacao_remove_second_level"
-                checked={e.removeSecondLevel}
-                onChange={(ev) => e.setRemoveSecondLevel(ev.target.checked)}
-              />
-              Remover também do segundo nível
-            </label>
+            {isSubstituir ? (
+              <label className="flex items-center gap-1.5 text-sm text-text-muted">
+                <input
+                  type="checkbox"
+                  id="aprovacao_replace_second_level"
+                  checked={e.replaceSecondLevel}
+                  onChange={(ev) => e.setReplaceSecondLevel(ev.target.checked)}
+                />
+                Substituir também no segundo nível
+              </label>
+            ) : (
+              <label className="flex items-center gap-1.5 text-sm text-text-muted">
+                <input
+                  type="checkbox"
+                  id="aprovacao_remove_second_level"
+                  checked={e.removeSecondLevel}
+                  onChange={(ev) => e.setRemoveSecondLevel(ev.target.checked)}
+                />
+                Remover também do segundo nível
+              </label>
+            )}
           </div>
           <div
             id="aprovacao_status"
@@ -150,14 +209,29 @@ export function EstruturasTab() {
         {e.hasPreview && (
           <div id="aprovacao_preview_panel" className="mt-4 rounded-lg border border-border bg-surface-2 p-4">
             <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <p className="mb-0.5 text-xs uppercase tracking-wide text-text-subtle">Aprovador localizado</p>
-                <div id="aprovacao_approver_name" className="font-semibold text-text">
-                  {e.approver?.nomeCompleto || "—"}
+              <div className="flex flex-wrap gap-6">
+                <div>
+                  <p className="mb-0.5 text-xs uppercase tracking-wide text-text-subtle">
+                    {isSubstituir ? "Aprovador atual" : "Aprovador localizado"}
+                  </p>
+                  <div id="aprovacao_approver_name" className="font-semibold text-text">
+                    {e.approver?.nomeCompleto || "—"}
+                  </div>
+                  <div id="aprovacao_approver_cpf" className="text-sm text-text-muted">
+                    {e.approver?.cpf ? `CPF: ${e.approver.cpf}` : ""}
+                  </div>
                 </div>
-                <div id="aprovacao_approver_cpf" className="text-sm text-text-muted">
-                  {e.approver?.cpf ? `CPF: ${e.approver.cpf}` : ""}
-                </div>
+                {isSubstituir && (
+                  <div>
+                    <p className="mb-0.5 text-xs uppercase tracking-wide text-text-subtle">Novo aprovador</p>
+                    <div id="aprovacao_new_approver_name" className="font-semibold text-text">
+                      {e.newApprover?.nomeCompleto || "—"}
+                    </div>
+                    <div id="aprovacao_new_approver_cpf" className="text-sm text-text-muted">
+                      {e.newApprover?.cpf ? `CPF: ${e.newApprover.cpf}` : ""}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="text-right text-sm">
                 <div>
@@ -190,24 +264,49 @@ export function EstruturasTab() {
                   </Badge>
                 </span>
               )}
-              <button
-                type="button"
-                id="aprovacao_remove_all_btn"
-                disabled={!e.items.length || e.exportLoading}
-                onClick={() => handleExport("all")}
-                className="rounded-lg border border-danger px-3 py-1.5 text-sm font-medium text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Remover de todas
-              </button>
-              <button
-                type="button"
-                id="aprovacao_remove_selected_btn"
-                disabled={e.selectedIds.size === 0 || e.exportLoading}
-                onClick={() => handleExport("selected")}
-                className="rounded-lg bg-danger px-3 py-1.5 text-sm font-medium text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Remover selecionadas
-              </button>
+              {isSubstituir ? (
+                <>
+                  <Button
+                    id="aprovacao_substitute_all_btn"
+                    variant="outline"
+                    size="sm"
+                    disabled={!e.items.length || e.exportLoading}
+                    onClick={() => handleExport("all")}
+                  >
+                    Substituir em todas
+                  </Button>
+                  <Button
+                    id="aprovacao_substitute_selected_btn"
+                    variant="primary"
+                    size="sm"
+                    disabled={e.selectedIds.size === 0 || e.exportLoading}
+                    onClick={() => handleExport("selected")}
+                  >
+                    Substituir selecionadas
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    id="aprovacao_remove_all_btn"
+                    disabled={!e.items.length || e.exportLoading}
+                    onClick={() => handleExport("all")}
+                    className="rounded-lg border border-danger px-3 py-1.5 text-sm font-medium text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Remover de todas
+                  </button>
+                  <button
+                    type="button"
+                    id="aprovacao_remove_selected_btn"
+                    disabled={e.selectedIds.size === 0 || e.exportLoading}
+                    onClick={() => handleExport("selected")}
+                    className="rounded-lg bg-danger px-3 py-1.5 text-sm font-medium text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Remover selecionadas
+                  </button>
+                </>
+              )}
             </div>
 
             {e.items.length > 0 && (
@@ -235,39 +334,45 @@ export function EstruturasTab() {
                     </tr>
                   </thead>
                   <tbody id="aprovacao_table_body">
-                    {e.items.map((item) => (
-                      <tr
-                        key={item.aprovacaoId}
-                        className={`border-t border-border ${item.ficaraSemAprovador ? "bg-warning/15" : ""}`}
-                      >
-                        <td className="px-2 py-1.5">
-                          <input
-                            type="checkbox"
-                            className="aprov-row-check"
-                            data-id={item.aprovacaoId}
-                            checked={e.selectedIds.has(item.aprovacaoId)}
-                            onChange={(ev) => e.toggleSelected(item.aprovacaoId, ev.target.checked)}
-                          />
-                        </td>
-                        <td className="px-3 py-1.5 text-text">
-                          {item.aprovacaoId}
-                          {item.ficaraSemAprovador && (
-                            <span title="Esta estrutura ficará sem aprovadores" className="ml-1 text-warning">
-                              ⚠
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-1.5 text-text">{item.aprovacaoPor}</td>
-                        <td className="px-3 py-1.5 text-text">{item.aprovacao ?? ""}</td>
-                        <td className="px-3 py-1.5 text-text">{item.tipo ?? ""}</td>
-                        <td className="px-3 py-1.5 text-text">{item.valor ?? ""}</td>
-                        <td className="px-3 py-1.5 text-text">{computeContexto(item)}</td>
-                        <td className="px-3 py-1.5 text-text">
-                          {item.posicoes?.length ? item.posicoes.join(", ") : "—"}
-                        </td>
-                        <td className="px-3 py-1.5 text-text">{item.segundoNivel ? "Sim" : "Não"}</td>
-                      </tr>
-                    ))}
+                    {e.items.map((item) => {
+                      const flagged = isSubstituir ? item.teraDuplicidade : item.ficaraSemAprovador;
+                      const flagTitle = isSubstituir
+                        ? "O novo aprovador já está presente nesta estrutura"
+                        : "Esta estrutura ficará sem aprovadores";
+                      return (
+                        <tr
+                          key={item.aprovacaoId}
+                          className={`border-t border-border ${flagged ? "bg-warning/15" : ""}`}
+                        >
+                          <td className="px-2 py-1.5">
+                            <input
+                              type="checkbox"
+                              className="aprov-row-check"
+                              data-id={item.aprovacaoId}
+                              checked={e.selectedIds.has(item.aprovacaoId)}
+                              onChange={(ev) => e.toggleSelected(item.aprovacaoId, ev.target.checked)}
+                            />
+                          </td>
+                          <td className="px-3 py-1.5 text-text">
+                            {item.aprovacaoId}
+                            {flagged && (
+                              <span title={flagTitle} className="ml-1 text-warning">
+                                ⚠
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-1.5 text-text">{item.aprovacaoPor}</td>
+                          <td className="px-3 py-1.5 text-text">{item.aprovacao ?? ""}</td>
+                          <td className="px-3 py-1.5 text-text">{item.tipo ?? ""}</td>
+                          <td className="px-3 py-1.5 text-text">{item.valor ?? ""}</td>
+                          <td className="px-3 py-1.5 text-text">{computeContexto(item)}</td>
+                          <td className="px-3 py-1.5 text-text">
+                            {item.posicoes?.length ? item.posicoes.join(", ") : "—"}
+                          </td>
+                          <td className="px-3 py-1.5 text-text">{item.segundoNivel ? "Sim" : "Não"}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -314,9 +419,13 @@ export function EstruturasTab() {
           </>
         }
       >
-        <p>Algumas estruturas ficarão sem nenhum aprovador após a remoção:</p>
+        <p>
+          {isSubstituir
+            ? "O novo aprovador já está presente em algumas estruturas:"
+            : "Algumas estruturas ficarão sem nenhum aprovador após a remoção:"}
+        </p>
         <ul className="my-2 max-h-52 list-disc overflow-y-auto pl-5">
-          {confirm?.empty.map((s) => (
+          {confirm?.affected.map((s) => (
             <li key={s.aprovacaoId}>
               AprovacaoId: <strong>{s.aprovacaoId}</strong>
             </li>

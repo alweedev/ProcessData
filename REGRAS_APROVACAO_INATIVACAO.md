@@ -5,7 +5,7 @@
 ### 1.1 Objetivo
 
 Gerenciar estruturas de aprovação em cadeia, permitindo:
-- Adicionar aprovadores a estruturas (fluxos de viagem/reembolso)
+- Substituir aprovadores em estruturas (fluxos de viagem/reembolso)
 - Remover aprovadores
 - Identificar estruturas que ficarão sem aprovador
 - Gerar relatórios de impacto
@@ -96,34 +96,60 @@ Ação: Deve notificar usuário antes de salvar
 
 ### 1.4 Fluxo de Aprovação
 
-#### Adição de Aprovador
+#### Substituição de Aprovador
+
+> Endpoints: `POST /api/aprovacao/substituir/preview` e `POST /api/aprovacao/substituir/export`
+> (`backend/api/aprovacao.py`, lógica em `ApprovalService.replace_cpf` / `check_new_approver_duplicates`).
+
+Cenário real de negócio: um aprovador sai e outro assume o lugar dele nas
+mesmas estruturas — não existe um fluxo de "inserir um aprovador do zero em
+estruturas arbitrárias" (isso exigiria decidir em quais estruturas inserir e
+em qual posição, o que não tem uma regra de negócio definida; ver PDF de
+carga da Argo para o formato completo da planilha, caso esse fluxo venha a
+ser necessário no futuro).
 
 ```
 [1] Usuário envia:
-    - CPF do aprovador
-    - Arquivo base com estruturas
-    - Arquivo de usuários
+    - CPF do aprovador atual (que está saindo)
+    - CPF do novo aprovador (que está entrando)
+    - Arquivo base com estruturas (base_file)
+    - Arquivo de usuários (users_file)
 
 [2] Validação:
-    - CPF tem 11 dígitos
-    - CPF existe na base
-    - Base tem coluna AprovacaoId
-    - Base tem coluna LoginAprovador_1..100
+    - Os dois CPFs têm 11 dígitos e dígito verificador válido
+    - Os dois CPFs existem na base de usuários e estão ATIVO
+    - CPF novo != CPF atual
+    - Base tem coluna AprovacaoId e colunas LoginAprovador_1..100
 
 [3] Detecção:
-    - Identifica colunas automaticamente
-    - Localiza todas as estruturas
-    - Mapeia aprovadores existentes
+    - Localiza todas as estruturas onde o CPF atual aparece
+      (LoginAprovador_1..100 e, opcionalmente, LoginAprovador_SEGUNDO_NIVEL)
+    - Verifica se o novo CPF já é aprovador em alguma dessas estruturas
+      (duplicidade) — reportado em `estruturasComDuplicidade`
 
-[4] Processamento:
-    - Insere novo aprovador em LoginAprovador_X
-    - Atualiza posições de aprovação
-    - Mantém histórico de segundo nível
+[4] Preview (antes de executar):
+    - Mostra estruturas afetadas, posições onde o CPF atual aparece
+    - Mostra estruturas que já têm o novo CPF (`teraDuplicidade`)
 
-[5] Saída:
-    - Relatório de estruturas afetadas
-    - Quantidade de ocorrências
-    - IDs de estruturas modificadas
+[5] Confirmação do usuário:
+    - Revisa impacto; se houver duplicidade, decide se continua
+      (`ignore_duplicate_warning=true`) ou cancela
+
+[6] Execução:
+    - Substitui o CPF atual pelo novo em LoginAprovador_1..100, na MESMA
+      posição (sem compactar) — ao contrário da remoção, a estrutura não
+      muda de forma, só o aprovador muda
+    - Se `replace_second_level=true` e o CPF atual está no
+      LoginAprovador_SEGUNDO_NIVEL, substitui lá também (padrão: false,
+      mantém o segundo nível como está)
+    - Gate: se alguma estrutura selecionada já tiver o novo CPF como
+      aprovador (duplicidade), retorna aviso (HTTP 400 + warning) e só
+      prossegue com ignore_duplicate_warning=true
+
+[7] Export:
+    - Exporta TODAS as linhas das estruturas alvo (a Argo precisa da
+      estrutura completa)
+    - Operacao = "UPDATE" apenas nas linhas efetivamente alteradas
 ```
 
 #### Remoção de Aprovador
@@ -460,7 +486,7 @@ def _normalize_lista_columns(df_lista: pd.DataFrame):
 
 | Aspecto | Aprovação | Inativação |
 |---------|-----------|-----------|
-| **Função** | Adicionar/remover aprovadores | Buscar/inativar usuários |
+| **Função** | Substituir/remover aprovadores | Buscar/inativar usuários |
 | **Entrada** | Base com estruturas + CPF | Base com usuários + lista |
 | **Critério** | AprovacaoId | CPF, Email, Nome |
 | **Validação** | CPF na base de usuários | CPF/Email/Nome válido |
@@ -481,8 +507,8 @@ def _normalize_lista_columns(df_lista: pd.DataFrame):
     - Gera saída padrão
     ↓
 [2] APROVAÇÃO
-    - Adiciona a estruturas de aprovação
-    - Define aprovadores
+    - Estruturas de aprovação já existem previamente (cadastradas na Argo)
+    - Substitui aprovadores quando alguém assume o lugar de outro
     ↓
 [3] INATIVAÇÃO
     - Remove de estruturas
@@ -493,25 +519,25 @@ def _normalize_lista_columns(df_lista: pd.DataFrame):
 
 ## 5. CASOS DE USO
 
-### Caso 1: Adicionar Aprovador
+### Caso 1: Substituir Aprovador
 
 ```
 Entrada:
-- CPF: 123.456.789-00
+- CPF atual: 123.456.789-00
+- CPF novo: 987.654.321-00
 - Base: estruturas_viagem.xlsx
 - Usuários: base_usuarios.xlsx
 
 Processamento:
-- Valida CPF (11 dígitos)
-- Localiza usuário na base
-- Encontra colunas LoginAprovador_1..100
-- Insere CPF em coluna vazia
-- Atualiza contadores
+- Valida os 2 CPFs (11 dígitos, ATIVO na base)
+- Localiza estruturas onde o CPF atual aparece
+- Verifica se o CPF novo já aparece nelas (duplicidade)
+- Substitui o CPF atual pelo novo, na mesma posição
 
 Saída:
 - 25 estruturas afetadas
-- 42 posições preenchidas
-- 5 estruturas sem segundo nível
+- 42 posições substituídas
+- 2 estruturas com duplicidade (novo já era aprovador)
 ```
 
 ### Caso 2: Remover Aprovador

@@ -35,6 +35,9 @@ cadastro, inativação e aprovação.
 - A lógica de **aprovação** (normalização de CPF, detecção de colunas, cálculo
   de impacto, remoção/compactação) saiu de `api/aprovacao.py` pra
   `ApprovalService`, no mesmo padrão de `ExportService`/`InactivationService`.
+- Fase 8: fluxo de **substituição de aprovador** (`ApprovalService.replace_cpf`
+  / `check_new_approver_duplicates`), com gate de duplicidade quando o novo
+  CPF já é aprovador na estrutura. Ver `REGRAS_APROVACAO_INATIVACAO.md` §1.4.
 
 ## Endpoints
 
@@ -47,6 +50,8 @@ cadastro, inativação e aprovação.
 | POST | `/api/process_inativacao` | gera a ficha de inativação (xlsx) |
 | POST | `/api/aprovacao/remover/preview` | impacto da remoção de um aprovador |
 | POST | `/api/aprovacao/remover/export` | base de aprovação atualizada (xlsx) |
+| POST | `/api/aprovacao/substituir/preview` | impacto da substituição de um aprovador por outro |
+| POST | `/api/aprovacao/substituir/export` | base de aprovação atualizada após substituição (xlsx) |
 | GET/DELETE | `/api/history` | trilha de auditoria (DELETE só localhost/token) |
 | GET | `/api/health` | health check |
 
@@ -72,8 +77,8 @@ Removidos: `POST /api/inativacao/executar` (sucesso falso, sem consumidor) e
 
 ## Testes
 
-`python -m pytest -q` (suíte em `backend/tests/`). Fluxos críticos ponta-a-ponta
-em `tests/e2e/` (Playwright).
+`python -m pytest -q` (suíte em `backend/tests/`, 94/94). Fluxos críticos
+ponta-a-ponta em `tests/e2e/` (Playwright).
 
 ## Próxima fase
 

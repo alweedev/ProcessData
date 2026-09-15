@@ -170,6 +170,84 @@ def _check_structures_without_approvers(
     return unique_structures
 
 
+def _check_structures_with_duplicate(
+    df_base: pd.DataFrame,
+    new_cpf_digits: str,
+    cols: dict[str, Any],
+    target_ids: set[str],
+) -> list[dict[str, Any]]:
+    """Verifica estruturas onde o novo CPF já é aprovador (main ou segundo nível).
+
+    Substituir um CPF por outro que já aprova a mesma estrutura criaria uma
+    duplicidade (o mesmo login em duas posições) — reportado para o usuário
+    decidir antes de exportar.
+    """
+    approver_cols: list[str] = cols.get("approver_cols") or []
+    aprov_id_col = cols.get("aprovacao_id")
+    login_segundo_col = cols.get("login_segundo")
+
+    if not aprov_id_col:
+        return []
+
+    duplicates: list[dict[str, Any]] = []
+    for _idx, row in df_base.iterrows():
+        aprov_id = str(row.get(aprov_id_col, "")).strip()
+        if not aprov_id or aprov_id not in target_ids:
+            continue
+
+        already_present = False
+        for col in approver_cols:
+            raw_login = str(row.get(col, "")).strip()
+            if raw_login and limpar_cpf_raw(raw_login) == new_cpf_digits:
+                already_present = True
+                break
+        if not already_present and login_segundo_col and login_segundo_col in df_base.columns:
+            raw_second = str(row.get(login_segundo_col, "")).strip()
+            if raw_second and limpar_cpf_raw(raw_second) == new_cpf_digits:
+                already_present = True
+
+        if not already_present:
+            continue
+
+        aprovacao_por_col = cols.get("aprovacao_por")
+        valor_col = cols.get("valor")
+        desc_ccusto_col = cols.get("desc_ccusto")
+        cod_ccusto_col = cols.get("cod_ccusto")
+        traveler_col = cols.get("traveler_name_col")
+
+        aprovacao_por_val = str(row.get(aprovacao_por_col, "")).strip() if aprovacao_por_col else ""
+        valor_val = str(row.get(valor_col, "")).strip() if valor_col else ""
+
+        contexto = ""
+        if aprovacao_por_val.upper() == "VIAJANTE":
+            traveler_name = str(row.get(traveler_col, "")).strip() if traveler_col else ""
+            contexto = traveler_name or valor_val
+        elif aprovacao_por_val.upper() == "CCEMPRESA":
+            cod_cc = str(row.get(cod_ccusto_col, "")).strip() if cod_ccusto_col else ""
+            desc_cc = str(row.get(desc_ccusto_col, "")).strip() if desc_ccusto_col else ""
+            contexto = f"{cod_cc} - {desc_cc}" if cod_cc and desc_cc else (cod_cc or desc_cc or valor_val)
+        else:
+            contexto = valor_val
+
+        duplicates.append(
+            {
+                "aprovacaoId": aprov_id,
+                "aprovacaoPor": aprovacao_por_val,
+                "valor": valor_val,
+                "contexto": contexto,
+            }
+        )
+
+    seen: set[str] = set()
+    unique_duplicates: list[dict[str, Any]] = []
+    for d in duplicates:
+        if d["aprovacaoId"] not in seen:
+            seen.add(d["aprovacaoId"])
+            unique_duplicates.append(d)
+
+    return unique_duplicates
+
+
 class ApprovalService:
     @staticmethod
     def normalize_cpf_input(raw_cpf: str | None) -> tuple[str, str]:
@@ -501,6 +579,88 @@ class ApprovalService:
             "structures_updated": len(structures_updated),
             "occurrences_removed": int(occurrences_removed),
             "promotions": int(promotions),
+            "changed_indices": changed_indices,
+        }
+        return df_out, stats
+
+    @staticmethod
+    def check_new_approver_duplicates(
+        df_base: pd.DataFrame,
+        new_cpf_digits: str,
+        cols: dict[str, Any],
+        target_ids: set[str],
+    ) -> list[dict[str, Any]]:
+        """Estruturas (dentro de target_ids) onde o novo CPF já é aprovador."""
+
+        if not target_ids:
+            return []
+        return _check_structures_with_duplicate(df_base, new_cpf_digits, cols, target_ids)
+
+    @staticmethod
+    def replace_cpf(
+        df_base: pd.DataFrame,
+        old_cpf_digits: str,
+        new_cpf_digits: str,
+        cols: dict[str, Any],
+        target_ids: set[str],
+        replace_second_level: bool,
+    ) -> tuple[pd.DataFrame, dict[str, Any]]:
+        """Substitui todas as ocorrências do CPF antigo pelo novo, na mesma posição/nível.
+
+        Ao contrário de `remove_cpf_and_compact`, não compacta nem promove
+        segundo nível: a posição do aprovador é preservada, só o login muda.
+        """
+
+        approver_cols: list[str] = cols.get("approver_cols") or []
+        aprov_id_col = cols.get("aprovacao_id")
+        if not aprov_id_col or not approver_cols:
+            return df_base, {
+                "structures_updated": 0,
+                "occurrences_replaced": 0,
+                "changed_indices": set(),
+            }
+
+        df_out = df_base.copy()
+        login_segundo_col = cols.get("login_segundo")
+        has_segundo = bool(login_segundo_col and login_segundo_col in df_out.columns)
+        segundo_master_col = cols.get("segundo_master")
+        new_login = format_cpf_for_output(new_cpf_digits)
+
+        structures_updated: set[str] = set()
+        changed_indices: set[Any] = set()
+        occurrences_replaced = 0
+
+        for idx, row in df_out.iterrows():
+            aprov_id = str(row.get(aprov_id_col, "")).strip()
+            if not aprov_id or aprov_id not in target_ids:
+                continue
+
+            changed = False
+
+            for col in approver_cols:
+                raw_login = str(row.get(col, "")).strip()
+                if raw_login and limpar_cpf_raw(raw_login) == old_cpf_digits:
+                    df_out.at[idx, col] = new_login
+                    occurrences_replaced += 1
+                    changed = True
+
+            if replace_second_level and has_segundo:
+                raw_second = str(row.get(login_segundo_col, "")).strip()
+                if raw_second and limpar_cpf_raw(raw_second) == old_cpf_digits:
+                    df_out.at[idx, login_segundo_col] = new_login
+                    occurrences_replaced += 1
+                    changed = True
+
+            if changed:
+                structures_updated.add(aprov_id)
+                changed_indices.add(idx)
+
+        if segundo_master_col and segundo_master_col in df_out.columns:
+            df_out[segundo_master_col] = df_out[segundo_master_col].astype(str).fillna("")
+
+        stats = {
+            "structures_updated": len(structures_updated),
+            "occurrences_replaced": int(occurrences_replaced),
             "changed_indices": changed_indices,
         }
         return df_out, stats

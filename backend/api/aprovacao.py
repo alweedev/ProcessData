@@ -291,3 +291,261 @@ def aprovacao_remover_export():
                     os.remove(path)
             except Exception as cleanup_exc:  # pragma: no cover
                 logger.warning(f"Falha ao remover temporário {path}: {cleanup_exc}")
+
+
+def _parse_bool_field(form: Any, raw_json: dict[str, Any] | None, name: str) -> bool:
+    raw = form.get(name)
+    if raw is None and raw_json is not None:
+        raw = raw_json.get(name)
+    if isinstance(raw, bool):
+        return raw
+    return str(raw or "").lower() in {"1", "true", "yes", "on"}
+
+
+@aprovacao_bp.route("/substituir/preview", methods=["POST"])
+def aprovacao_substituir_preview():
+    users_path: str | None = None
+    base_path: str | None = None
+    try:
+        users_file = request.files.get("users_file")
+        base_file = request.files.get("base_file")
+        form = request.form or {}
+        raw_json = request.get_json(silent=True) if request.is_json else None
+
+        old_cpf_raw = form.get("cpf") or (raw_json or {}).get("cpf")
+        new_cpf_raw = form.get("new_cpf") or (raw_json or {}).get("new_cpf")
+
+        if not users_file or not base_file:
+            return jsonify({"error": "Envie 'users_file' e 'base_file' (arquivos Excel)."}), 400
+
+        old_cpf_digits, old_cpf_formatted = ApprovalService.normalize_cpf_input(old_cpf_raw)
+        new_cpf_digits, new_cpf_formatted = ApprovalService.normalize_cpf_input(new_cpf_raw)
+        if new_cpf_digits == old_cpf_digits:
+            return jsonify({"error": "O CPF do novo aprovador deve ser diferente do CPF atual."}), 400
+
+        users_path, err = save_and_validate_upload(users_file, settings.UPLOAD_FOLDER, label="users_file")
+        if err:
+            return jsonify({"error": err}), 400
+        base_path, err = save_and_validate_upload(base_file, settings.UPLOAD_FOLDER, label="base_file")
+        if err:
+            return jsonify({"error": err}), 400
+
+        _, old_approver_name = ApprovalService.load_users_and_find_approver(users_path, old_cpf_digits)
+        _, new_approver_name = ApprovalService.load_users_and_find_approver(users_path, new_cpf_digits)
+
+        df_base = pd.read_excel(base_path, dtype=str).fillna("")
+        cols = ApprovalService.detect_approval_columns(df_base)
+
+        preview = ApprovalService.build_preview_for_cpf(df_base, old_cpf_digits, cols, check_empty=False)
+        raw_structures: list[dict[str, Any]] = preview.get("structures", []) or []
+        affected_ids: set[str] = set(preview.get("affected_ids") or [])
+
+        duplicates = ApprovalService.check_new_approver_duplicates(df_base, new_cpf_digits, cols, affected_ids)
+        duplicate_ids = {d.get("aprovacaoId") for d in duplicates}
+
+        por_aprovacao_por: dict[str, int] = {}
+        items: list[dict[str, Any]] = []
+        for rec in raw_structures:
+            aprovacao_por = (rec.get("aprovacao_por") or "").strip()
+            chave_tipo = aprovacao_por or "OUTRO"
+            por_aprovacao_por[chave_tipo] = por_aprovacao_por.get(chave_tipo, 0) + 1
+
+            cost_center = rec.get("cost_center") or ""
+            cc_codigo: str | None = None
+            cc_descricao: str | None = None
+            if cost_center:
+                partes = [p.strip() for p in str(cost_center).split("-", 1)]
+                if len(partes) == 2:
+                    cc_codigo, cc_descricao = partes[0] or None, partes[1] or None
+                else:
+                    cc_descricao = partes[0] or None
+
+            positions = rec.get("positions") or []
+            try:
+                posicoes_norm = [int(p) for p in positions]
+            except Exception:
+                posicoes_norm = []
+
+            items.append(
+                {
+                    "aprovacaoId": rec.get("aprovacao_id"),
+                    "aprovacaoPor": aprovacao_por or None,
+                    "aprovacao": rec.get("aprovacao"),
+                    "tipo": rec.get("tipo"),
+                    "valor": rec.get("valor"),
+                    "viajanteNomeCompleto": rec.get("traveler_name"),
+                    "ccCodigo": cc_codigo,
+                    "ccDescricao": cc_descricao,
+                    "posicoes": posicoes_norm,
+                    "segundoNivel": bool(rec.get("in_second_level")),
+                    "teraDuplicidade": rec.get("aprovacao_id") in duplicate_ids,
+                }
+            )
+
+        response = {
+            "oldApprover": {"cpf": old_cpf_formatted, "nomeCompleto": old_approver_name},
+            "newApprover": {"cpf": new_cpf_formatted, "nomeCompleto": new_approver_name},
+            "summary": {
+                "estruturasAfetadas": preview.get("total_structures", 0),
+                "ocorrenciasTotal": preview.get("total_occurrences", 0),
+                "porAprovacaoPor": por_aprovacao_por,
+                "estruturasComDuplicidade": len(duplicates),
+            },
+            "items": items,
+            "alertas": {
+                "estruturasComDuplicidade": duplicates,
+            },
+        }
+        return jsonify(response), 200
+    except ValueError as ve:
+        logger.warning(f"Preview aprovacao substituir - erro de validação: {ve}")
+        return jsonify({"error": str(ve)}), 400
+    except Exception:  # pragma: no cover - proteção extra
+        logger.exception("Erro em /api/aprovacao/substituir/preview")
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
+    finally:
+        for path in [users_path, base_path]:
+            try:
+                if path and os.path.exists(path):
+                    os.remove(path)
+            except Exception as cleanup_exc:  # pragma: no cover
+                logger.warning(f"Falha ao remover temporário {path}: {cleanup_exc}")
+
+
+@aprovacao_bp.route("/substituir/export", methods=["POST"])
+def aprovacao_substituir_export():
+    users_path: str | None = None
+    base_path: str | None = None
+    try:
+        users_file = request.files.get("users_file")
+        base_file = request.files.get("base_file")
+        form = request.form or {}
+        raw_json = request.get_json(silent=True) if request.is_json else None
+
+        old_cpf_raw = form.get("cpf") or (raw_json or {}).get("cpf")
+        new_cpf_raw = form.get("new_cpf") or (raw_json or {}).get("new_cpf")
+        mode = (form.get("mode") or (raw_json or {}).get("mode") or "all").lower()
+
+        selected_ids_form = form.getlist("selected_aprovacao_ids[]") or form.getlist("selected_aprovacao_ids")
+        selected_ids_json = (raw_json or {}).get("selected_aprovacao_ids") or []
+        selected_ids: set[str] = set(str(x) for x in (selected_ids_form or selected_ids_json or []))
+
+        replace_second_level = _parse_bool_field(form, raw_json, "replace_second_level")
+        ignore_duplicate_warning = _parse_bool_field(form, raw_json, "ignore_duplicate_warning")
+
+        if not users_file or not base_file:
+            return jsonify({"error": "Envie 'users_file' e 'base_file' (arquivos Excel)."}), 400
+
+        old_cpf_digits, old_cpf_formatted = ApprovalService.normalize_cpf_input(old_cpf_raw)
+        new_cpf_digits, _new_cpf_formatted = ApprovalService.normalize_cpf_input(new_cpf_raw)
+        if new_cpf_digits == old_cpf_digits:
+            return jsonify({"error": "O CPF do novo aprovador deve ser diferente do CPF atual."}), 400
+
+        users_path, err = save_and_validate_upload(users_file, settings.UPLOAD_FOLDER, label="users_file")
+        if err:
+            return jsonify({"error": err}), 400
+        base_path, err = save_and_validate_upload(base_file, settings.UPLOAD_FOLDER, label="base_file")
+        if err:
+            return jsonify({"error": err}), 400
+
+        # Garante que os dois CPFs existem na base de usuários e estão ATIVOs.
+        ApprovalService.load_users_and_find_approver(users_path, old_cpf_digits)
+        ApprovalService.load_users_and_find_approver(users_path, new_cpf_digits)
+
+        df_base = pd.read_excel(base_path, dtype=str).fillna("")
+        cols = ApprovalService.detect_approval_columns(df_base)
+
+        preview = ApprovalService.build_preview_for_cpf(df_base, old_cpf_digits, cols, check_empty=False)
+        affected_ids_all: set[str] = set(preview.get("affected_ids") or [])
+        if not affected_ids_all:
+            return jsonify({"error": "CPF não está presente em nenhuma estrutura de aprovação."}), 400
+
+        if mode == "selected":
+            if not selected_ids:
+                return jsonify({"error": "Informe 'selected_aprovacao_ids' quando mode='selected'."}), 400
+            target_ids = affected_ids_all.intersection(selected_ids)
+            if not target_ids:
+                return jsonify({"error": "Nenhuma AprovacaoId selecionada contém o CPF informado."}), 400
+        else:
+            target_ids = affected_ids_all
+
+        duplicates = ApprovalService.check_new_approver_duplicates(df_base, new_cpf_digits, cols, target_ids)
+        if duplicates and not ignore_duplicate_warning:
+            return jsonify(
+                {
+                    "error": "O novo aprovador já está presente em algumas estruturas.",
+                    "warning": True,
+                    "estruturasComDuplicidade": duplicates,
+                    "message": (
+                        f"{len(duplicates)} estrutura(s) já têm o novo aprovador. "
+                        "Deseja continuar mesmo assim?"
+                    ),
+                }
+            ), 400
+
+        df_updated, stats = ApprovalService.replace_cpf(
+            df_base=df_base,
+            old_cpf_digits=old_cpf_digits,
+            new_cpf_digits=new_cpf_digits,
+            cols=cols,
+            target_ids=target_ids,
+            replace_second_level=replace_second_level,
+        )
+
+        aprovacao_id_col = cols.get("aprovacao_id")
+        if aprovacao_id_col and aprovacao_id_col in df_updated.columns:
+            df_export = df_updated[df_updated[aprovacao_id_col].astype(str).isin(target_ids)].copy()
+        else:
+            df_export = df_updated.copy()
+
+        changed_indices = stats.get("changed_indices") or set()
+        if "Operacao" not in df_export.columns:
+            df_export.insert(0, "Operacao", "")
+        changed_mask = df_export.index.isin(changed_indices)
+        df_export.loc[changed_mask, "Operacao"] = "UPDATE"
+
+        cols_list = df_export.columns.tolist()
+        if cols_list and cols_list[0] != "Operacao":
+            cols_list.remove("Operacao")
+            cols_list.insert(0, "Operacao")
+            df_export = df_export[cols_list]
+
+        output = ExportService.to_excel_bytes(df_export, sheet_name="Aprovacao")
+
+        filename = f"base_aprovacao_atualizada_{old_cpf_formatted.replace('-', '')}.xlsx"
+        logger.info(
+            "Estruturas atualizadas: %s | Ocorrencias substituidas: %s | Linhas exportadas: %s (de %s total)",
+            stats.get("structures_updated"),
+            stats.get("occurrences_replaced"),
+            len(df_export),
+            len(df_base),
+        )
+
+        AuditService.record(
+            event_type="aprovacao_substituicao",
+            status="success",
+            details={
+                "structures_updated": stats.get("structures_updated"),
+                "occurrences_replaced": stats.get("occurrences_replaced"),
+            },
+        )
+        return send_file(
+            output,
+            download_name=filename,
+            as_attachment=True,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    except ValueError as ve:
+        logger.warning(f"Export aprovacao substituir - erro de validação: {ve}")
+        return jsonify({"error": str(ve)}), 400
+    except Exception:  # pragma: no cover - proteção extra
+        logger.exception("Erro em /api/aprovacao/substituir/export")
+        AuditService.record(event_type="aprovacao_substituicao", status="error", details={})
+        return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
+    finally:
+        for path in [users_path, base_path]:
+            try:
+                if path and os.path.exists(path):
+                    os.remove(path)
+            except Exception as cleanup_exc:  # pragma: no cover
+                logger.warning(f"Falha ao remover temporário {path}: {cleanup_exc}")
