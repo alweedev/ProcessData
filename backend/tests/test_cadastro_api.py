@@ -80,6 +80,71 @@ def test_cadastro_success_audit_tracks_invalid_row_count_without_raw_messages(cl
     assert "errors" not in latest["details"]
 
 
+def test_cadastro_multi_file_upload_merges_rows(client):
+    """/api/process_cadastro nunca era testado com mais de 1 arquivo, embora
+    a rota faça `request.files.getlist('files[]')` e itere sobre todos."""
+    df1 = pd.DataFrame(
+        [
+            {
+                "CPF": valid_cpf(20),
+                "NOME COMPLETO": "Ana Primeiro Arquivo",
+                "EMAIL": "ana@empresa.com",
+                "EMPRESA": "Empresa A",
+                "Centro de custo": "CC1",
+                "SOLICITANTE? (S/N)": "S",
+            },
+        ]
+    )
+    df2 = pd.DataFrame(
+        [
+            {
+                "CPF": valid_cpf(21),
+                "NOME COMPLETO": "Bruno Segundo Arquivo",
+                "EMAIL": "bruno@empresa.com",
+                "EMPRESA": "Empresa B",
+                "Centro de custo": "CC2",
+                "SOLICITANTE? (S/N)": "N",
+            },
+        ]
+    )
+    data = {
+        "files[]": [xlsx_upload(df1, "um.xlsx"), xlsx_upload(df2, "dois.xlsx")],
+        "login_choice": "CPF",
+        "fluxo": "SELF",
+    }
+    resp = client.post("/api/process_cadastro", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+
+    _header, rows = _read_first_sheet(resp.data)
+    assert len(rows) == 2
+    nomes = {r["NomeCompleto"] for r in rows}
+    assert nomes == {"ANA PRIMEIRO ARQUIVO", "BRUNO SEGUNDO ARQUIVO"}
+
+
+def test_cadastro_front_flow_via_endpoint(client):
+    """fluxo=FRONT só era testado direto no ProcessingService; aqui confere
+    que o endpoint HTTP repassa `fluxo` corretamente."""
+    df = pd.DataFrame(
+        [
+            {
+                "EMAIL": "viajante@empresa.com",
+                "NOME COMPLETO": "Viajante Teste",
+                "EMPRESA": "Empresa A",
+                "Centro de custo": "CC1",
+                "SOLICITANTE? (S/N)": "N",
+            },
+        ]
+    )
+    data = {"files[]": xlsx_upload(df, "front.xlsx"), "login_choice": "EMAIL", "fluxo": "FRONT"}
+    resp = client.post("/api/process_cadastro", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+
+    _header, rows = _read_first_sheet(resp.data)
+    assert rows[0]["Login"] == "FRONTVIAJANTE@EMPRESA.COM"
+    assert rows[0]["ViajanteMasterNacional"] == "S"
+    assert rows[0]["ViajanteMasterInternacional"] == "S"
+
+
 def test_cadastro_bool_and_blank_rows(tmp_path):
     df = pd.DataFrame(
         [

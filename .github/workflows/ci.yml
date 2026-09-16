@@ -21,8 +21,14 @@ jobs:
         run: ruff format --check .
       - name: mypy
         run: mypy -p backend
-      - name: pytest
-        run: python -m pytest -q
+      - name: pytest (com cobertura)
+        run: python -m pytest -q --cov --cov-report=term-missing --cov-report=xml
+      - name: coverage summary
+        run: python -m coverage report
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
 
   frontend:
     runs-on: ubuntu-latest

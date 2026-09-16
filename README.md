@@ -141,10 +141,11 @@ Upload de arquivo é limitado a 16 MB (`MAX_CONTENT_LENGTH`, fixo).
 Com o ambiente virtual ativo, a partir da raiz do repositório:
 
 ```bash
-python -m pytest -q                              # suíte completa (backend/tests/), 113/113
+python -m pytest -q                              # suíte completa (backend/tests/), 116/116
 python -m pytest backend/tests/test_cadastro_api.py -q
 python -m pytest backend/tests/test_inativacao_api.py backend/tests/test_inativacao_buscar_api.py -q
 python -m pytest backend/tests/test_aprovacao.py backend/tests/test_aprovacao_substituir.py -q
+python -m pytest --cov --cov-report=term-missing  # cobertura (também roda no CI)
 
 ruff check backend/                              # lint
 mypy backend/                                    # tipos

@@ -28,6 +28,43 @@ def test_normal_values_unchanged():
     assert ws.cell(row=2, column=1).value == "ABC"
 
 
+def test_happy_path_applies_header_style_and_layout():
+    out = ExportService.to_excel_bytes(pd.DataFrame({"NomeCompleto": ["Ana", "Bruno"]}), sheet_name="S")
+    ws = load_workbook(io.BytesIO(out.getvalue()))["S"]
+    header_cell = ws.cell(row=1, column=1)
+    assert header_cell.font.bold is True
+    assert header_cell.fill.fgColor.rgb == "00FFDCE6" or header_cell.fill.fgColor.rgb == "FFDCE6F1"
+    assert ws.freeze_panes == "A2"
+    assert ws.column_dimensions["A"].width is not None
+    assert ws.auto_filter.ref is not None
+
+
+def test_fallback_without_style_still_neutralizes_formulas(monkeypatch):
+    """Se a etapa de estilo falhar (ex.: incompatibilidade de versão do
+    openpyxl), o export cai no fallback sem estilo -- mas a neutralização de
+    formula-injection (a parte que importa pra segurança) precisa continuar
+    funcionando mesmo nesse caminho, hoje sem nenhum teste cobrindo isso."""
+
+    def boom(*_a, **_k):
+        raise RuntimeError("estilo indisponível")
+
+    # get_column_letter só é usado pela etapa de largura de coluna do
+    # ExportService (depois que df.to_excel/_neutralize_worksheet já
+    # rodaram) -- ao contrário de Font/PatternFill, não é usado pelo
+    # pipeline interno do pandas, então não derruba o próprio fallback.
+    monkeypatch.setattr("openpyxl.utils.get_column_letter", boom)
+
+    out = ExportService.to_excel_bytes(pd.DataFrame({"x": ["=SUM(A1)", "normal"]}), sheet_name="S")
+    ws = load_workbook(io.BytesIO(out.getvalue()))["S"]
+    cell = ws.cell(row=2, column=1)
+    assert cell.data_type in _STRING_TYPES
+    assert cell.value == "=SUM(A1)"
+    # sem estilo: freeze_panes só é setado depois da etapa que forçamos a
+    # falhar, então no fallback ele fica ausente (diferente do caminho feliz,
+    # coberto por test_happy_path_applies_header_style_and_layout).
+    assert ws.freeze_panes is None
+
+
 def test_aprovacao_export_neutralizes_injection(client):
     users = pd.DataFrame([{"CPF": valid_cpf(1), "NomeCompleto": "Aprovador Um", "Status": "ATIVO"}])
     # payload com prefixo "+": sobrevive ao round-trip de leitura da planilha

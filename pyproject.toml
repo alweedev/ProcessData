@@ -6,6 +6,16 @@ filterwarnings = [
     "ignore::DeprecationWarning",
 ]
 
+[tool.coverage.run]
+source = ["backend"]
+omit = ["backend/tests/*"]
+
+[tool.coverage.report]
+# Sem threshold ainda -- objetivo inicial é só ter visibilidade real de
+# cobertura em vez de auditoria manual (ver ARQUITETURA_MODERNIZADA.md).
+skip_covered = false
+show_missing = true
+
 [tool.ruff]
 line-length = 120
 target-version = "py310"
