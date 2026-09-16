@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRegisterPrimaryAction } from "../../app/actionContext";
+import { FileDropzone } from "../../components/FileDropzone";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
@@ -23,8 +24,6 @@ function rowStatusClass(found: boolean, status: string): string {
 
 export function InativacaoTab() {
   const inativacao = useInativacao();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [dragOver, setDragOver] = useState(false);
   const [resultSearch, setResultSearch] = useState("");
   const [page, setPage] = useState(1);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -45,7 +44,6 @@ export function InativacaoTab() {
 
   function clearBase() {
     pickFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
     inativacao.setResults([]);
   }
 
@@ -107,51 +105,15 @@ export function InativacaoTab() {
       </Modal>
 
       <Card>
-        <div
-          id="inativacao_base_uploadArea"
-          aria-live="polite"
-          tabIndex={0}
-          role="button"
-          aria-label="Upload da base de inativacao. Pressione para selecionar arquivo"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              fileInputRef.current?.click();
-            }
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-            const file = e.dataTransfer.files?.[0];
-            if (file) pickFile(file);
-          }}
-          className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
-            dragOver ? "border-accent bg-accent/5" : "border-border-strong hover:border-accent/50"
-          }`}
+        <FileDropzone
+          id="inativacao_base"
+          containerId="inativacao_base_uploadArea"
+          accept=".xlsx,.xls"
+          ariaLabel="Upload da base de inativação. Pressione para selecionar arquivo"
+          description="Arraste a base (.xlsx) ou selecione o arquivo."
+          syncFiles={inativacao.baseFile ? [inativacao.baseFile] : []}
+          onFiles={(list) => pickFile(list[0] ?? null)}
         >
-          <p className="mb-3 text-sm text-text-muted">Arraste a base (.xlsx) ou selecione o arquivo.</p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            id="inativacao_base"
-            aria-label="Selecionar base para inativação"
-            className="hidden"
-            onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
-          />
-          <button
-            type="button"
-            title="Selecionar planilha base de usuários"
-            onClick={() => fileInputRef.current?.click()}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-fg transition-colors hover:bg-accent-hover"
-          >
-            Selecionar
-          </button>
           <div id="inativacao_base_feedback" aria-live="polite" className="mt-3">
             {inativacao.baseFile && (
               <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-2 py-1 pl-3 pr-1.5 text-sm text-text">
@@ -172,7 +134,7 @@ export function InativacaoTab() {
               </span>
             )}
           </div>
-        </div>
+        </FileDropzone>
 
         <div className="mt-4">
           <Field id="lista_text" label="Informe abaixo como deseja localizar os usuários.">

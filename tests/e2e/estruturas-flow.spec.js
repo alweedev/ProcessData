@@ -52,6 +52,41 @@ test("verifica CPF, mostra a tabela e remove de todas as estruturas", async ({ p
   expect(download.suggestedFilename()).toBe("base_aprovacao_atualizada.xlsx");
 });
 
+test("toggle Remover/Substituir expõe aria-pressed corretamente", async ({ page }) => {
+  const remover = page.locator("#aprovacao_mode_remover");
+  const substituir = page.locator("#aprovacao_mode_substituir");
+  await expect(remover).toHaveAttribute("aria-pressed", "true");
+  await expect(substituir).toHaveAttribute("aria-pressed", "false");
+
+  await substituir.click();
+  await expect(substituir).toHaveAttribute("aria-pressed", "true");
+  await expect(remover).toHaveAttribute("aria-pressed", "false");
+});
+
+test("modal de aviso tem focus trap: Tab não escapa pro conteúdo por trás", async ({ page }) => {
+  const base = [{ AprovacaoId: "A2b", AprovacaoPor: "VIAJANTE", LoginAprovador_1: APPROVER, LoginAprovador_2: "" }];
+  await page.setInputFiles("#aprovacao_users_file", xlsxFile("users.xlsx", usersRows()));
+  await page.setInputFiles("#aprovacao_base_file", xlsxFile("base.xlsx", base));
+  await page.fill("#aprovacao_cpf", APPROVER);
+  await page.locator("#aprovacao_preview_btn").click();
+  await page.locator("#aprovacao_remove_all_btn").click();
+
+  const dialog = page.locator('[role="dialog"]');
+  await expect(dialog).toBeVisible();
+
+  // Foco inicial vai pro painel do diálogo; Shift+Tab a partir dele deve
+  // "dar a volta" pro último elemento focável (o botão "Sim, continuar"),
+  // não escapar pro restante da página.
+  await page.keyboard.press("Shift+Tab");
+  await expect(page.locator('[data-testid="aprovacao-confirm-continuar"]')).toBeFocused();
+
+  // De lá, Tab avança normalmente pro botão "Fechar" (X) do diálogo -- ainda
+  // dentro do modal, nunca pro input de CPF que fica atrás dele.
+  await page.keyboard.press("Tab");
+  await expect(page.locator("#aprovacao_cpf")).not.toBeFocused();
+  await expect(dialog.locator(':focus')).toHaveCount(1);
+});
+
 test("avisa quando uma estrutura ficará sem aprovador e permite continuar", async ({ page }) => {
   // Sem LoginAprovador_2: remover o único aprovador esvazia a estrutura.
   const base = [{ AprovacaoId: "A2", AprovacaoPor: "VIAJANTE", LoginAprovador_1: APPROVER, LoginAprovador_2: "" }];

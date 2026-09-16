@@ -71,10 +71,15 @@ export function EstruturasTab() {
         icon={<IconSitemap className="h-5 w-5" />}
       />
 
-      <div className="mb-4 inline-flex rounded-lg border border-border bg-surface-2 p-1">
+      <div
+        role="group"
+        aria-label="Modo de operação: remover ou substituir aprovador"
+        className="mb-4 inline-flex rounded-lg border border-border bg-surface-2 p-1"
+      >
         <button
           type="button"
           id="aprovacao_mode_remover"
+          aria-pressed={!isSubstituir}
           onClick={() => e.setMode("remover")}
           className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             !isSubstituir ? "bg-surface text-text shadow-sm" : "text-text-muted hover:text-text"
@@ -85,6 +90,7 @@ export function EstruturasTab() {
         <button
           type="button"
           id="aprovacao_mode_substituir"
+          aria-pressed={isSubstituir}
           onClick={() => e.setMode("substituir")}
           className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             isSubstituir ? "bg-surface text-text shadow-sm" : "text-text-muted hover:text-text"
@@ -338,6 +344,7 @@ export function EstruturasTab() {
                               type="checkbox"
                               className="aprov-row-check"
                               data-id={item.aprovacaoId}
+                              aria-label={`Selecionar estrutura ${item.aprovacaoId}`}
                               checked={e.selectedIds.has(item.aprovacaoId)}
                               onChange={(ev) => e.toggleSelected(item.aprovacaoId, ev.target.checked)}
                             />
