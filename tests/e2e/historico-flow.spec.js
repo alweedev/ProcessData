@@ -6,6 +6,21 @@ import { test, expect } from "@playwright/test";
 // rodar. Usamos textos únicos e locators com hasText para mirar só na linha
 // que este teste criou, em vez de assumir uma lista vazia.
 
+/** Semeia uma entrada local (mesmo formato de historyStore.ts::addLocalEntry)
+ * direto no localStorage e recarrega, pra HistoricoTab já nascer com o dado
+ * -- evita depender de qualquer hook global exposto só para teste. */
+async function seedHistoryEntry(page, text) {
+  await page.evaluate((t) => {
+    const KEY = "history_v2";
+    const arr = JSON.parse(localStorage.getItem(KEY) || "[]");
+    arr.push({ ts: Date.now(), text: t, source: "local" });
+    localStorage.setItem(KEY, JSON.stringify(arr));
+  }, text);
+  await page.reload();
+  await page.locator("#historico-tab").click();
+  await expect(page.locator("#historico")).toBeVisible();
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.locator("#historico-tab").click();
@@ -14,7 +29,7 @@ test.beforeEach(async ({ page }) => {
 
 test("item aparece após addToHistory e busca filtra a lista", async ({ page }) => {
   const marker = `evento_teste_${Date.now()}`;
-  await page.evaluate((m) => window.addToHistory(m), marker);
+  await seedHistoryEntry(page, marker);
 
   const row = page.locator("#historico_tbody tr", { hasText: marker });
   await expect(row).toBeVisible();
@@ -30,7 +45,7 @@ test("item aparece após addToHistory e busca filtra a lista", async ({ page }) 
 
 test("exportar CSV e JSON disparam download", async ({ page }) => {
   const marker = `evento_export_${Date.now()}`;
-  await page.evaluate((m) => window.addToHistory(m), marker);
+  await seedHistoryEntry(page, marker);
   await expect(page.locator("#historico_tbody tr", { hasText: marker })).toBeVisible();
 
   const [csvDownload] = await Promise.all([
@@ -48,7 +63,7 @@ test("exportar CSV e JSON disparam download", async ({ page }) => {
 
 test("limpar esvazia a lista e chama DELETE /api/history", async ({ page }) => {
   const marker = `evento_para_limpar_${Date.now()}`;
-  await page.evaluate((m) => window.addToHistory(m), marker);
+  await seedHistoryEntry(page, marker);
   await expect(page.locator("#historico_tbody tr", { hasText: marker })).toBeVisible();
 
   const [request] = await Promise.all([

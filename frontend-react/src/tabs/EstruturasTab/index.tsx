@@ -287,24 +287,25 @@ export function EstruturasTab() {
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
+                  <Button
                     id="aprovacao_remove_all_btn"
+                    variant="outline"
+                    size="sm"
                     disabled={!e.items.length || e.exportLoading}
                     onClick={() => handleExport("all")}
-                    className="rounded-lg border border-danger px-3 py-1.5 text-sm font-medium text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="border-danger text-danger hover:bg-danger/10"
                   >
                     Remover de todas
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
                     id="aprovacao_remove_selected_btn"
+                    variant="danger"
+                    size="sm"
                     disabled={e.selectedIds.size === 0 || e.exportLoading}
                     onClick={() => handleExport("selected")}
-                    className="rounded-lg bg-danger px-3 py-1.5 text-sm font-medium text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Remover selecionadas
-                  </button>
+                  </Button>
                 </>
               )}
             </div>

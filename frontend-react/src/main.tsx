@@ -1,8 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import "./toast/legacyBridge"; // efeito colateral: instala window.showToast
-import "./history/historyStore"; // efeito colateral: instala window.addToHistory
+import "./history/historyStore"; // efeito colateral: migra a chave legada do localStorage o quanto antes
 import { App } from "./App";
 
 const root = document.getElementById("root");

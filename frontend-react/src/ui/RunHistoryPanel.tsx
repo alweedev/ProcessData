@@ -1,3 +1,4 @@
+import { triggerAnchorDownload } from "../lib/downloadFile";
 import { useRuns, type RunOperation } from "../runs/runsStore";
 import { EmptyState } from "./EmptyState";
 import { IconInbox } from "./icons";
@@ -8,15 +9,6 @@ const LABEL: Record<RunOperation, string> = {
   inativacao: "Inativação",
   estruturas: "Estruturas de aprovação",
 };
-
-function triggerDownload(url: string, filename: string) {
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-}
 
 /** Lista de execuções da sessão para uma operação (com "baixar novamente"). */
 export function RunHistoryPanel({ operation }: { operation: RunOperation }) {
@@ -40,7 +32,9 @@ export function RunHistoryPanel({ operation }: { operation: RunOperation }) {
               timestamp={run.ts}
               inputSummary={run.inputSummary}
               outputFilename={run.outputFilename}
-              onRedownload={run.blobUrl ? () => triggerDownload(run.blobUrl as string, run.outputFilename) : undefined}
+              onRedownload={
+                run.blobUrl ? () => triggerAnchorDownload(run.blobUrl as string, run.outputFilename) : undefined
+              }
             />
           ))}
         </div>

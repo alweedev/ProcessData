@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { triggerAnchorDownload } from "../../lib/downloadFile";
 import { addRun } from "../../runs/runsStore";
 import { pushToast } from "../../toast/toastStore";
 
@@ -239,12 +240,7 @@ export function useEstruturas() {
         return null;
       }
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "base_aprovacao_atualizada.xlsx";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      triggerAnchorDownload(url, "base_aprovacao_atualizada.xlsx");
       addRun({
         operation: "estruturas",
         inputSummary:

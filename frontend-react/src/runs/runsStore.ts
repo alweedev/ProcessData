@@ -37,7 +37,17 @@ export function addRun(entry: {
     outputFilename: entry.outputFilename,
     blobUrl: entry.blobUrl,
   };
-  runs = [run, ...runs].slice(0, 50);
+  const next = [run, ...runs];
+  for (const evicted of next.slice(50)) {
+    if (evicted.blobUrl) {
+      try {
+        URL.revokeObjectURL(evicted.blobUrl);
+      } catch {
+        /* noop */
+      }
+    }
+  }
+  runs = next.slice(0, 50);
   emit();
   return run;
 }

@@ -117,10 +117,3 @@ export async function clearAll(): Promise<void> {
 }
 
 migrateLegacyKey();
-
-/**
- * Abas ainda não migradas (Cadastro, Análise, Estruturas) continuam chamando
- * `window.addToHistory(texto)` normalmente — importar este módulo já instala
- * a ponte, mesmo padrão de src/toast/legacyBridge.ts.
- */
-window.addToHistory = addLocalEntry;

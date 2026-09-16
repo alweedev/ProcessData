@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
+import { addLocalEntry } from "../../history/historyStore";
 import { postAnalysisSummary, postFormForBlob, type QualityReport } from "../../lib/api";
+import { triggerAnchorDownload } from "../../lib/downloadFile";
 import { addRun } from "../../runs/runsStore";
 import { pushToast } from "../../toast/toastStore";
 
@@ -123,12 +125,7 @@ export function useCadastro() {
       fd.append("fluxo", fluxo);
       const blob = await postFormForBlob("/api/process_cadastro", fd, setProgress);
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "saida_cadastro.xlsx";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      triggerAnchorDownload(url, "saida_cadastro.xlsx");
       setDone(true);
       setFiles([]);
       setValidation(IDLE_VALIDATION);
@@ -139,7 +136,7 @@ export function useCadastro() {
         blobUrl: url,
       });
       pushToast(`Cadastro processado! Opções: ${loginChoice}, ${fluxo}.`, "success");
-      window.addToHistory?.(`Cadastro gerado: ${firstName} - ${new Date().toLocaleString("pt-BR")}`);
+      addLocalEntry(`Cadastro gerado: ${firstName} - ${new Date().toLocaleString("pt-BR")}`);
       onSuccess?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

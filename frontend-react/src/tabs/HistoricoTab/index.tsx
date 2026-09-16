@@ -128,7 +128,7 @@ export function HistoricoTab() {
                   <td className="px-3 py-1.5 text-text">
                     {item.text}
                     {item.source === "server" && (
-                      <span className="ml-1.5 rounded bg-surface-sunken px-1.5 py-0.5 text-[11px] text-text-muted">API</span>
+                      <span className="ml-1.5 rounded bg-surface-sunken px-1.5 py-0.5 text-xs text-text-muted">API</span>
                     )}
                   </td>
                 </tr>

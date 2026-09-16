@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { postFormForBlob, postFormJson } from "../../lib/api";
+import { triggerAnchorDownload } from "../../lib/downloadFile";
 import { addRun } from "../../runs/runsStore";
 import { pushToast } from "../../toast/toastStore";
 
@@ -121,12 +122,7 @@ export function useInativacao() {
       fd.append("lista_text", finalListText);
       const blob = await postFormForBlob("/api/process_inativacao", fd, setProgress);
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "saida_inativacao.xlsx";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      triggerAnchorDownload(url, "saida_inativacao.xlsx");
       addRun({
         operation: "inativacao",
         inputSummary: [baseFile.name, `${classification.totalValid} item(ns) na lista`],
