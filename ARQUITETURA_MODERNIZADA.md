@@ -3,15 +3,18 @@
 ## Objetivo
 
 Arquitetura modular, legível e testável, preservando as regras de negócio de
-cadastro, inativação e aprovação.
+cadastro, inativação e aprovação. Para o detalhe de cada regra, ver
+`REGRAS_NEGOCIO_PROCESSAMENTO.md` (cadastro) e
+`REGRAS_APROVACAO_INATIVACAO.md` (aprovação/inativação); o `README.md` traz
+quick start e visão geral.
 
 ## Camadas
 
 - `backend/domain`: regras e contratos (`MODEL_COLS`, `FICHA_MAP`,
   `REQUIRED_OUTPUT_COLS`) — **fonte única** desses dados.
 - `backend/services`: orquestração de casos de uso (`ProcessingService`,
-  `ValidationService`, `InactivationService`, `ExportService`, `AuditService`,
-  `ReportService`).
+  `ValidationService`, `InactivationService`, `ApprovalService`,
+  `ExportService`, `AuditService`, `ReportService`).
 - `backend/shared`: utilitários compartilhados — `text_utils` (normalização),
   `cpf_utils` (limpeza, formatação, dígito verificador), `file_utils` (extensão,
   nome temporário), `upload_validation` (sniff de conteúdo).
@@ -77,13 +80,13 @@ Removidos: `POST /api/inativacao/executar` (sucesso falso, sem consumidor) e
 
 ## Testes
 
-`python -m pytest -q` (suíte em `backend/tests/`, 94/94). Fluxos críticos
-ponta-a-ponta em `tests/e2e/` (Playwright).
+`python -m pytest -q` (suíte em `backend/tests/`, 97/97). Fluxos críticos
+ponta-a-ponta em `tests/e2e/` (Playwright, 16 specs).
 
 ## Próxima fase
 
 - Sem migração de framework planejada no curto prazo: a stack atual (Flask +
-  services) está estável, testada (82/82 pytest, Playwright verde) e sem sinal
+  services) está estável, testada (97/97 pytest, Playwright verde) e sem sinal
   de dor de crescimento no código. Avaliar FastAPI + Pydantic v2 + SQLAlchemy 2
   + Alembic + PostgreSQL fica registrado, mas parado até existir um driver
   concreto (ex: multi-tenant, autenticação, consulta SQL no histórico) — não

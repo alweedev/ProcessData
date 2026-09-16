@@ -1,537 +1,301 @@
-# 📋 Regras de Negócio - Processamento de Planilhas
+# Regras de Negócio — Cadastro em Massa
 
-## 📊 Visão Geral da Arquitetura
+Este documento descreve o pipeline de **cadastro** (`ProcessingService`): como uma
+planilha de entrada vira a ficha padronizada pronta para carga na Argo. Para
+**aprovação** e **inativação**, ver `REGRAS_APROVACAO_INATIVACAO.md`. Para a
+visão de camadas/endpoints, ver `ARQUITETURA_MODERNIZADA.md`.
 
-O backend processa planilhas através de um pipeline centralizado em **3 módulos principais**:
+Código-fonte de referência:
 
-1. **`processor.py`** - Lógica de transformação de dados
-2. **`validators.py`** - Validações de negócio
-3. **`utils.py`** - Utilitários de normalização e formatação
-
----
-
-## 🔄 FLUXO DE PROCESSAMENTO
-
-```
-Arquivo (XLS/XLSX)
-    ↓
-[1] LEITURA & MAPEAMENTO DE COLUNAS
-    ↓
-[2] NORMALIZAÇÃO E TRANSFORMAÇÃO
-    ↓
-[3] VALIDAÇÃO POR LINHA
-    ↓
-[4] VALIDAÇÃO GERAL (DataFrame)
-    ↓
-[5] DESDUPLICAÇÃO
-    ↓
-[6] NORMALIZAÇÃO FINAL
-    ↓
-[7] SAÍDA VALIDADA
-```
+| Responsabilidade | Módulo |
+|---|---|
+| Orquestração do pipeline | `backend/services/processing_service.py` (`ProcessingService.process_records_from_files`) |
+| Validação por linha / geral | `backend/services/validation_service.py` (`ValidationService`) |
+| Contratos de dados (`MODEL_COLS`, `FICHA_MAP`, `REQUIRED_OUTPUT_COLS`) | `backend/domain/rules.py` |
+| Normalização de texto e CPF | `backend/shared/text_utils.py`, `backend/shared/cpf_utils.py` |
 
 ---
 
-## 1️⃣ LEITURA E MAPEAMENTO DE COLUNAS
+## 1. Fluxo de processamento
 
-### Formatos Suportados
-- **Excel**: `.xlsx`, `.xls`, `.xltx`
-- ❌ Outros formatos são rejeitados na validação de extensão
+```
+Arquivo (.xlsx / .xls / .xltx)
+    │
+    ├─ [1] Leitura + remoção de linhas de cabeçalho repetido
+    ├─ [2] Mapeamento de colunas (FICHA_MAP, case/acento-insensitive)
+    ├─ [3] Inicialização das 32 colunas do modelo (MODEL_COLS) + valores padrão
+    ├─ [4] Nome/SobreNome a partir de NomeCompleto
+    ├─ [5] Geração de Login (CPF ou Email) + fluxo SELF/FRONT
+    ├─ [6] Sanitização de texto e normalização de booleanos
+    ├─ [7] Validação por linha + validação geral (__geral__)
+    ├─ [8] Desduplicação (Login + NomeCompleto)
+    └─ [9] Remoção de linhas totalmente em branco → DataFrame final
+```
 
-### Mapas de Colunas (FICHA_MAP)
+`.docx` nunca foi suportado (função inexistente); entrada aceita é só Excel.
 
-O sistema mapeia variações de nomes de colunas (case-insensitive, sem acentos) para campos padrão:
+---
 
-#### Campos de Identificação
-| Entrada | Saída |
-|---------|-------|
-| CPF, CPF (SEM PONTOS) | CPF |
-| MATRICULA, Matricula, NroMatricula | NroMatricula |
+## 2. Leitura e mapeamento de colunas
 
-#### Dados Pessoais
-| Entrada | Saída |
-|---------|-------|
-| NOME | Nome |
-| SOBRENOME (ATE 20 CARACTERES) | SobreNome |
-| NOME COMPLETO, NomeCompleto | NomeCompleto |
-| EMAIL, E-MAIL | Email |
-| TELEFONE | Telefone |
+### Remoção de cabeçalho repetido
 
-#### Dados Corporativos
-| Entrada | Saída |
-|---------|-------|
-| EMPRESA (DO GRUPO), Empresa | NomeEmpresa |
-| Centro de custo, Centro_de_Custo, CODIGO - CENTRO DE CUSTO | CodigoCCustoEmpresa |
-| DESCRICAO - CENTRO DE CUSTO, Descrição Centro de Custo | DescricaoCCustoEmpresa |
+Se mais de 40% dos valores de uma linha coincidem (case-insensitive) com o
+nome da própria coluna, a linha é descartada — cobre planilhas com o
+cabeçalho colado de novo no meio dos dados.
 
-#### Dados Funcionais
-| Entrada | Saída |
-|---------|-------|
-| CARGO | Cargo |
-| DEPARTAMENTO | Departamento |
-| NIVEL, NÍVEL | Nivel |
+### `FICHA_MAP` (variações de nome de coluna aceitas)
 
-#### Flags Booleanas
-| Entrada | Saída |
-|---------|-------|
-| SOLICITANTE? (S/N) | Solicitante |
-| TERCEIRO? (S/N), Terceiro | Terceiro |
+| Entrada (qualquer caixa/acento) | Campo padrão |
+|---|---|
+| CPF, CPF (SEM PONTOS) | `CPF` |
+| MATRICULA, Matricula, MATRICULA (não obrigatório) | `NroMatricula` |
+| NOME | `Nome` |
+| SOBRENOME (ATE 20 CARACTERES), SOBRENOME (limite 50 caracteres) | `SobreNome` |
+| NOME COMPLETO, NomeCompleto, NOME COMPLETO (limite 50 caracteres) | `NomeCompleto` |
+| EMAIL, E-MAIL, Email | `Email` |
+| TELEFONE, Telefone | `Telefone` |
+| EMPRESA (DO GRUPO), Empresa | `NomeEmpresa` |
+| Centro de custo, Centro_de_Custo, CODIGO/CÓDIGO - CENTRO DE CUSTO | `CodigoCCustoEmpresa` |
+| DESCRICAO - CENTRO DE CUSTO, Descrição Centro de Custo | `DescricaoCCustoEmpresa` |
+| CARGO | `Cargo` |
+| DEPARTAMENTO | `Departamento` |
+| NIVEL, NÍVEL, NÍVEL (se aplicável) | `Nivel` |
+| SOLICITANTE, SOLICITANTE? (S/N) | `Solicitante` |
+| TERCEIRO, TERCEIRO? (S/N) | `Terceiro` |
 
-### Remoção de Linhas Duplicadas (Cabeçalhos Repetidos)
+Fonte única: `FICHA_MAP` em `backend/domain/rules.py`. Colunas da planilha que
+não batem com nenhuma entrada do mapa são ignoradas.
 
-Remove linhas onde >40% dos valores coincidem com o nome da coluna.
+---
+
+## 3. Colunas do modelo e valores padrão
+
+`MODEL_COLS` define as 32 colunas de saída, sempre nessa ordem. As que faltam
+na entrada nascem vazias (`""`); em seguida alguns campos recebem valor fixo:
+
+| Campo | Valor | Observação |
+|---|---|---|
+| `Operacao` | `"INSERT"` | sempre, no cadastro |
+| `EmpresaCCustoParaUsuario` | `"S"` | fixo |
+| `CodigoIntegracao` | `"AUT"` | fixo |
+| `Status` | `""` | fica vazio |
+
+### Colunas obrigatórias na saída (`REQUIRED_OUTPUT_COLS`)
+
+`Login`, `NomeEmpresa`, `CodigoCCustoEmpresa`, `DescricaoCCustoEmpresa`,
+`Email`, `NomeCompleto`, `Nome`, `SobreNome`, `CodigoIntegracao`,
+`EmpresaCCustoParaUsuario`. Ausência de qualquer uma vira erro `__geral__`
+(ver §5).
+
+---
+
+## 4. Nome, Login e fluxo (SELF / FRONT)
+
+### Nome / SobreNome
+
+Derivados de `NomeCompleto`: primeiro token → `Nome`, último token →
+`SobreNome` (ambos sanitizados, máx. 20 caracteres). Não trata partículas
+(da/de/dos) nem sobrenomes compostos — nome com 1 palavra só vira `Nome`,
+`SobreNome` fica vazio.
+
+### Login (`login_choice`)
+
+| Escolha | Resultado |
+|---|---|
+| `"CPF"` (padrão) | CPF formatado **`XXXXXXXXX-XX`** (9 dígitos + traço + 2 dígitos verificadores — **sem pontos**) |
+| `"EMAIL"` | Email em MAIÚSCULAS |
+
+> Formato real de `format_cpf_for_output()`: `123456789-00`, não
+> `123.456.789-00`. Vale para cadastro **e** para os CPFs exibidos no fluxo de
+> aprovação.
+
+### Fluxo (`fluxo`, padrão `"SELF"`)
+
+| Fluxo | `ViajanteMasterNacional`/`Internacional` | Login |
+|---|---|---|
+| `SELF` | `N` / `N` | inalterado |
+| `FRONT` | `S` / `S` | prefixado `"FRONT"` (sem espaços) — ex.: `FRONT123456789-00` |
+
+Em ambos os fluxos: `Vip`, `SolicitanteMaster`, `MasterAdiantamento`,
+`MasterReembolso` = `"N"`.
+
+---
+
+## 5. Sanitização e normalização
+
+### Texto (`sanitize_output_text`)
+
+Aplica-se a `Nome`, `SobreNome` (máx. 20), e sem limite a `NomeCompleto`,
+`NomeEmpresa`, `DescricaoCCustoCliente`, `Cargo`, `Departamento`, `Cidade`,
+`Estado`, `Endereco`:
+
+1. Remove acentos + maiúsculas (`upper_no_accents`, NFKD)
+2. Mantém apenas `A-Z 0-9 espaço - / ( )`, remove o resto
+3. Colapsa espaços duplicados
+
+**Exceção `DescricaoCCustoEmpresa`**: só remove acentos, preserva vírgulas e
+demais pontuação (ex.: `"COM AQUISICAO SFB (CO/N/NE), FASE 2"` continua igual
+— usado como descrição livre pela Argo).
+
+`Email`/`Telefone`: trim + MAIÚSCULAS (sem o filtro de caracteres).
+
+### Campos booleanos → S/N
+
+`Solicitante`, `Vip`, `ViajanteMasterNacional`, `ViajanteMasterInternacional`,
+`SolicitanteMaster`, `MasterAdiantamento`, `MasterReembolso`: qualquer valor
+em `{S, SIM, YES, Y, TRUE, 1}` (fold de acento antes de comparar) vira `"S"`;
+qualquer outra coisa vira `"N"`.
+
+**`Terceiro` é diferente**: se o valor contém dígitos, mantém só os dígitos
+(é um ID de terceiro, não um flag); só cai no mapeamento S/N acima quando não
+há dígito nenhum.
+
+### `NroMatricula`
+
+Mantém só os dígitos do valor de entrada.
+
+---
+
+## 6. Validação por linha (`ValidationService.validate_row`)
+
+| # | Campo | Regra | Erro |
+|---|---|---|---|
+| 1 | `Solicitante` | precisa ser exatamente `S` ou `N` (maiúsculo) | `Solicitante obrigatório (deve ser S ou N)` |
+| 2 | `CPF` | ver nota abaixo — na prática só falha com **mais de 11 dígitos** | `CPF deve ter 11 dígitos` |
+| 3 | `Email` | se preenchido, precisa ter `@` e `.` depois do `@` | `Email inválido` |
+| 4 | `NomeCompleto` | não pode ser vazio | `NomeCompleto vazio` |
+| 5 | `Nivel` | ver autocorreção abaixo | `Nivel inválido, ajustado para vazio` |
+
+> **CPF curto não gera erro.** `clean_cpf()` (usado tanto aqui quanto na
+> limpeza geral) faz `zfill(11)` — um CPF com menos de 11 dígitos é
+> completado com zeros à esquerda em vez de rejeitado (`"12345"` vira
+> `"00000012345"`, válido para a checagem de tamanho). O erro só dispara com
+> **mais de 11 dígitos** (excesso não é truncado). Não há checagem de dígito
+> verificador aqui — isso só existe no fluxo de aprovação
+> (`ApprovalService.normalize_cpf_input`, módulo 11).
+
+### Autocorreção de `Nivel`
+
+Valores aceitos sem alteração: `OPERACIONAL`, `GERENCIA`, `DIRETORIA` (ou
+vazio). Qualquer outro valor é normalizado (maiúsculas, sem acento) e, se
+contiver `OPER`/`GER`/`DIR` como substring, é ajustado para o nível
+correspondente; senão vira `""` e a linha registra o erro acima.
+
+---
+
+## 7. Validação geral e desduplicação
+
+- **Geral** (`ValidationService.validate_dataframe`): confere se todas as
+  `REQUIRED_OUTPUT_COLS` existem no DataFrame e, quando há linhas, se
+  `Login`, `Email`, `NomeCompleto`, `Nome`, `SobreNome`, `NomeEmpresa` não
+  estão **inteiramente** vazias (coluna toda em branco = sinal de que a
+  origem não trouxe aquele dado). Cada falha vira uma mensagem em
+  `errors["__geral__"]`.
+- **Desduplicação**: `drop_duplicates(subset=["Login", "NomeCompleto"], keep="first")`
+  — mantém a primeira ocorrência.
+- **Linhas em branco**: removidas ao final se `Login`, `NomeCompleto`, `CPF`
+  e `Email` estiverem todos vazios.
+
+---
+
+## 8. Retorno do pipeline
 
 ```python
-def is_header(row):
-    matches = 0
-    for c in cols:
-        val = str(row.get(c, "")).strip()
-        if val.upper() == str(c).upper():
-            matches += 1
-    return (matches / len(cols)) > 0.4
+errors, df_final = ProcessingService.process_records_from_files(paths, login_choice, fluxo)
 ```
+
+- Sucesso total: `errors == {}`, `df_final` com as 32 colunas do modelo.
+- `errors[idx]`: mensagens da linha `idx`, concatenadas com `"; "`.
+- `errors["__geral__"]`: falhas de colunas obrigatórias, concatenadas.
+- `errors[caminho_do_arquivo]`: erro de leitura/I/O daquele arquivo.
 
 ---
 
-## 2️⃣ NORMALIZAÇÃO E TRANSFORMAÇÃO
+## 9. Exemplos
 
-### 2.1 Inicialização de Colunas Padrão
+### 9.1 Cadastro SELF — caminho feliz
 
-**Colunas Padrão do Modelo (MODEL_COLS - 33 campos)**
+Entrada: `CPF=123.456.789-00`, `NOME COMPLETO=João da Silva`,
+`EMAIL=joao@empresa.com`, `EMPRESA=Empresa A`, `Centro de custo=CC001`,
+`NIVEL=Operacional`, `SOLICITANTE=N`.
 
-```
-Operacao, UserId, Login, CodigoCCustoCliente, DescricaoCCustoCliente,
-NomeEmpresa, CodigoCCustoEmpresa, DescricaoCCustoEmpresa, EmpresaCCustoParaUsuario,
-NroMatricula, Nome, SobreNome, NomeCompleto, Email, Telefone, Cargo, Departamento, Nivel,
-Endereco, Cidade, Estado, CEP, Solicitante, Vip, ViajanteMasterNacional,
-ViajanteMasterInternacional, SolicitanteMaster, MasterAdiantamento, MasterReembolso, Terceiro,
-CodigoIntegracao, Status
-```
+> Reparo: `Centro de custo` (com "de") é a grafia reconhecida por
+> `FICHA_MAP` — uma variação como `CENTRO CUSTO` (sem "de") não bate com
+> nenhuma chave e fica de fora do mapeamento (ver §9.4).
 
-**Valores Padrão Atribuídos**
+Saída (linha válida, `login_choice="CPF"`, `fluxo="SELF"`):
 
-| Campo | Valor Padrão | Descrição |
-|-------|--------------|-----------|
-| Operacao | "INSERT" | Operação padrão de cadastro |
-| EmpresaCCustoParaUsuario | "S" | Associar empresa/CC ao usuário |
-| CodigoIntegracao | "AUT" | Código de integração automático |
-| Status | "" | Status vazio inicial |
-| Solicitante | "N" | Padrão: não solicitante |
-| Vip | "N" | Padrão: não VIP |
-| ViajanteMasterNacional | "N" | Depende do fluxo |
-| ViajanteMasterInternacional | "N" | Depende do fluxo |
-| SolicitanteMaster | "N" | Padrão: não master |
-| MasterAdiantamento | "N" | Padrão: não master |
-| MasterReembolso | "N" | Padrão: não master |
-
-### 2.2 Geração de Nome e Sobrenome
-
-**Fonte**: `NomeCompleto` (campo obrigatório)
-
-**Regra**: Divide em primeiro token (Nome) e último token (SobreNome)
-- ❌ Não detecta partículas (da/de/dos)
-- ❌ Não detecta sobrenomes compostos
-
-```python
-parts = [p for p in fullname.strip().split() if p]
-if len(parts) == 1:
-    first, last = parts[0], ""
-else:
-    first, last = parts[0], parts[-1]
-```
-
-**Limites de Caracteres**:
-- Nome: máx 20 caracteres
-- SobreNome: máx 20 caracteres
-
-### 2.3 Geração de Login
-
-**Escolhas Disponíveis** (parâmetro `login_choice`):
-
-#### Opção 1: CPF (padrão)
-```
-Login = CPF formatado (XXX.XXX.XXX-XX)
-Requer: campo CPF preenchido
-Validação: 11 dígitos
-```
-
-#### Opção 2: EMAIL
-```
-Login = Email (normalizado para MAIÚSCULAS)
-Requer: campo Email preenchido
-```
-
-### 2.4 Fluxos de Processamento
-
-**Parâmetro**: `fluxo` (padrão: "SELF")
-
-#### Fluxo SELF
-Configura usuários com viagem doméstica:
-```
-Vip = "N"
-ViajanteMasterNacional = "N"
-ViajanteMasterInternacional = "N"
-SolicitanteMaster = "N"
-MasterAdiantamento = "N"
-MasterReembolso = "N"
-```
-
-#### Fluxo FRONT
-Configura viajantes com acesso completo:
-```
-ViajanteMasterNacional = "S"
-ViajanteMasterInternacional = "S"
-Vip = "N"
-SolicitanteMaster = "N"
-MasterAdiantamento = "N"
-MasterReembolso = "N"
-
-Login = "FRONT" + Login (sem espaços)
-Exemplo: "João Silva" → "FRONTjoaosilva" (com CPF) → "FRONTxxx.xxx.xxx-xx"
-```
-
-### 2.5 Sanitização de Texto
-
-**Aplica-se a campos textuais:**
-```
-Nome, SobreNome, NomeCompleto, NomeEmpresa,
-DescricaoCCustoEmpresa, DescricaoCCustoCliente, Cargo,
-Departamento,
-```
-
-**Regras de Sanitização** (`sanitize_output_text()`):
-
-1. Remove acentos (via `upper_no_accents()`)
-2. Converte para MAIÚSCULAS
-3. Remove caracteres especiais (mantém apenas: A-Z, 0-9, espaço, -, /, (), )
-4. Remove espaços duplicados
-5. Limita a caracteres (20 para Nome/SobreNome, ilimitado para outros)
-
-**Exceção**: `DescricaoCCustoEmpresa`
-- Apenas remove acentos
-- Mantém estrutura original (parênteses, barras, etc.)
-- Exemplo preservado: "COM AQUISICAO SFB (CO/N/NE)"
-
-**Normalização de Email e Telefone**:
-- Convertidos para MAIÚSCULAS
-- Trim de espaços
-
-### 2.6 Normalização de Campos Numéricos
-
-**NroMatricula**:
-- Extrai apenas dígitos
-- Remove caracteres especiais
-
-**Terceiro**:
-- Se contiver dígitos: mantém dígitos
-- Senão: mapeia Sim/Não → S/N
-
-**Campos Booleanos** (`map_bool_to_SN()`):
-
-Mapeia valores para S/N:
-```
-"S", "SIM", "YES", "Y", "TRUE", "1" → "S"
-Tudo mais → "N"
-```
-
-Aplica-se a:
-```
-Solicitante, Terceiro, Vip, ViajanteMasterNacional,
-ViajanteMasterInternacional, SolicitanteMaster,
-MasterAdiantamento, MasterReembolso
-```
-
----
-
-## 3️⃣ VALIDAÇÃO POR LINHA
-
-### Função: `validar_linha(reg)`
-
-Validações executadas em cada registro:
-
-#### 1. Solicitante (OBRIGATÓRIO)
-```
-✓ Deve ser 'S' ou 'N'
-✗ Erro: "Solicitante obrigatório (deve ser S ou N)"
-```
-
-#### 2. CPF (CONDICIONAL)
-```
-✓ Se preenchido: deve ter 11 dígitos
-✗ Erro: "CPF deve ter 11 dígitos"
-⚠️ Warning: Se vazio mas esperado
-```
-
-Fonte do CPF: campo `CPF` ou `Login` (nessa ordem)
-
-#### 3. Email (OPCIONAL COM VALIDAÇÃO)
-```
-✓ Se preenchido: deve conter @ e . após @
-✗ Erro: "Email inválido"
-⚠️ Warning: Se vazio mas esperado
-```
-
-Padrão: `email@dominio.com`
-
-#### 4. NomeCompleto (OBRIGATÓRIO)
-```
-✓ Não pode estar vazio
-✗ Erro: "NomeCompleto vazio"
-```
-
-#### 5. Nivel (CONDICIONAL COM AUTOCORREÇÃO)
-```
-✓ Valores aceitos: "OPERACIONAL", "GERENCIA", "DIRETORIA", ou vazio
-
-⚡ Autocorreção (mapeamento inteligente):
-- Contém "OPER" → ajusta para "OPERACIONAL"
-- Contém "GER" → ajusta para "GERENCIA"
-- Contém "DIR" → ajusta para "DIRETORIA"
-- Outro texto → ajusta para vazio
-  
-✗ Erro: "Nivel inválido, ajustado para vazio"
-```
-
----
-
-## 4️⃣ VALIDAÇÃO GERAL (DataFrame)
-
-### Função: `validar_dataframe_for_output(df)`
-
-Verifica se o DataFrame contém todas as **COLUNAS OBRIGATÓRIAS DE SAÍDA**:
-
-```
-Login
-NomeEmpresa
-CodigoCCustoEmpresa
-DescricaoCCustoEmpresa
-Email
-NomeCompleto
-Nome
-SobreNome
-CodigoIntegracao
-EmpresaCCustoParaUsuario
-```
-
-**Erro**: `"Coluna obrigatoria ausente: {coluna}"`
-
----
-
-## 5️⃣ DESDUPLICAÇÃO
-
-**Critério**: Combinação (Login, NomeCompleto)
-
-```python
-df_final = df_final.drop_duplicates(subset=["Login", "NomeCompleto"], keep="first")
-```
-
-- Mantém primeira ocorrência
-- Remove duplicatas exatas
-
----
-
-## 6️⃣ NORMALIZAÇÃO FINAL
-
-Aplicadas após validações:
-
-### 6.1 Preenchimento de Campos Booleanos Faltantes
-
-Se um campo booleano não existe na entrada → preenchido com "N"
-
-### 6.2 Normalização de Valores Booleanos
-
-Mapeia variações para S/N usando `map_bool_to_SN()`
-
-### 6.3 Remoção de Linhas em Branco
-
-Remove linhas onde todos os campos críticos estão vazios:
-```
-Campos críticos: Login, NomeCompleto, CPF, Email
-(apenas se existirem)
-```
-
-### 6.4 Conversão de Tipos
-
-- Objetos (strings) trimados e normalizados
-- Email/Telefone convertidos para MAIÚSCULAS
-- Login (EMAIL) convertido para MAIÚSCULAS
-- DescricaoCCustoEmpresa normalizado (acentos removidos)
-- NroMatricula com apenas dígitos
-
----
-
-## 7️⃣ SAÍDA FINAL
-
-### Estrutura do Retorno
-
-```python
-errors, df_final = processar_registros_from_files(paths, login_choice, fluxo)
-```
-
-#### Em Caso de Sucesso
-- `errors`: dicionário vazio `{}`
-- `df_final`: DataFrame com 33 colunas padrão, validado e normalizado
-
-#### Em Caso de Erro
-- `errors`: dicionário com índices de linha e mensagens
-- `errors["__geral__"]`: erros gerais do DataFrame
-
-#### Exemplo de Erro
 ```python
 {
-    0: "Solicitante obrigatório (deve ser S ou N); CPF deve ter 11 dígitos",
-    2: "NomeCompleto vazio",
-    "__geral__": "Coluna obrigatoria ausente: Email",
+    "Operacao": "INSERT", "Login": "123456789-00",
+    "NomeEmpresa": "EMPRESA A", "CodigoCCustoEmpresa": "CC001",
+    "Nome": "JOAO", "SobreNome": "SILVA", "NomeCompleto": "JOAO DA SILVA",
+    "Email": "JOAO@EMPRESA.COM", "Nivel": "OPERACIONAL",
+    "EmpresaCCustoParaUsuario": "S", "CodigoIntegracao": "AUT",
+    "Vip": "N", "ViajanteMasterNacional": "N", "ViajanteMasterInternacional": "N",
+    # ... demais campos do modelo, vazios ou "N"
 }
 ```
 
----
+### 9.2 Cadastro FRONT — viajante
 
-## 📐 MODELOS DE DADOS
+Entrada: `EMAIL=maria@empresa.com`, `NOME COMPLETO=Maria Santos Silva`,
+`login_choice="EMAIL"`, `fluxo="FRONT"`.
 
-### MODEL_COLS (33 Campos)
+Diferenças-chave: `Login = "FRONTMARIA@EMPRESA.COM"` (prefixado, sem
+espaços), `ViajanteMasterNacional = "S"`, `ViajanteMasterInternacional = "S"`.
 
-```python
-[
-    # Operação e Identificadores
-    "Operacao",  # INSERT
-    "UserId",  # ID do usuário (geralmente vazio)
-    "Login",  # CPF formatado ou Email (obrigatório)
-    "CodigoIntegracao",  # AUT (padrão)
-    "Status",  # (vazio)
-    # Identificação Pessoal
-    "NroMatricula",  # Matrícula (opcional)
-    "Nome",  # Primeiro nome (max 20 chars)
-    "SobreNome",  # Último nome (max 20 chars)
-    "NomeCompleto",  # Nome completo (obrigatório)
-    "CPF",  # CPF com dígitos (11 dígitos)
-    # Contato
-    "Email",  # Email (obrigatório)
-    "Telefone",  # Telefone (opcional)
-    # Profissional
-    "Cargo",  # Cargo (opcional)
-    "Departamento",  # Departamento (opcional)
-    "Nivel",  # OPERACIONAL, GERENCIA, DIRETORIA
-    # Endereço
-    "Endereco",  # Endereço (opcional)
-    "Cidade",  # Cidade (opcional)
-    "Estado",  # Estado (opcional)
-    "CEP",  # CEP (opcional)
-    # Centro de Custo
-    "CodigoCCustoCliente",  # CC do cliente (opcional)
-    "DescricaoCCustoCliente",  # Descrição do CC cliente
-    "CodigoCCustoEmpresa",  # CC da empresa (obrigatório)
-    "DescricaoCCustoEmpresa",  # Descrição CC empresa (obrigatório)
-    "EmpresaCCustoParaUsuario",  # S/N (padrão S)
-    # Dados da Empresa
-    "NomeEmpresa",  # Nome da empresa (obrigatório)
-    # Flags de Acesso (S/N)
-    "Solicitante",  # É solicitante (obrigatório)
-    "Terceiro",  # É terceiro (S/N)
-    "Vip",  # É VIP (S/N)
-    "ViajanteMasterNacional",  # Master nacional (S/N)
-    "ViajanteMasterInternacional",  # Master internacional (S/N)
-    "SolicitanteMaster",  # Solicitante master (S/N)
-    "MasterAdiantamento",  # Master de adiantamento (S/N)
-    "MasterReembolso",  # Master de reembolso (S/N)
-]
-```
+### 9.3 Dados sujos com autocorreção e erro
 
-### REQUIRED_OUTPUT_COLS (10 Campos Obrigatórios)
+Entrada: `CPF=123456789012` (12 dígitos — número digitado errado),
+`Nível=gerente`, `SOLICITANTE? (S/N)=S`.
 
-```python
-[
-    "Login",
-    "NomeEmpresa",
-    "CodigoCCustoEmpresa",
-    "DescricaoCCustoEmpresa",
-    "Email",
-    "NomeCompleto",
-    "Nome",
-    "SobreNome",
-    "CodigoIntegracao",
-    "EmpresaCCustoParaUsuario",
-]
-```
+- `Nivel`: `"gerente"` → contém `GER` → autocorrigido para `"GERENCIA"`
+  (a correção é aplicada mesmo assim, a linha só falha pelo CPF).
+- `CPF`: 12 dígitos → excede 11 → `errors[idx] = "CPF deve ter 11 dígitos"`.
+  Um CPF **curto** (ex.: `"12345"`) não geraria esse erro — seria
+  zero-preenchido para `"00000012345"` (ver §6).
+- `Solicitante`: `"S"` → válido.
+
+### 9.4 O que a normalização de coluna faz (e o que não faz)
+
+A normalização em `ProcessingService` é só `upper_no_accents(col).strip()` —
+maiúsculas + remoção de acento + trim nas pontas. Ela **não** remove espaços
+internos, `_` ou `-`, e não faz matching semântico:
+
+| Coluna de entrada | Normalizado | Casa com `FICHA_MAP`? |
+|---|---|---|
+| `nome completo` / `Nome Completo` | `NOME COMPLETO` | ✓ → `NomeCompleto` |
+| `NOME_COMPLETO` (underscore) | `NOME_COMPLETO` | ✗ — chave no mapa é com espaço, não `_` |
+| `nome_pessoa` | `NOME_PESSOA` | ✗ — variação não cadastrada |
+| `e-mail` | `E-MAIL` | ✓ → `Email` |
+
+Ou seja: `FICHA_MAP` é uma tabela fixa de sinônimos exatos (após o fold de
+caixa/acento), não um matching aproximado. Para aceitar uma variação nova de
+nome de coluna (ex.: `NOME_COMPLETO` com underscore), ela precisa ser
+adicionada como chave literal em `FICHA_MAP` (§2).
 
 ---
 
-## 🔍 REGRAS ESPECIAIS
-
-### Normalização de CPF
-
-1. **Extração**: Remove tudo que não é dígito (`limpar_cpf_raw()`)
-2. **Validação**: 11 dígitos obrigatórios
-3. **Formatação**: XXX.XXX.XXX-XX (`format_cpf_for_output()`)
-
-Exemplo:
-```
-Entrada: "123.456.789-00"
-Extração: "12345678900"
-Validação: ✓ 11 dígitos
-Formatação: "123.456.789-00"
-```
-
-### Normalização de Texto (sem acentos)
-
-Usa `upper_no_accents()`:
-```
-unicodedata.normalize("NFKD", s)
-  .encode("ASCII", "ignore")
-  .decode("utf-8")
-```
-
-Exemplo:
-```
-"São José" → "SAO JOSE"
-"Açúcar" → "ACUCAR"
-"Château" → "CHATEAU"
-```
-
-### Tratamento de Dados Vazios
-
-- Strings vazias: `""` (vazio)
-- None/NaN: convertidos para `""`
-- Espaços em branco: trimados e normalizados
-
----
-
-## ⚠️ CASOS DE ERRO COMUNS
+## 10. Casos de erro comuns
 
 | Situação | Erro | Resolução |
-|----------|------|-----------|
-| NomeCompleto vazio | "NomeCompleto vazio" | Preencher nome completo |
-| CPF com <11 dígitos | "CPF deve ter 11 dígitos" | Verificar CPF |
-| Email sem @ | "Email inválido" | Formato: user@domain.com |
-| Solicitante não é S/N | "Solicitante obrigatório (deve ser S ou N)" | Usar S ou N |
-| Coluna obrigatória ausente | "Coluna obrigatoria ausente: {col}" | Adicionar coluna |
-| Nível inválido | "Nivel inválido, ajustado para vazio" | Usar OPERACIONAL, GERENCIA ou DIRETORIA |
+|---|---|---|
+| `NomeCompleto` vazio | `NomeCompleto vazio` | preencher |
+| CPF com mais de 11 dígitos | `CPF deve ter 11 dígitos` | conferir CPF (CPF curto é zero-preenchido, não gera erro — ver §6) |
+| Email sem `@`/`.` | `Email inválido` | formato `user@dominio.com` |
+| `Solicitante` diferente de S/N | `Solicitante obrigatório (deve ser S ou N)` | usar S ou N |
+| Coluna obrigatória ausente/vazia | `Coluna obrigatoria ausente: {col}` / `Coluna obrigatoria vazia: {col}` | adicionar/preencher a coluna |
+| `Nivel` fora do esperado e sem substring reconhecível | `Nivel inválido, ajustado para vazio` | usar Operacional/Gerência/Diretoria |
 
 ---
 
-## 📁 ESTRUTURA DE ARQUIVO DE ENTRADA
+## 11. Pontos de extensão
 
-### Arquivo Excel Esperado
-
-```
-| CPF | NOME COMPLETO | EMAIL | CENTRO DE CUSTO | EMPRESA | ... |
-|----|---|---|---|---|---|
-| 123.456.789-00 | João Silva | joao@email.com | 001 - CC1 | Empresa A | ... |
-| 987.654.321-11 | Maria Santos | maria@email.com | 002 - CC2 | Empresa B | ... |
-```
-
----
-
-## 🎯 RESUMO ARQUITETURAL
-
-| Aspecto | Descrição |
-|---------|-----------|
-| **Pipeline** | Sequencial com validações em camadas |
-| **Entrada** | XLSX, XLS |
-| **Saída** | DataFrame normalizado + erros estruturados |
-| **Validações** | 5 camadas (mapeamento, normalização, linha, geral, desdup) |
-| **Colunas Modelo** | 33 campos padronizados |
-| **Colunas Obrigatórias** | 10 campos mínimos |
-| **Fluxos** | SELF (padrão) e FRONT |
-| **Tratamento de Erros** | Por linha + geral, com warnings de campos vazios |
-
+| Mudança | Onde mexer |
+|---|---|
+| Nova variação de nome de coluna | `FICHA_MAP` em `backend/domain/rules.py` |
+| Nova validação por linha | `ValidationService.validate_row` |
+| Novo fluxo além de SELF/FRONT | `ProcessingService.process_records_from_files`, bloco `fluxo_up` |
+| Novo campo sanitizado como texto | lista de colunas em `ProcessingService.process_records_from_files` (loop de `sanitize_output_text`) |

@@ -138,15 +138,32 @@ http://127.0.0.1:5000
    - Preserva **Nome** e **Sobrenome** da base original
    - Gera a planilha final de inativação
 
+### Estruturas de aprovação
+
+1. Acesse a aba **Estruturas**.
+2. Faça upload da base de estruturas + base de usuários.
+3. Informe o CPF do aprovador (e, no modo substituição, o CPF do novo
+   aprovador).
+4. Revise o preview de impacto (estruturas afetadas, avisos de duplicidade
+   ou de estrutura que ficaria sem aprovador) e confirme a exportação — em
+   todas as estruturas encontradas ou só nas selecionadas.
+
+> Detalhe completo das regras de cada fluxo:
+> [`REGRAS_NEGOCIO_PROCESSAMENTO.md`](REGRAS_NEGOCIO_PROCESSAMENTO.md)
+> (cadastro) e
+> [`REGRAS_APROVACAO_INATIVACAO.md`](REGRAS_APROVACAO_INATIVACAO.md)
+> (aprovação/inativação). Arquitetura e endpoints:
+> [`ARQUITETURA_MODERNIZADA.md`](ARQUITETURA_MODERNIZADA.md).
+
 ## 🧪 Testes
 
 Com o ambiente virtual ativo, a partir da raiz do repositório:
 
 ```bash
-python -m pytest -q                    # suíte completa (backend/tests/)
+python -m pytest -q                    # suíte completa (backend/tests/), 97/97
 python -m pytest backend/tests/test_cadastro_api.py -q
 python -m pytest backend/tests/test_inativacao_api.py backend/tests/test_inativacao_generation_api.py -q
-python -m pytest backend/tests/test_aprovacao.py -q
+python -m pytest backend/tests/test_aprovacao.py backend/tests/test_aprovacao_substituir.py -q
 ```
 
 Fluxos críticos ponta-a-ponta (Playwright, requer Node):
@@ -177,7 +194,7 @@ npx playwright test
 - O projeto segue em evolução contínua com foco em organização, clareza e boas práticas.
 - Ferramentas de IA foram utilizadas como suporte ao desenvolvimento, principalmente para revisão de código, identificação de melhorias e aceleração do aprendizado, com todas as decisões técnicas sendo analisadas e implementadas conscientemente.
 
-- ## 👨‍💻 Autor
+## 👨‍💻 Autor
 
 Desenvolvido por **Alejandro Gabriel**
 
