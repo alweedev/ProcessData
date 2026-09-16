@@ -86,6 +86,23 @@ def test_old_cpf_not_found_in_any_structure(client):
     assert "nenhuma estrutura" in resp.get_json()["error"].lower()
 
 
+def test_old_approver_not_found_rejected(client):
+    base = _base_df([{"AprovacaoId": "A", "LoginAprovador_1": OLD}])
+    users = _users_df().drop(index=0).reset_index(drop=True)  # remove OLD da base de usuários
+    resp = _post_preview(client, users, base, OLD, NEW)
+    assert resp.status_code == 400
+    assert "encontrado" in resp.get_json()["error"].lower()
+
+
+def test_old_approver_inactive_rejected(client):
+    base = _base_df([{"AprovacaoId": "A", "LoginAprovador_1": OLD}])
+    users = _users_df()
+    users.loc[users["CPF"] == OLD, "Status"] = "INATIVO"
+    resp = _post_preview(client, users, base, OLD, NEW)
+    assert resp.status_code == 400
+    assert "ativo" in resp.get_json()["error"].lower()
+
+
 # ---------------------------------------------------------------- preview
 
 
@@ -104,6 +121,17 @@ def test_preview_happy_path(client):
 
 def test_preview_flags_duplicate_when_new_already_approver(client):
     base = _base_df([{"AprovacaoId": "A", "LoginAprovador_1": OLD, "LoginAprovador_2": NEW}])
+    resp = _post_preview(client, _users_df(), base, OLD, NEW)
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    body = resp.get_json()
+    assert body["summary"]["estruturasComDuplicidade"] == 1
+    assert body["items"][0]["teraDuplicidade"] is True
+
+
+def test_preview_flags_duplicate_when_new_already_in_second_level(client):
+    base = _base_df(
+        [{"AprovacaoId": "A", "LoginAprovador_1": OLD, "LoginAprovador_SEGUNDO_NIVEL": NEW}]
+    )
     resp = _post_preview(client, _users_df(), base, OLD, NEW)
     assert resp.status_code == 200, resp.get_data(as_text=True)
     body = resp.get_json()

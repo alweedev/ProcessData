@@ -1,5 +1,6 @@
 // @ts-check
 import { test, expect } from "@playwright/test";
+import * as XLSX from "xlsx";
 import { xlsxFile, validCpf } from "./fixtures.mjs";
 
 const APPROVER = validCpf(1);
@@ -12,6 +13,18 @@ function usersRows() {
     { CPF: OTHER, Status: "ATIVO", NomeCompleto: "Outro" },
     { CPF: NEW_APPROVER, Status: "ATIVO", NomeCompleto: "Aprovador Novo" },
   ];
+}
+
+/** Lê as linhas do .xlsx baixado pelo browser. */
+async function readDownloadRows(download) {
+  const path = await download.path();
+  const wb = XLSX.readFile(path);
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, { defval: "" });
+}
+
+function digitsOnly(value) {
+  return String(value ?? "").replace(/\D/g, "");
 }
 
 test.beforeEach(async ({ page }) => {
@@ -119,4 +132,73 @@ test("modo substituir: avisa quando o novo aprovador já está na estrutura e pe
     confirmBtn.click(),
   ]);
   expect(download.suggestedFilename()).toBe("base_aprovacao_atualizada.xlsx");
+});
+
+test("modo substituir: toggle 'segundo nível' controla se o LoginAprovador_SEGUNDO_NIVEL é substituído", async ({
+  page,
+}) => {
+  const base = [
+    {
+      AprovacaoId: "A6",
+      AprovacaoPor: "VIAJANTE",
+      LoginAprovador_1: OTHER,
+      LoginAprovador_SEGUNDO_NIVEL: APPROVER,
+    },
+  ];
+  await page.locator("#aprovacao_mode_substituir").click();
+  await page.setInputFiles("#aprovacao_users_file", xlsxFile("users.xlsx", usersRows()));
+  await page.setInputFiles("#aprovacao_base_file", xlsxFile("base.xlsx", base));
+  await page.fill("#aprovacao_cpf", APPROVER);
+  await page.fill("#aprovacao_new_cpf", NEW_APPROVER);
+  await page.locator("#aprovacao_preview_btn").click();
+  await expect(page.locator("#aprovacao_table_wrap tr")).not.toHaveCount(0);
+
+  // Checkbox desligado (padrão): o segundo nível não é tocado.
+  const [downloadOff] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#aprovacao_substitute_all_btn").click(),
+  ]);
+  const rowsOff = await readDownloadRows(downloadOff);
+  expect(digitsOnly(rowsOff[0].LoginAprovador_SEGUNDO_NIVEL)).toBe(APPROVER);
+  expect(String(rowsOff[0].Operacao || "")).toBe("");
+
+  // Liga o toggle, refaz a verificação e exporta de novo.
+  await page.locator("#aprovacao_replace_second_level").check();
+  await page.locator("#aprovacao_preview_btn").click();
+  await expect(page.locator("#aprovacao_table_wrap tr")).not.toHaveCount(0);
+  const [downloadOn] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#aprovacao_substitute_all_btn").click(),
+  ]);
+  const rowsOn = await readDownloadRows(downloadOn);
+  expect(digitsOnly(rowsOn[0].LoginAprovador_SEGUNDO_NIVEL)).toBe(NEW_APPROVER);
+  expect(rowsOn[0].Operacao).toBe("UPDATE");
+});
+
+test("modo substituir: seleção por linha restringe a exportação às estruturas marcadas", async ({ page }) => {
+  const base = [
+    { AprovacaoId: "A7", AprovacaoPor: "VIAJANTE", LoginAprovador_1: APPROVER },
+    { AprovacaoId: "A8", AprovacaoPor: "VIAJANTE", LoginAprovador_1: APPROVER },
+  ];
+  await page.locator("#aprovacao_mode_substituir").click();
+  await page.setInputFiles("#aprovacao_users_file", xlsxFile("users.xlsx", usersRows()));
+  await page.setInputFiles("#aprovacao_base_file", xlsxFile("base.xlsx", base));
+  await page.fill("#aprovacao_cpf", APPROVER);
+  await page.fill("#aprovacao_new_cpf", NEW_APPROVER);
+  await page.locator("#aprovacao_preview_btn").click();
+  await expect(page.locator("#aprovacao_table_wrap tr")).not.toHaveCount(0);
+
+  // Todas vêm pré-selecionadas após o preview; mantém só A7 marcada.
+  await page.locator("#aprovacao_check_all").uncheck();
+  await page.locator('.aprov-row-check[data-id="A7"]').check();
+  await expect(page.locator("#aprovacao_substitute_selected_btn")).toBeEnabled();
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#aprovacao_substitute_selected_btn").click(),
+  ]);
+  const rows = await readDownloadRows(download);
+  expect(rows).toHaveLength(1);
+  expect(rows[0].AprovacaoId).toBe("A7");
+  expect(digitsOnly(rows[0].LoginAprovador_1)).toBe(NEW_APPROVER);
 });
