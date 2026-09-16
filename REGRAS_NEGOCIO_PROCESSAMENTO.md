@@ -162,18 +162,22 @@ Mantém só os dígitos do valor de entrada.
 | # | Campo | Regra | Erro |
 |---|---|---|---|
 | 1 | `Solicitante` | precisa ser exatamente `S` ou `N` (maiúsculo) | `Solicitante obrigatório (deve ser S ou N)` |
-| 2 | `CPF` | ver nota abaixo — na prática só falha com **mais de 11 dígitos** | `CPF deve ter 11 dígitos` |
+| 2 | `CPF` | ver nota abaixo | `CPF deve ter 11 dígitos` |
 | 3 | `Email` | se preenchido, precisa ter `@` e `.` depois do `@` | `Email inválido` |
 | 4 | `NomeCompleto` | não pode ser vazio | `NomeCompleto vazio` |
 | 5 | `Nivel` | ver autocorreção abaixo | `Nivel inválido, ajustado para vazio` |
 
-> **CPF curto não gera erro.** `clean_cpf()` (usado tanto aqui quanto na
-> limpeza geral) faz `zfill(11)` — um CPF com menos de 11 dígitos é
-> completado com zeros à esquerda em vez de rejeitado (`"12345"` vira
-> `"00000012345"`, válido para a checagem de tamanho). O erro só dispara com
-> **mais de 11 dígitos** (excesso não é truncado). Não há checagem de dígito
-> verificador aqui — isso só existe no fluxo de aprovação
-> (`ApprovalService.normalize_cpf_input`, módulo 11).
+> **Zero à esquerda vs. entrada incompleta.** `clean_cpf()` faz `zfill(11)`
+> para restaurar o caso comum de Excel tratando CPF como número e derrubando
+> **um** zero à esquerda (`"1234567890"`, 10 dígitos → `"01234567890"`).
+> `validate_row` distingue isso de entrada realmente incompleta: só aceita o
+> resultado do `zfill` se havia **pelo menos 10 dígitos** antes do
+> preenchimento (`raw_cpf_digits()`); menos que isso gera
+> `CPF deve ter 11 dígitos` mesmo depois de zero-preenchido (ex.: `"12345"`
+> não vira um `"00000012345"` válido). Excesso de dígitos (12+) também
+> falha — o `zfill` não trunca. Não há checagem de dígito verificador aqui —
+> isso só existe no fluxo de aprovação (`ApprovalService.normalize_cpf_input`,
+> módulo 11).
 
 ### Autocorreção de `Nivel`
 
@@ -254,8 +258,8 @@ Entrada: `CPF=123456789012` (12 dígitos — número digitado errado),
 - `Nivel`: `"gerente"` → contém `GER` → autocorrigido para `"GERENCIA"`
   (a correção é aplicada mesmo assim, a linha só falha pelo CPF).
 - `CPF`: 12 dígitos → excede 11 → `errors[idx] = "CPF deve ter 11 dígitos"`.
-  Um CPF **curto** (ex.: `"12345"`) não geraria esse erro — seria
-  zero-preenchido para `"00000012345"` (ver §6).
+  Um CPF **bem curto** (ex.: `"12345"`, 5 dígitos reais) cai no mesmo erro —
+  só 10 dígitos reais (1 zero perdido pelo Excel) são aceitos (ver §6).
 - `Solicitante`: `"S"` → válido.
 
 ### 9.4 O que a normalização de coluna faz (e o que não faz)
@@ -283,7 +287,7 @@ adicionada como chave literal em `FICHA_MAP` (§2).
 | Situação | Erro | Resolução |
 |---|---|---|
 | `NomeCompleto` vazio | `NomeCompleto vazio` | preencher |
-| CPF com mais de 11 dígitos | `CPF deve ter 11 dígitos` | conferir CPF (CPF curto é zero-preenchido, não gera erro — ver §6) |
+| CPF com mais de 11 dígitos, ou com menos de 10 dígitos reais | `CPF deve ter 11 dígitos` | conferir CPF (só 10 dígitos reais — 1 zero perdido pelo Excel — é aceito, ver §6) |
 | Email sem `@`/`.` | `Email inválido` | formato `user@dominio.com` |
 | `Solicitante` diferente de S/N | `Solicitante obrigatório (deve ser S ou N)` | usar S ou N |
 | Coluna obrigatória ausente/vazia | `Coluna obrigatoria ausente: {col}` / `Coluna obrigatoria vazia: {col}` | adicionar/preencher a coluna |

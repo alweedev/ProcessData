@@ -1,7 +1,13 @@
 import re
 
 
-def clean_cpf(value):
+def raw_cpf_digits(value):
+    """Dígitos de ``value`` antes do zero-padding de `clean_cpf`.
+
+    Usado para diferenciar "Excel perdeu 1 zero à esquerda" (10 dígitos reais)
+    de entrada claramente incompleta (poucos dígitos) — ambas viram 11 dígitos
+    depois do `zfill`, mas só a primeira é uma restauração legítima.
+    """
     if value is None:
         return ""
     text = str(value).strip()
@@ -9,7 +15,11 @@ def clean_cpf(value):
     # sem isso o "0" espúrio vira um 12º dígito.
     if text.endswith(".0") and text[:-2].isdigit():
         text = text[:-2]
-    digits = re.sub(r"\D", "", text)
+    return re.sub(r"\D", "", text)
+
+
+def clean_cpf(value):
+    digits = raw_cpf_digits(value)
     # Planilhas tratando CPF como número perdem zeros à esquerda; restaura o
     # tamanho padrão de 11 dígitos (mesma defesa usada em processor.py).
     return digits.zfill(11) if digits else ""

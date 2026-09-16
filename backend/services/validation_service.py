@@ -1,5 +1,5 @@
 from backend.domain.rules import REQUIRED_OUTPUT_COLS
-from backend.shared.cpf_utils import clean_cpf
+from backend.shared.cpf_utils import clean_cpf, raw_cpf_digits
 from backend.shared.text_utils import upper_no_accents
 
 
@@ -39,8 +39,12 @@ class ValidationService:
 
         cpf_raw = row.get("CPF", "") or row.get("Login", "")
         cpf_digits = clean_cpf(cpf_raw)
-        if cpf_raw and cpf_digits and len(cpf_digits) != 11:
-            errors.append("CPF deve ter 11 dígitos")
+        if cpf_raw and cpf_digits:
+            # zfill restaura no máximo 1 zero à esquerda perdido pelo Excel
+            # (10 -> 11 dígitos); menos que isso é entrada incompleta, não
+            # CPF válido com zero suprimido.
+            if len(cpf_digits) != 11 or len(raw_cpf_digits(cpf_raw)) < 10:
+                errors.append("CPF deve ter 11 dígitos")
 
         email = str(row.get("Email", "")).strip()
         if email and ("@" not in email or "." not in email.split("@")[-1]):

@@ -47,6 +47,22 @@ def test_validation_rejects_invalid_solicitante_and_missing_name():
     assert any("NomeCompleto" in msg for msg in errors)
 
 
+def test_validation_accepts_cpf_missing_one_leading_zero():
+    # Excel derrubou 1 zero à esquerda (10 dígitos reais) -> zfill restaura;
+    # continua sendo um CPF plausível, não deve gerar erro.
+    row = {"Solicitante": "S", "NomeCompleto": "Ana Souza", "Email": "", "CPF": "1234567890"}
+    errors = ValidationService.validate_row(row)
+    assert not any("CPF" in msg for msg in errors)
+
+
+def test_validation_rejects_cpf_with_too_few_digits():
+    # Menos de 10 dígitos não é "1 zero perdido pelo Excel", é entrada
+    # incompleta -- não deve virar um CPF "válido" zero-preenchido.
+    row = {"Solicitante": "S", "NomeCompleto": "Ana Souza", "Email": "", "CPF": "12345"}
+    errors = ValidationService.validate_row(row)
+    assert any("CPF deve ter 11 dígitos" in msg for msg in errors)
+
+
 def test_processing_service_generates_output_for_self_flow():
     df = pd.DataFrame(
         [
