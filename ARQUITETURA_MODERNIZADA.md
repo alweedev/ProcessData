@@ -80,17 +80,22 @@ Removidos: `POST /api/inativacao/executar` (sucesso falso, sem consumidor) e
 
 ## Testes
 
-`python -m pytest -q` (suíte em `backend/tests/`, 97/97). Fluxos críticos
-ponta-a-ponta em `tests/e2e/` (Playwright, 16 specs).
+`python -m pytest -q --cov` (suíte em `backend/tests/`, 123/123, cobertura
+medida mas sem gate de threshold ainda). `npm --prefix frontend-react run
+test` (Vitest, funções puras dos hooks). Fluxos críticos ponta-a-ponta em
+`tests/e2e/` (Playwright, 19 specs).
 
 ## Próxima fase
 
 - Sem migração de framework planejada no curto prazo: a stack atual (Flask +
-  services) está estável, testada (97/97 pytest, Playwright verde) e sem sinal
-  de dor de crescimento no código. Avaliar FastAPI + Pydantic v2 + SQLAlchemy 2
-  + Alembic + PostgreSQL fica registrado, mas parado até existir um driver
-  concreto (ex: multi-tenant, autenticação, consulta SQL no histórico) — não
-  faz sentido pagar esse custo pra um único cliente interno.
-- Foco atual é manter a ferramenta sólida pro uso interno (a aba **Análise**
-  foi removida na Fase 5 da migração do frontend, então deixou de haver
-  pendência de ligá-la a `/api/analysis/summary`).
+  services) está estável, testada (123/123 pytest, Vitest e Playwright
+  verdes) e sem sinal de dor de crescimento no código. Avaliar FastAPI +
+  Pydantic v2 + SQLAlchemy 2 + Alembic + PostgreSQL fica registrado, mas
+  parado até existir um driver concreto (ex: multi-tenant, autenticação,
+  consulta SQL no histórico) — não faz sentido pagar esse custo pra um único
+  cliente interno.
+- Foco atual é manter a ferramenta sólida pro uso interno. A aba **Análise**
+  foi removida na Fase 5 da migração do frontend, mas `/api/analysis/summary`
+  **continua em uso** — virou a validação prévia (não-bloqueante) do
+  Cadastro (`useCadastro.ts` chama `postAnalysisSummary` antes de gerar a
+  ficha). Não há endpoint órfão aqui.

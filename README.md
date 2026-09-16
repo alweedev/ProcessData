@@ -69,6 +69,7 @@ python -m venv .venv
 # source .venv/bin/activate      # Linux / macOS
 
 pip install -r requirements.txt
+pre-commit install               # roda ruff/mypy/oxlint no seu commit, não só no CI
 python -m backend.app            # http://127.0.0.1:5000
 ```
 
