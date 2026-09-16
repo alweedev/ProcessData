@@ -11,20 +11,8 @@ import { IconSitemap } from "../../ui/icons";
 import { PageHeader } from "../../ui/PageHeader";
 import { RunHistoryPanel } from "../../ui/RunHistoryPanel";
 import { TextInput } from "../../ui/TextInput";
-import { useEstruturas, type PreviewItem } from "./useEstruturas";
-
-function computeContexto(item: PreviewItem): string {
-  const cod = item.ccCodigo || "";
-  const desc = item.ccDescricao || "";
-  if (item.aprovacaoPor === "VIAJANTE" && item.viajanteNomeCompleto) return item.viajanteNomeCompleto;
-  if (item.aprovacaoPor === "CCEMPRESA") {
-    if (cod && desc) return `${cod} - ${desc}`;
-    return cod || desc || "";
-  }
-  if (cod && desc) return `${cod} - ${desc}`;
-  if (item.viajanteNomeCompleto) return item.viajanteNomeCompleto;
-  return cod || desc || "";
-}
+import { computeContexto } from "./computeContexto";
+import { useEstruturas } from "./useEstruturas";
 
 function FileFeedback({ file, onClear }: { file: File | null; onClear: () => void }) {
   if (!file) return null;

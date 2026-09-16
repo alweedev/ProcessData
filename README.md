@@ -20,7 +20,7 @@ Nasceu de uma necessidade real do dia a dia profissional: preparar fichas para c
 |---|---|
 | Backend | Python, Flask, Flask-CORS, Pandas, OpenPyXL, xlrd |
 | Frontend | React 19 + TypeScript, Vite, Tailwind CSS 4 |
-| Testes | pytest (backend), Playwright (e2e), ruff + mypy (lint/tipos) |
+| Testes | pytest + pytest-cov (backend), Vitest (unidade frontend), Playwright (e2e), ruff + mypy + oxlint (lint/tipos) |
 
 ## 📂 Estrutura do projeto
 
@@ -141,7 +141,7 @@ Upload de arquivo é limitado a 16 MB (`MAX_CONTENT_LENGTH`, fixo).
 Com o ambiente virtual ativo, a partir da raiz do repositório:
 
 ```bash
-python -m pytest -q                              # suíte completa (backend/tests/), 116/116
+python -m pytest -q                              # suíte completa (backend/tests/), 123/123
 python -m pytest backend/tests/test_cadastro_api.py -q
 python -m pytest backend/tests/test_inativacao_api.py backend/tests/test_inativacao_buscar_api.py -q
 python -m pytest backend/tests/test_aprovacao.py backend/tests/test_aprovacao_substituir.py -q
@@ -149,6 +149,15 @@ python -m pytest --cov --cov-report=term-missing  # cobertura (também roda no C
 
 ruff check backend/                              # lint
 mypy backend/                                    # tipos
+```
+
+Testes de unidade do frontend (Vitest — funções puras dos hooks de cada
+aba; componentes ainda não têm cobertura, só as unidades):
+
+```bash
+cd frontend-react
+npm run test          # roda uma vez (usado no CI)
+npm run test:watch    # modo watch, pra desenvolvimento
 ```
 
 Fluxos críticos ponta-a-ponta (Playwright, requer Node):

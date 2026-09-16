@@ -13,7 +13,7 @@ export interface InativacaoResult {
   found: boolean;
 }
 
-interface Classification {
+export interface Classification {
   validCpfs: string[];
   validNames: string[];
   validEmails: string[];
@@ -23,13 +23,13 @@ interface Classification {
 
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/i;
 
-function isValidFullName(s: string): boolean {
+export function isValidFullName(s: string): boolean {
   const norm = s.normalize("NFKD").replace(/\p{Diacritic}/gu, "");
   const parts = norm.trim().split(/\s+/);
   return parts.length >= 2 && norm.trim().length >= 3;
 }
 
-function classifyList(text: string): Classification {
+export function classifyList(text: string): Classification {
   const lines = (text || "")
     .split(/\r?\n/)
     .map((l) => l.trim())

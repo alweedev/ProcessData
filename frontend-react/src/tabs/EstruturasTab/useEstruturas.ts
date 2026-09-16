@@ -35,7 +35,7 @@ interface WarningStructure {
   aprovacaoId: string;
 }
 
-function normalizeCpf(value: string): string {
+export function normalizeCpf(value: string): string {
   return (value || "").replace(/\D/g, "");
 }
 

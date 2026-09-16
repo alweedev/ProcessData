@@ -40,6 +40,8 @@ jobs:
       - run: npm --prefix frontend-react ci
       - name: oxlint
         run: npm --prefix frontend-react run lint
+      - name: vitest
+        run: npm --prefix frontend-react run test
       - name: build (tsc -b + vite build)
         run: npm --prefix frontend-react run build
 
