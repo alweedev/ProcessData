@@ -47,10 +47,18 @@ cadastrada na Argo (diferente do cadastro, que **cria** registros — ver
 ```
 
 > A checagem de **dígito verificador** só existe aqui (`is_valid_cpf`,
-> módulo 11); cadastro e inativação validam só o comprimento (11 dígitos).
+> módulo 11); cadastro valida só o comprimento (com a ressalva do zero à
+> esquerda — ver `REGRAS_NEGOCIO_PROCESSAMENTO.md` §6).
 > A base de usuários precisa ter coluna `CPF` e uma de nome (`NomeCompleto`
 > ou `Nome` [+ `SobreNome`]) — senão: `"Base de usuários não contém coluna
 > 'CPF'."` / `"...coluna de nome ('NomeCompleto' ou 'Nome')."`.
+>
+> **Na prática, `"CPF inválido. Informe 11 dígitos."` só aparece com CPF
+> longo demais** (12+ dígitos): `normalize_cpf_input` também faz
+> `zfill(11)` antes de checar o tamanho, então uma entrada curta (ex.:
+> `"123456"`) vira 11 dígitos e cai direto no erro de dígito verificador —
+> que, ao contrário do cadastro, sempre pega esses casos porque a checagem
+> de módulo 11 é muito mais rígida que a de comprimento.
 
 ### 1.3 Substituição de aprovador (`ApprovalService.replace_cpf`)
 

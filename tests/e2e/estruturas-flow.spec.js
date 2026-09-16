@@ -89,6 +89,33 @@ test("seleção por linha: remover selecionadas fica desabilitado sem seleção"
   await expect(page.locator("#aprovacao_remove_selected_btn")).toBeDisabled();
 });
 
+test("modo remover: seleção por linha restringe a exportação às estruturas marcadas", async ({ page }) => {
+  const base = [
+    { AprovacaoId: "A9", AprovacaoPor: "VIAJANTE", LoginAprovador_1: APPROVER, LoginAprovador_2: OTHER },
+    { AprovacaoId: "A10", AprovacaoPor: "VIAJANTE", LoginAprovador_1: APPROVER, LoginAprovador_2: OTHER },
+  ];
+  await page.setInputFiles("#aprovacao_users_file", xlsxFile("users.xlsx", usersRows()));
+  await page.setInputFiles("#aprovacao_base_file", xlsxFile("base.xlsx", base));
+  await page.fill("#aprovacao_cpf", APPROVER);
+  await page.locator("#aprovacao_preview_btn").click();
+  await expect(page.locator("#aprovacao_table_wrap tr")).not.toHaveCount(0);
+
+  // Todas vêm pré-selecionadas após o preview; mantém só A9 marcada.
+  await page.locator("#aprovacao_check_all").uncheck();
+  await page.locator('.aprov-row-check[data-id="A9"]').check();
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#aprovacao_remove_selected_btn").click(),
+  ]);
+  const rows = await readDownloadRows(download);
+  expect(rows).toHaveLength(1);
+  expect(rows[0].AprovacaoId).toBe("A9");
+  // APPROVER removido e compactado: OTHER sobe pra posição 1.
+  expect(digitsOnly(rows[0].LoginAprovador_1)).toBe(OTHER);
+  expect(String(rows[0].LoginAprovador_2 || "")).toBe("");
+});
+
 test("modo substituir: verifica os 2 CPFs, mostra tabela e substitui em todas as estruturas", async ({ page }) => {
   const base = [
     { AprovacaoId: "A4", AprovacaoPor: "VIAJANTE", LoginAprovador_1: APPROVER, LoginAprovador_2: OTHER },

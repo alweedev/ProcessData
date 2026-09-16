@@ -60,6 +60,32 @@ def test_cpf_checksum_rejected(client):
     assert "verificador" in resp.get_json()["error"].lower()
 
 
+def test_empty_cpf_rejected(client):
+    resp = _post_preview(client, _users_df(), _base_df([{"AprovacaoId": "A", "LoginAprovador_1": APPROVER}]), "")
+    assert resp.status_code == 400
+    assert "informe um cpf" in resp.get_json()["error"].lower()
+
+
+def test_cpf_too_long_rejected(client):
+    # normalize_cpf_input faz zfill(11) antes de checar o tamanho: uma
+    # entrada curta (poucos dígitos) sempre vira 11 dígitos e cai no erro de
+    # dígito verificador (test_cpf_checksum_rejected), não no de tamanho.
+    # Só dá pra disparar "CPF inválido. Informe 11 dígitos." com excesso.
+    resp = _post_preview(
+        client, _users_df(), _base_df([{"AprovacaoId": "A", "LoginAprovador_1": APPROVER}]), "123456789012"
+    )
+    assert resp.status_code == 400
+    assert "11 dígitos" in resp.get_json()["error"]
+
+
+def test_users_base_missing_cpf_column(client):
+    users = pd.DataFrame([{"NomeCompleto": "Aprovador Um", "Status": "ATIVO"}])
+    base = _base_df([{"AprovacaoId": "A", "LoginAprovador_1": APPROVER}])
+    resp = _post_preview(client, users, base, APPROVER)
+    assert resp.status_code == 400
+    assert "cpf" in resp.get_json()["error"].lower()
+
+
 def test_users_base_missing_name_column(client):
     users = _users_df(with_name=False)
     base = _base_df([{"AprovacaoId": "A", "LoginAprovador_1": APPROVER}])
@@ -173,3 +199,41 @@ def test_structure_truly_empty_triggers_gate(client):
     body = resp.get_json()
     assert body.get("warning") is True
     assert body.get("estruturasSemAprovador")
+
+
+def test_second_level_removal_can_also_trigger_empty_gate(client):
+    """O gate de estrutura vazia deve considerar a remoção do 2º nível
+    também, não só do 1º (remove_second_level=true esvaziando o único
+    fallback que restava)."""
+    base = _base_df(
+        [{"AprovacaoId": "A", "LoginAprovador_1": APPROVER, "LoginAprovador_SEGUNDO_NIVEL": APPROVER}]
+    )
+    resp = _post_export(client, _users_df(), base, APPROVER, remove_second_level="true")
+    assert resp.status_code == 400
+    body = resp.get_json()
+    assert body.get("warning") is True
+    assert body.get("estruturasSemAprovador")
+
+
+def test_mode_selected_restricts_target_structures(client):
+    base = _base_df(
+        [
+            {"AprovacaoId": "A", "LoginAprovador_1": APPROVER, "LoginAprovador_2": OTHER},
+            {"AprovacaoId": "B", "LoginAprovador_1": APPROVER, "LoginAprovador_2": OTHER},
+        ]
+    )
+    resp = _post_export(client, _users_df(), base, APPROVER, mode="selected", **{"selected_aprovacao_ids": "A"})
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    wb = load_workbook(io.BytesIO(resp.data))
+    ws = wb.active
+    header = [c.value for c in ws[1]]
+    rows = [dict(zip(header, [c.value for c in row])) for row in ws.iter_rows(min_row=2)]
+    assert len(rows) == 1
+    assert rows[0]["AprovacaoId"] == "A"
+
+
+def test_mode_selected_without_ids_rejected(client):
+    base = _base_df([{"AprovacaoId": "A", "LoginAprovador_1": APPROVER, "LoginAprovador_2": OTHER}])
+    resp = _post_export(client, _users_df(), base, APPROVER, mode="selected")
+    assert resp.status_code == 400
+    assert "selected_aprovacao_ids" in resp.get_json()["error"]
