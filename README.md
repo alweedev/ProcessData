@@ -1,51 +1,28 @@
 # ProcessData
 
-Sistema web para **análise, cadastro e inativação de usuários a partir de planilhas Excel**, desenvolvido para automatizar rotinas operacionais e reduzir atividades manuais repetitivas.
+Sistema web para **cadastro em massa, inativação e gestão de estruturas de aprovação** a partir de planilhas Excel — automatiza rotinas operacionais que antes eram feitas manualmente em planilha, reduzindo retrabalho e erro humano.
 
-O projeto foi criado a partir de uma **necessidade real do dia a dia profissional**, onde processos manuais em planilhas demandavam tempo, atenção constante e estavam sujeitos a erros.
-
----
-
-## 🎯 Objetivo
-
-- Automatizar processos manuais baseados em planilhas
-- Padronizar validações e regras de negócio
-- Reduzir retrabalho e falhas operacionais
-- Centralizar fluxos de cadastro e inativação
-- Servir como base organizada para evolução futura
+Nasceu de uma necessidade real do dia a dia profissional: preparar fichas para carga na plataforma **Argo** (cadastro, inativação, aprovação) exigia validar e formatar planilhas manualmente, um processo repetitivo e sujeito a erro.
 
 ---
 
 ## 🚀 Funcionalidades
 
-- Upload e processamento de planilhas Excel
-- Validação de colunas e campos obrigatórios
-- Cadastro de usuários em massa
-- Inativação de usuários a partir de base do cliente
-- Geração de planilhas finais padronizadas, prontas para carga na plataforma Argo
-- Interface web (React) com abas de Cadastro, Inativação, Estruturas de aprovação e Histórico
-- Backend preparado para execução local e deploy
+- **Cadastro em massa**: normaliza uma planilha de entrada (com nomes de coluna variados) para a ficha padrão de carga, com validação linha a linha e geral.
+- **Inativação**: busca usuários numa base do cliente por CPF, e-mail ou nome e gera a ficha de desligamento (`Operacao=DELETE`).
+- **Estruturas de aprovação**: substitui ou remove aprovadores em cadeias de aprovação existentes, com preview de impacto (estruturas afetadas, duplicidade, estrutura que ficaria sem aprovador) antes de exportar.
+- Interface web em React, com abas de Início, Cadastro, Inativação, Estruturas e Histórico.
+- Trilha de auditoria (JSONL, rotacionada) de toda exportação/ação sensível.
 
----
+## 🛠️ Stack
 
-## 🛠️ Tecnologias Utilizadas
+| Camada | Tecnologias |
+|---|---|
+| Backend | Python, Flask, Flask-CORS, Pandas, OpenPyXL, xlrd |
+| Frontend | React 19 + TypeScript, Vite, Tailwind CSS 4 |
+| Testes | pytest (backend), Playwright (e2e), ruff + mypy (lint/tipos) |
 
-### Backend
-- Python
-- Flask
-- Flask-CORS
-- Pandas
-- OpenPyXL
-- xlrd
-
-### Frontend
-- React 19 + TypeScript
-- Vite
-- Tailwind CSS
-
----
-
-## 📂 Estrutura do Projeto
+## 📂 Estrutura do projeto
 
 ```
 ProcessData/
@@ -53,117 +30,124 @@ ProcessData/
 │  ├─ api/            # blueprints Flask (cadastro, inativacao, aprovacao, analysis, history, frontend, health)
 │  ├─ core/           # config e logging
 │  ├─ domain/         # regras e contratos (MODEL_COLS, FICHA_MAP, REQUIRED_OUTPUT_COLS)
-│  ├─ services/       # casos de uso (processing, validation, inactivation, export, audit, report)
-│  ├─ shared/         # utilitarios (texto, cpf, arquivos, validacao de upload)
-│  ├─ infra/          # persistencia (trilha de auditoria JSONL)
-│  ├─ processor.py    # motor de inativacao (processar_inativacao_from_paths)
+│  ├─ services/       # casos de uso (processing, validation, inactivation, approval, export, audit, report)
+│  ├─ shared/         # utilitários (texto, cpf, arquivos, validação de upload)
+│  ├─ infra/          # persistência (trilha de auditoria JSONL)
+│  ├─ processor.py    # motor de inativação (processar_inativacao_from_paths)
 │  ├─ app.py          # factory Flask
-│  └─ tests/          # suite pytest
+│  └─ tests/          # suíte pytest
 │
 ├─ frontend/
 │  ├─ index.html         # shell servido pelo Flask; monta o bundle React
-│  └─ static/react/      # build do frontend React (Vite) — reconstruido por `npm run build:react`
+│  └─ static/react/      # build do frontend React (Vite) — gerado por `npm run build:react`
 │
-├─ frontend-react/     # projeto Vite + React + Tailwind (fonte da UI)
-│
-├─ tests/e2e/         # Playwright (fluxos criticos)
-├─ pyproject.toml
+├─ frontend-react/    # projeto Vite + React + Tailwind (fonte da UI)
+├─ tests/e2e/         # Playwright (fluxos críticos)
+├─ data/              # fixtures/planilhas de teste manual (fora da suíte automatizada)
+├─ pyproject.toml     # config de ruff/mypy/pytest
 ├─ requirements.txt
-├─ .gitignore
-└─ README.md
+└─ package.json       # scripts de build/dev do frontend + testes e2e
 ```
 
 ---
 
-## ⚡ Quick Start
+## ⚡ Quick start
 
 ### Pré-requisitos
-- Python 3.10+
-- Git
-- (opcional) Node 18+ para os testes end-to-end Playwright
 
-### Executar localmente
+- Python 3.10+
+- Node 18+ (build do frontend e testes e2e)
+- Git
+
+### Rodar o backend (serve o frontend já buildado)
 
 ```bash
 git clone https://github.com/alweedev/ProcessData.git
 cd ProcessData
 python -m venv .venv
-# Windows
-.\.venv\Scripts\Activate.ps1
-# Linux / macOS
-source .venv/bin/activate
+.\.venv\Scripts\Activate.ps1     # Windows
+# source .venv/bin/activate      # Linux / macOS
 
-pip install -r requirements.txt   # requirements.txt fica na raiz
-python -m backend.app             # ou: python backend/app.py
+pip install -r requirements.txt
+python -m backend.app            # http://127.0.0.1:5000
+```
+
+### Desenvolver o frontend (com hot reload)
+
+```bash
+npm install
+npm run dev:react     # Vite em http://127.0.0.1:5173, com HMR
+```
+
+Para gerar o build consumido pelo Flask (`frontend/static/react/`):
+
+```bash
+npm run build:react          # build único
+npm run build:react:watch    # rebuild automático a cada mudança
 ```
 
 ### Variáveis de ambiente (opcionais)
 
 | Var | Padrão | Uso |
-|-----|--------|-----|
+|---|---|---|
 | `UPLOAD_FOLDER` | `<tmp>/processdata_uploads` | pasta de arquivos temporários (fora do repo) |
 | `HISTORY_LOG_FILE` | `<UPLOAD_FOLDER>/history.log.jsonl` | trilha de auditoria (JSONL, rotacionada) |
-| `HISTORY_MAX_BYTES` | `5242880` | tamanho para rotacionar a auditoria |
-| `CORS_ORIGINS` | *(vazio = mesma origem)* | lista separada por vírgula de origens permitidas em `/api/*` |
+| `HISTORY_MAX_BYTES` | `5242880` (5 MB) | tamanho do arquivo de auditoria para rotacionar |
+| `HISTORY_MAX_ROWS` | `5000` | linhas mantidas em memória ao ler o histórico |
 | `HISTORY_ADMIN_TOKEN` | *(vazio)* | token para `DELETE /api/history` fora de localhost |
+| `CORS_ORIGINS` | *(vazio = mesma origem)* | lista separada por vírgula de origens permitidas em `/api/*` |
 | `HOST` / `PORT` / `DEBUG` | `0.0.0.0` / `5000` / `false` | servidor Flask |
 
-## Acesse no Navegador
-
-```
-http://127.0.0.1:5000
-```
-
-## 🔁 Fluxos Principais
-
-### Cadastro em massa
-
-1. Acesse a aba **Cadastro**.
-2. Faça upload da ficha de cadastro no formato esperado.
-3. O sistema:
-   - Normaliza colunas conforme o modelo definido
-   - Separa **Nome** e **Sobrenome** a partir de **Nome Completo**
-   - Valida CPF, e-mail e campos obrigatórios
-   - Gera a planilha final pronta para uso
+Upload de arquivo é limitado a 16 MB (`MAX_CONTENT_LENGTH`, fixo).
 
 ---
 
+## 🔁 Fluxos principais
+
+### Cadastro em massa
+
+1. Aba **Cadastro** → upload da planilha de entrada.
+2. O sistema mapeia colunas conhecidas (nomes variados são aceitos, ver
+   `FICHA_MAP`), separa **Nome**/**Sobrenome** a partir de **Nome Completo**,
+   valida CPF/e-mail/campos obrigatórios e gera a ficha final.
+
 ### Inativação de usuários
 
-1. Acesse a aba **Inativação**.
-2. Faça upload da base de usuários do cliente.
-3. Informe a lista de desligados (CPF, nome completo ou e-mail).
-4. O sistema:
-   - Realiza match por CPF, nome e e-mail
-   - Preserva **Nome** e **Sobrenome** da base original
-   - Gera a planilha final de inativação
+1. Aba **Inativação** → upload da base de usuários do cliente + lista de
+   desligados (CPF, nome completo ou e-mail, colados ou em planilha).
+2. O sistema casa por CPF → nome → e-mail (nessa prioridade) e gera a ficha
+   de inativação (`Operacao=DELETE`).
 
 ### Estruturas de aprovação
 
-1. Acesse a aba **Estruturas**.
-2. Faça upload da base de estruturas + base de usuários.
-3. Informe o CPF do aprovador (e, no modo substituição, o CPF do novo
+1. Aba **Estruturas** → upload da base de estruturas + base de usuários.
+2. Informe o CPF do aprovador (e, no modo substituição, o CPF do novo
    aprovador).
-4. Revise o preview de impacto (estruturas afetadas, avisos de duplicidade
+3. Revise o preview de impacto (estruturas afetadas, avisos de duplicidade
    ou de estrutura que ficaria sem aprovador) e confirme a exportação — em
    todas as estruturas encontradas ou só nas selecionadas.
 
-> Detalhe completo das regras de cada fluxo:
+> Regras de negócio completas de cada fluxo:
 > [`REGRAS_NEGOCIO_PROCESSAMENTO.md`](REGRAS_NEGOCIO_PROCESSAMENTO.md)
 > (cadastro) e
 > [`REGRAS_APROVACAO_INATIVACAO.md`](REGRAS_APROVACAO_INATIVACAO.md)
-> (aprovação/inativação). Arquitetura e endpoints:
+> (aprovação/inativação). Arquitetura, camadas e endpoints:
 > [`ARQUITETURA_MODERNIZADA.md`](ARQUITETURA_MODERNIZADA.md).
+
+---
 
 ## 🧪 Testes
 
 Com o ambiente virtual ativo, a partir da raiz do repositório:
 
 ```bash
-python -m pytest -q                    # suíte completa (backend/tests/), 97/97
+python -m pytest -q                              # suíte completa (backend/tests/), 113/113
 python -m pytest backend/tests/test_cadastro_api.py -q
-python -m pytest backend/tests/test_inativacao_api.py backend/tests/test_inativacao_generation_api.py -q
+python -m pytest backend/tests/test_inativacao_api.py backend/tests/test_inativacao_buscar_api.py -q
 python -m pytest backend/tests/test_aprovacao.py backend/tests/test_aprovacao_substituir.py -q
+
+ruff check backend/                              # lint
+mypy backend/                                    # tipos
 ```
 
 Fluxos críticos ponta-a-ponta (Playwright, requer Node):
@@ -171,32 +155,48 @@ Fluxos críticos ponta-a-ponta (Playwright, requer Node):
 ```bash
 npm ci
 npx playwright install
-npx playwright test
+npm run test:e2e             # builda o frontend (npm run build:react) e roda as 17 specs
 ```
+
+`npx playwright test` direto **não** rebuilda o frontend antes — use depois
+de mudanças em `frontend-react/` ou prefira `npm run test:e2e`. O servidor
+Flask do teste sobe via `python`; se não estiver no `PATH`, aponte pro
+interpretador do venv com `PYTHON=.venv/Scripts/python.exe` (Windows) antes
+do comando.
+
+---
 
 ## 🔒 Segurança
 
-- **Excel**: células que começam com `= + - @` / TAB / CR são gravadas como
-  texto (anti *formula injection*).
-- **Preview**: valores da planilha são escapados antes de ir para o DOM.
-- **Upload**: além da extensão, o conteúdo `.xlsx/.xltx` é checado (assinatura
-  ZIP + estrutura OOXML).
-- **Estático**: o servidor só entrega arquivos dentro de `frontend/` (bloqueia `../`).
-- **CORS**: mesma origem por padrão; libere origens com `CORS_ORIGINS`.
-- **Histórico**: `DELETE /api/history` só de localhost ou com `X-Admin-Token`.
-- **Auditoria**: `history.log.jsonl` rotaciona ao passar `HISTORY_MAX_BYTES`.
-- **Erros**: respostas 5xx são genéricas; o detalhe fica só no log do servidor.
-- Não versione planilhas reais, `.env`, `.venv`, logs sensíveis ou temporários
-  (`UPLOAD_FOLDER` fica fora do repositório por padrão).
+- **Formula injection**: células que começam com `= + - @` / TAB / CR são
+  gravadas como texto explícito na exportação.
+- **XSS**: valores vindos da planilha são escapados no preview antes de ir
+  para o DOM.
+- **Upload**: além da extensão (`.xlsx`, `.xls`, `.xltx`), o conteúdo
+  `.xlsx`/`.xltx` é checado (assinatura ZIP + estrutura OOXML); limite de
+  16 MB por arquivo.
+- **Path traversal**: o servidor estático só entrega arquivos cujo caminho
+  real resolve para dentro de `frontend/`.
+- **CORS**: restrito à mesma origem por padrão; `CORS_ORIGINS` libera
+  origens específicas.
+- **Histórico**: `DELETE /api/history` exige localhost ou `X-Admin-Token`;
+  arquivo rotaciona por tamanho (`HISTORY_MAX_BYTES`).
+- **Erros**: respostas 5xx são genéricas ao cliente; o detalhe fica só no
+  log do servidor (sem vazar nome/colunas da planilha).
+- Não versione planilhas reais, `.env`, `.venv` ou logs/temporários —
+  `UPLOAD_FOLDER` já fica fora do repositório por padrão.
 
 ## 📌 Observações
 
-- O projeto segue em evolução contínua com foco em organização, clareza e boas práticas.
-- Ferramentas de IA foram utilizadas como suporte ao desenvolvimento, principalmente para revisão de código, identificação de melhorias e aceleração do aprendizado, com todas as decisões técnicas sendo analisadas e implementadas conscientemente.
+- Projeto em evolução contínua, com foco em organização, clareza e boas
+  práticas — sem migração de framework planejada no curto prazo (ver
+  `ARQUITETURA_MODERNIZADA.md` § Próxima fase).
+- Ferramentas de IA foram usadas como apoio ao desenvolvimento (revisão de
+  código, identificação de melhorias, aceleração do aprendizado), com todas
+  as decisões técnicas analisadas e implementadas conscientemente.
 
 ## 👨‍💻 Autor
 
 Desenvolvido por **Alejandro Gabriel**
 
 LinkedIn: https://www.linkedin.com/in/alejandro-gabriel/
-
