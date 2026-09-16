@@ -37,9 +37,7 @@ def test_name_not_in_base_is_listed_in_not_found():
 
 
 def test_match_by_email_case_insensitive():
-    df_base = pd.DataFrame(
-        [{"CPF": "", "NomeCompleto": "Maria Silva", "Email": "Maria@Ex.com", "Status": "ATIVO"}]
-    )
+    df_base = pd.DataFrame([{"CPF": "", "NomeCompleto": "Maria Silva", "Email": "Maria@Ex.com", "Status": "ATIVO"}])
     result = InactivationService.search_matches(df_base, ["maria@ex.com"])
 
     assert result["items"][0]["found"] is True

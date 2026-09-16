@@ -71,7 +71,5 @@ def test_buscar_reports_duplicate_cpf_in_input_list(client):
 
 
 def test_buscar_without_base_file_rejected(client):
-    resp = client.post(
-        "/api/inativacao/buscar", data={"lista_text": valid_cpf(1)}, content_type="multipart/form-data"
-    )
+    resp = client.post("/api/inativacao/buscar", data={"lista_text": valid_cpf(1)}, content_type="multipart/form-data")
     assert resp.status_code == 400

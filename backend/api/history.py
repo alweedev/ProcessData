@@ -1,3 +1,5 @@
+import hmac
+
 from flask import Blueprint, jsonify, request
 
 from backend.core.config import settings
@@ -16,7 +18,8 @@ def _delete_allowed() -> bool:
     if (request.remote_addr or "") in _LOCAL_ADDRS:
         return True
     token = settings.HISTORY_ADMIN_TOKEN
-    return bool(token) and request.headers.get("X-Admin-Token") == token
+    provided = request.headers.get("X-Admin-Token") or ""
+    return bool(token) and hmac.compare_digest(provided, token)
 
 
 @history_bp.route("", methods=["GET"])

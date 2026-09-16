@@ -205,9 +205,7 @@ def test_second_level_removal_can_also_trigger_empty_gate(client):
     """O gate de estrutura vazia deve considerar a remoção do 2º nível
     também, não só do 1º (remove_second_level=true esvaziando o único
     fallback que restava)."""
-    base = _base_df(
-        [{"AprovacaoId": "A", "LoginAprovador_1": APPROVER, "LoginAprovador_SEGUNDO_NIVEL": APPROVER}]
-    )
+    base = _base_df([{"AprovacaoId": "A", "LoginAprovador_1": APPROVER, "LoginAprovador_SEGUNDO_NIVEL": APPROVER}])
     resp = _post_export(client, _users_df(), base, APPROVER, remove_second_level="true")
     assert resp.status_code == 400
     body = resp.get_json()

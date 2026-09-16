@@ -34,3 +34,22 @@ def test_history_delete_allowed_with_token(client, monkeypatch):
 def test_history_get_still_open(client):
     resp = client.get("/api/history", environ_base={"REMOTE_ADDR": "8.8.8.8"})
     assert resp.status_code == 200
+
+
+def test_history_delete_wrong_token_denied(client, monkeypatch):
+    from backend.core.config import settings
+
+    monkeypatch.setattr(settings, "HISTORY_ADMIN_TOKEN", "s3cr3t", raising=False)
+    resp = client.delete(
+        "/api/history",
+        headers={"X-Admin-Token": "token-errado"},
+        environ_base={"REMOTE_ADDR": "8.8.8.8"},
+    )
+    assert resp.status_code == 403
+
+
+def test_security_headers_present_on_every_response(client):
+    resp = client.get("/api/health")
+    assert resp.headers.get("X-Content-Type-Options") == "nosniff"
+    assert resp.headers.get("X-Frame-Options") == "DENY"
+    assert "frame-ancestors 'none'" in resp.headers.get("Content-Security-Policy", "")

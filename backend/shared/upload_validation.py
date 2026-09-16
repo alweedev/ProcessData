@@ -16,7 +16,9 @@ _ZIP_MAGIC = b"PK\x03\x04"
 _OOXML_EXTS = {".xlsx", ".xltx"}
 
 
-def save_and_validate_upload(file: Any, upload_folder: str, *, label: str | None = None) -> tuple[str | None, str | None]:
+def save_and_validate_upload(
+    file: Any, upload_folder: str, *, label: str | None = None
+) -> tuple[str | None, str | None]:
     """Salva um upload (`werkzeug.FileStorage`) em arquivo temporário, validando
     extensão e conteúdo. Repete o mesmo trio (extensão -> salvar -> conteúdo)
     que toda rota de upload do projeto precisa fazer.

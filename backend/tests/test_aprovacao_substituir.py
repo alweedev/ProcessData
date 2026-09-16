@@ -129,9 +129,7 @@ def test_preview_flags_duplicate_when_new_already_approver(client):
 
 
 def test_preview_flags_duplicate_when_new_already_in_second_level(client):
-    base = _base_df(
-        [{"AprovacaoId": "A", "LoginAprovador_1": OLD, "LoginAprovador_SEGUNDO_NIVEL": NEW}]
-    )
+    base = _base_df([{"AprovacaoId": "A", "LoginAprovador_1": OLD, "LoginAprovador_SEGUNDO_NIVEL": NEW}])
     resp = _post_preview(client, _users_df(), base, OLD, NEW)
     assert resp.status_code == 200, resp.get_data(as_text=True)
     body = resp.get_json()
@@ -154,9 +152,7 @@ def test_replace_keeps_same_position(client):
 
 
 def test_replace_second_level_only_when_flagged(client):
-    base = _base_df(
-        [{"AprovacaoId": "A", "LoginAprovador_1": OTHER, "LoginAprovador_SEGUNDO_NIVEL": OLD}]
-    )
+    base = _base_df([{"AprovacaoId": "A", "LoginAprovador_1": OTHER, "LoginAprovador_SEGUNDO_NIVEL": OLD}])
     resp_off = _post_export(client, _users_df(), base, OLD, NEW, replace_second_level="false")
     assert resp_off.status_code == 200, resp_off.get_data(as_text=True)
     rows_off = _rows_from_xlsx(resp_off)

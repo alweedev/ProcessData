@@ -67,3 +67,34 @@ def test_500_response_is_generic(client, monkeypatch):
     assert "Erro interno" in resp.get_json()["error"]
     assert "segredo" not in body
     assert "Traceback" not in body
+
+
+def test_500_error_does_not_leak_into_public_history(client, monkeypatch):
+    """GET /api/history é intencionalmente aberto (sem autenticação) --
+    então o detalhe de uma exceção (que já não vaza na resposta HTTP, ver
+    test_500_response_is_generic) também não pode vazar por ali."""
+    from backend.services.processing_service import ProcessingService
+
+    def boom(*a, **k):
+        raise RuntimeError("detalhe sensivel: C:\\segredo\\base_real.xlsx")
+
+    monkeypatch.setattr(ProcessingService, "process_records_from_files", boom)
+
+    df = pd.DataFrame(
+        [
+            {
+                "CPF": valid_cpf(1),
+                "NOME COMPLETO": "Ana",
+                "EMAIL": "a@x.com",
+                "EMPRESA": "E",
+                "Centro de custo": "C",
+                "SOLICITANTE? (S/N)": "S",
+            }
+        ]
+    )
+    data = {"files[]": xlsx_upload(df, "c.xlsx")}
+    resp = client.post("/api/process_cadastro", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 500
+
+    history_resp = client.get("/api/history?limit=10")
+    assert "segredo" not in history_resp.get_data(as_text=True)

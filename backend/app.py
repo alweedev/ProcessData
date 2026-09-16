@@ -41,6 +41,15 @@ def create_app() -> Flask:
     app.register_blueprint(analysis_bp)
     app.register_blueprint(history_bp)
 
+    @app.after_request
+    def _add_security_headers(response):
+        # Defesa em profundidade básica: não afeta scripts/estilos inline já
+        # usados pelo shell (tema pré-paint, loader de dev/HMR).
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
+        return response
+
     logger.info("Aplicação Flask criada e blueprints registrados.")
     return app
 

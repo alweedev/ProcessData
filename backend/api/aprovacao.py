@@ -477,8 +477,7 @@ def aprovacao_substituir_export():
                     "warning": True,
                     "estruturasComDuplicidade": duplicates,
                     "message": (
-                        f"{len(duplicates)} estrutura(s) já têm o novo aprovador. "
-                        "Deseja continuar mesmo assim?"
+                        f"{len(duplicates)} estrutura(s) já têm o novo aprovador. Deseja continuar mesmo assim?"
                     ),
                 }
             ), 400

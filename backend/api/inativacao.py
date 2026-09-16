@@ -74,13 +74,9 @@ def api_inativacao_buscar():
             },
         )
         return jsonify(search), 200
-    except Exception as e:
+    except Exception:
         logger.exception("Erro em /api/inativacao/buscar")
-        AuditService.record(
-            event_type="inativacao_busca",
-            status="error",
-            details={"message": str(e)},
-        )
+        AuditService.record(event_type="inativacao_busca", status="error", details={})
         return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for path in [base_path, lista_path]:
@@ -175,13 +171,9 @@ def api_process_inativacao():
             as_attachment=True,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Erro em /api/process_inativacao")
-        AuditService.record(
-            event_type="inativacao_geracao",
-            status="error",
-            details={"message": str(e)},
-        )
+        AuditService.record(event_type="inativacao_geracao", status="error", details={})
         return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for path in [base_path, lista_path]:

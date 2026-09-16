@@ -51,7 +51,11 @@ def test_cadastro_happy_path_returns_xlsx(client):
     assert "-" in str(rows[0]["Login"])
 
 
-def test_cadastro_success_audit_keeps_row_validation_errors(client):
+def test_cadastro_success_audit_tracks_invalid_row_count_without_raw_messages(client):
+    """O histórico registra QUANTAS linhas falharam (métrica), mas não o
+    conteúdo bruto de `errors` -- /api/history é legível sem autenticação
+    (GET), então mensagens de erro (que em outros fluxos podem conter
+    caminho de arquivo do servidor) não devem ficar ali."""
     from backend.services.audit_service import AuditService
 
     df = pd.DataFrame(
@@ -73,7 +77,7 @@ def test_cadastro_success_audit_keeps_row_validation_errors(client):
     events = AuditService.list_events(limit=5)
     latest = next(e for e in events if e["event_type"] == "cadastro" and e["status"] == "success")
     assert latest["details"]["invalid_rows"] >= 1
-    assert latest["details"]["errors"]
+    assert "errors" not in latest["details"]
 
 
 def test_cadastro_bool_and_blank_rows(tmp_path):

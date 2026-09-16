@@ -42,7 +42,10 @@ def api_process_cadastro():
             AuditService.record(
                 event_type="cadastro",
                 status="empty",
-                details={"files": len(uploaded), "errors": errors},
+                # não grava o dict de erros no histórico: em caso de falha de
+                # leitura ele é indexado por caminho de arquivo do servidor,
+                # e /api/history é legível sem autenticação (GET).
+                details={"files": len(uploaded), "errors_count": len(errors)},
             )
             return jsonify({"error": "Nenhum registro processado", "errors": errors}), 400
 
@@ -58,7 +61,6 @@ def api_process_cadastro():
                 "login_choice": login_choice,
                 "fluxo": fluxo,
                 "invalid_rows": len(errors),
-                "errors": errors,
             },
         )
         return send_file(
@@ -67,13 +69,11 @@ def api_process_cadastro():
             as_attachment=True,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-    except Exception as e:
+    except Exception:
+        # detalhe completo só no log do servidor (logger.exception); o
+        # histórico é público via GET /api/history, então não grava str(exc).
         logger.exception("Erro em /api/process_cadastro")
-        AuditService.record(
-            event_type="cadastro",
-            status="error",
-            details={"message": str(e)},
-        )
+        AuditService.record(event_type="cadastro", status="error", details={})
         return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for p in paths:

@@ -47,10 +47,12 @@ def analysis_summary():
 
         if (df_final is None or df_final.empty) and errors:
             detail = "; ".join(f"{p}: {msg}" for p, msg in errors.items())
+            # não grava `detail` no histórico: pode conter caminho de arquivo
+            # do servidor, e /api/history é legível sem autenticação (GET).
             AuditService.record(
                 event_type="analysis_summary",
                 status="error",
-                details={"files": len(uploaded), "message": detail},
+                details={"files": len(uploaded), "errors_count": len(errors)},
             )
             return jsonify({"error": f"Falha ao processar arquivo(s): {detail}"}), 400
 
@@ -77,13 +79,9 @@ def analysis_summary():
                 "preview": preview,
             }
         ), 200
-    except Exception as exc:
+    except Exception:
         logger.exception("Erro em /api/analysis/summary")
-        AuditService.record(
-            event_type="analysis_summary",
-            status="error",
-            details={"message": str(exc)},
-        )
+        AuditService.record(event_type="analysis_summary", status="error", details={})
         return jsonify({"error": "Erro interno ao processar a solicitação."}), 500
     finally:
         for path in paths:
