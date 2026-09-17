@@ -1,5 +1,6 @@
 import type { QualityReport } from "../lib/api";
 import { StatCard } from "./StatCard";
+import { Skeleton } from "./Skeleton";
 import { TONE_OUTLINE } from "./tone";
 
 interface ValidationReportProps {
@@ -11,8 +12,14 @@ interface ValidationReportProps {
 export function ValidationReport({ report, loading, error }: ValidationReportProps) {
   if (loading) {
     return (
-      <div className="rounded-surface border border-border bg-surface-2 px-4 py-6 text-center text-sm text-text-muted">
-        Validando planilha…
+      <div className="rounded-surface border border-border bg-surface-2 p-4" aria-live="polite">
+        <span className="sr-only">Validando planilha…</span>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-hidden="true">
+          <Skeleton className="h-14" />
+          <Skeleton className="h-14" />
+          <Skeleton className="h-14" />
+          <Skeleton className="h-14" />
+        </div>
       </div>
     );
   }
