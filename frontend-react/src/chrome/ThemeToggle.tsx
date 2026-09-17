@@ -1,21 +1,7 @@
 import { useEffect, useState } from "react";
-import { IconMoon, IconSun } from "../ui/icons";
 import { cn } from "../ui/cn";
-
-const THEME_KEY = "pd_theme";
-
-type Mode = "light" | "dark";
-
-function computeInitialTheme(): Mode {
-  try {
-    const stored = localStorage.getItem(THEME_KEY);
-    if (stored === "dark" || stored === "light") return stored;
-  } catch {
-    /* localStorage indisponível (modo privado etc.) */
-  }
-  const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-  return prefersDark ? "dark" : "light";
-}
+import { IconMoon, IconSun } from "../ui/icons";
+import { computeInitialTheme, THEME_KEY, type Mode } from "./theme";
 
 function applyTheme(mode: Mode) {
   // .dark em <html> — mesmo alvo do script anti-FOUC no <head>.

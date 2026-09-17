@@ -14,8 +14,8 @@
     <script>
       try {
         var stored = localStorage.getItem("pd_theme");
-        var prefers = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        var mode = stored ? stored : prefers ? "dark" : "light";
+        var prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+        var mode = stored ? stored : prefersLight ? "light" : "dark";
         if (mode === "dark") document.documentElement.classList.add("dark");
       } catch (e) {
         /* noop */
