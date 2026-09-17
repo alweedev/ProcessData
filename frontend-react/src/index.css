@@ -45,9 +45,9 @@
   --color-info: var(--pd-info);
   --color-info-soft: var(--pd-info-soft);
 
-  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.1);
-  --shadow-card-hover: 0 6px 20px rgb(16 24 40 / 0.1);
-  --shadow-pop: 0 12px 32px rgb(16 24 40 / 0.18);
+  --shadow-card: var(--pd-shadow-card);
+  --shadow-card-hover: var(--pd-shadow-card-hover);
+  --shadow-pop: var(--pd-shadow-pop);
 
   /* Radius semântico — nomeia a intenção em vez do valor cru, resolvendo a
      mistura de rounded-lg/xl/md sem regra que havia entre componentes. */
@@ -89,6 +89,10 @@
   --pd-danger-soft: #fbe8ea;
   --pd-info: #0b7594;
   --pd-info-soft: #e2f1f6;
+
+  --pd-shadow-card: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.1);
+  --pd-shadow-card-hover: 0 6px 20px rgb(16 24 40 / 0.1);
+  --pd-shadow-pop: 0 12px 32px rgb(16 24 40 / 0.18);
 }
 
 /* Sem :where() aqui de propósito: precisa da mesma especificidade de :root
@@ -124,6 +128,10 @@
   --pd-danger-soft: #2b1518;
   --pd-info: #38bdf8;
   --pd-info-soft: #0b2530;
+
+  --pd-shadow-card: 0 0 0 1px rgb(0 0 0 / 0.3);
+  --pd-shadow-card-hover: 0 4px 16px rgb(0 0 0 / 0.4);
+  --pd-shadow-pop: 0 16px 40px rgb(0 0 0 / 0.55);
 }
 
 @layer base {
@@ -167,5 +175,30 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Transição de troca de aba (navigate() em routing/useHashRoute.ts) — classe
+   `vt-nav` liga/desliga em <html> só durante essa transição, pra não afetar
+   o crossfade simples que o ThemeToggle já usa (sem essa classe). */
+:root.vt-nav::view-transition-old(root) {
+  animation: pd-vt-out 150ms ease-in both;
+}
+
+:root.vt-nav::view-transition-new(root) {
+  animation: pd-vt-in 150ms ease-out both;
+}
+
+@keyframes pd-vt-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes pd-vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
   }
 }
