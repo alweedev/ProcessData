@@ -95,11 +95,11 @@
    (ambos 0,1,0) pra o .dark, declarado depois, vencer quando <html class="dark">. */
 .dark {
   --pd-bg: #0a0d12;
-  --pd-surface: #111820;
-  --pd-surface-2: #19232f;
-  --pd-surface-sunken: #0c1219;
-  --pd-border: #202b38;
-  --pd-border-strong: #2d3d4e;
+  --pd-surface: #0e141b;
+  --pd-surface-2: #141b24;
+  --pd-surface-sunken: #0a0d12;
+  --pd-border: #1f2830;
+  --pd-border-strong: #384656;
 
   --pd-text: #e7eef7;
   --pd-text-muted: #9aa6b3;

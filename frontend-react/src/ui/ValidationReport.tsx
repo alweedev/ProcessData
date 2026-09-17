@@ -1,5 +1,6 @@
 import type { QualityReport } from "../lib/api";
 import { StatCard } from "./StatCard";
+import { TONE_OUTLINE } from "./tone";
 
 interface ValidationReportProps {
   report: QualityReport | null;
@@ -43,7 +44,7 @@ export function ValidationReport({ report, loading, error }: ValidationReportPro
       {clean && <p className="text-sm text-success">Nenhum problema encontrado — pode gerar.</p>}
 
       {report.general_errors && (
-        <div className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">{report.general_errors}</div>
+        <div className={`rounded-control border px-3 py-2 text-sm ${TONE_OUTLINE.danger}`}>{report.general_errors}</div>
       )}
 
       {blanks.length > 0 && (
@@ -51,7 +52,7 @@ export function ValidationReport({ report, loading, error }: ValidationReportPro
           <p className="mb-1 font-medium">Campos obrigatórios em branco</p>
           <div className="flex flex-wrap gap-1.5">
             {blanks.map(([col, n]) => (
-              <span key={col} className="rounded-pill bg-warning-soft px-2 py-0.5 text-xs text-warning">
+              <span key={col} className={`rounded-pill border px-2 py-0.5 text-xs ${TONE_OUTLINE.warning}`}>
                 {col}: {n}
               </span>
             ))}
