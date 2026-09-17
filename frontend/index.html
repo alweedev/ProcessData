@@ -12,14 +12,15 @@
     <link rel="manifest" href="site.webmanifest?v=3" />
     <!-- Aplica o tema antes do 1º paint (evita flash). O ThemeToggle assume depois. -->
     <script>
+      var stored = null;
       try {
-        var stored = localStorage.getItem("pd_theme");
-        var prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
-        var mode = stored ? stored : prefersLight ? "light" : "dark";
-        if (mode === "dark") document.documentElement.classList.add("dark");
+        stored = localStorage.getItem("pd_theme");
       } catch (e) {
         /* noop */
       }
+      var prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+      var mode = stored === "dark" || stored === "light" ? stored : prefersLight ? "light" : "dark";
+      if (mode === "dark") document.documentElement.classList.add("dark");
     </script>
     <!-- ?v=N: bumpar a cada release pra invalidar o cache do browser -->
     <link rel="stylesheet" href="static/react/app-react.css?v=2" />

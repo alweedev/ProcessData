@@ -30,4 +30,25 @@ describe("computeInitialTheme", () => {
     mockMatchMedia(true);
     expect(computeInitialTheme()).toBe("light");
   });
+
+  it("quando localStorage.getItem lança, cai para dark por padrão (sem prefers-color-scheme:light)", () => {
+    // Simula Safari private browsing, iframes restritos, etc.
+    const originalGetItem = Storage.prototype.getItem;
+    Storage.prototype.getItem = vi.fn(() => {
+      throw new Error("Access denied");
+    });
+    mockMatchMedia(false);
+    expect(computeInitialTheme()).toBe("dark");
+    Storage.prototype.getItem = originalGetItem;
+  });
+
+  it("quando localStorage lança, ainda respeita prefers-color-scheme:light", () => {
+    const originalGetItem = Storage.prototype.getItem;
+    Storage.prototype.getItem = vi.fn(() => {
+      throw new Error("Access denied");
+    });
+    mockMatchMedia(true);
+    expect(computeInitialTheme()).toBe("light");
+    Storage.prototype.getItem = originalGetItem;
+  });
 });
