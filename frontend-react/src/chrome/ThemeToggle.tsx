@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { IconMoon, IconSun } from "../ui/icons";
+import { cn } from "../ui/cn";
 
 const THEME_KEY = "pd_theme";
 
@@ -29,11 +31,23 @@ export function ThemeToggle() {
 
   function toggle() {
     const next: Mode = mode === "dark" ? "light" : "dark";
-    setMode(next);
-    try {
-      localStorage.setItem(THEME_KEY, next);
-    } catch {
-      /* noop */
+    const commit = () => {
+      setMode(next);
+      try {
+        localStorage.setItem(THEME_KEY, next);
+      } catch {
+        /* noop */
+      }
+    };
+
+    // Crossfade da página inteira via View Transitions API nativa (sem
+    // dependência) quando disponível; cai para a transição CSS de cor
+    // (index.css) em navegadores sem suporte ou com prefers-reduced-motion.
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (!reduced && typeof document.startViewTransition === "function") {
+      document.startViewTransition(commit);
+    } else {
+      commit();
     }
   }
 
@@ -42,33 +56,35 @@ export function ThemeToggle() {
     <button
       id="themeToggle"
       type="button"
+      role="switch"
+      aria-checked={isDark}
       aria-label={isDark ? "Alternar para tema claro" : "Alternar para tema escuro"}
       title="Alternar tema"
       onClick={toggle}
-      className="rounded-lg border border-border-strong p-2 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
+      className={cn(
+        "relative inline-flex h-8 w-14 shrink-0 items-center rounded-pill border transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+        isDark ? "border-brand/40 bg-brand-soft" : "border-border-strong bg-surface-2",
+      )}
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-5 w-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.6}
-        aria-hidden="true"
-      >
-        {isDark ? (
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-        ) : (
-          <>
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.657-6.343l1.414-1.414M4.929 19.071l1.414-1.414m0-11.314L4.93 4.93m13.657 13.657l1.414 1.414"
-            />
-            <circle cx="12" cy="12" r="4" />
-          </>
+      <span
+        className={cn(
+          "absolute left-1 flex h-6 w-6 items-center justify-center rounded-pill bg-surface text-text shadow-card transition-transform duration-300",
+          isDark && "translate-x-6",
         )}
-      </svg>
+      >
+        <IconSun
+          className={cn(
+            "absolute h-3.5 w-3.5 transition-all duration-300",
+            isDark ? "-rotate-90 scale-50 opacity-0" : "rotate-0 scale-100 opacity-100",
+          )}
+        />
+        <IconMoon
+          className={cn(
+            "absolute h-3.5 w-3.5 transition-all duration-300",
+            isDark ? "rotate-0 scale-100 opacity-100" : "rotate-90 scale-50 opacity-0",
+          )}
+        />
+      </span>
     </button>
   );
 }
