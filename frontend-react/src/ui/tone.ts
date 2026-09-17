@@ -22,7 +22,7 @@ export const TONE_TEXT: Record<Tone, string> = {
 
 /** Contornado, sem fundo — alertas persistentes (ex.: ApiHealthBanner). */
 export const TONE_OUTLINE: Record<Tone, string> = {
-  neutral: "border-border-strong text-text-subtle",
+  neutral: "border-border-strong text-text-muted",
   brand: "border-brand/40 text-brand",
   success: "border-success/40 text-success",
   warning: "border-warning/40 text-warning",

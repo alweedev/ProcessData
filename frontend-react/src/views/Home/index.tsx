@@ -69,29 +69,28 @@ export function HomeView() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {OPS.map((op, index) => (
-          <Card
-            key={op.id}
-            interactive
-            role="button"
-            tabIndex={0}
-            className="pd-enter pd-stagger"
-            style={{ "--i": index } as CSSProperties}
-            onClick={() => navigate(op.id)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                navigate(op.id);
-              }
-            }}
-          >
-            <div className="flex items-start gap-3">
-              <IconChip icon={op.icon} />
-              <div>
-                <p className="font-medium text-text">{op.label}</p>
-                <p className="mt-0.5 text-sm text-text-muted">{op.desc}</p>
+          <div key={op.id} className="pd-enter pd-stagger" style={{ "--i": index } as CSSProperties}>
+            <Card
+              interactive
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(op.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  navigate(op.id);
+                }
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <IconChip icon={op.icon} />
+                <div>
+                  <p className="font-medium text-text">{op.label}</p>
+                  <p className="mt-0.5 text-sm text-text-muted">{op.desc}</p>
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
         ))}
       </div>
 

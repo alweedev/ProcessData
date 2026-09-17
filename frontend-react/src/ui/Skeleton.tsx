@@ -12,7 +12,7 @@ export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       aria-hidden="true"
-      className={cn("rounded-control bg-surface-sunken [animation:pd-shimmer_1.4s_ease-in-out_infinite]", className)}
+      className={cn("rounded-control bg-border [animation:pd-shimmer_1.4s_ease-in-out_infinite]", className)}
     />
   );
 }
