@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useState } from "react";
 import { FileDropzone } from "../../components/FileDropzone";
 import { Modal } from "../../components/Modal";
@@ -326,7 +327,7 @@ export function EstruturasTab() {
                     </tr>
                   </thead>
                   <tbody id="aprovacao_table_body">
-                    {e.items.map((item) => {
+                    {e.items.map((item, index) => {
                       const flagged = isSubstituir ? item.teraDuplicidade : item.ficaraSemAprovador;
                       const flagTitle = isSubstituir
                         ? "O novo aprovador já está presente nesta estrutura"
@@ -334,7 +335,8 @@ export function EstruturasTab() {
                       return (
                         <tr
                           key={item.aprovacaoId}
-                          className={`border-t border-border ${flagged ? "bg-warning/15" : ""}`}
+                          className={`pd-enter pd-stagger border-t border-border ${flagged ? "bg-warning/15" : ""}`}
+                          style={{ "--i": Math.min(index, 12) } as CSSProperties}
                         >
                           <td className="px-2 py-1.5">
                             <input

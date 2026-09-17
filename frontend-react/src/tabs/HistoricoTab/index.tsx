@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { formatTs } from "../../history/formatTs";
 import { clearAll, getSnapshot, refreshFromServer, subscribe, type HistoryState } from "../../history/historyStore";
@@ -123,7 +124,11 @@ export function HistoricoTab() {
             </thead>
             <tbody id="historico_tbody">
               {filtered.map((item, i) => (
-                <tr key={`${item.ts}-${i}`} className="border-t border-border">
+                <tr
+                  key={`${item.ts}-${i}`}
+                  className="pd-enter pd-stagger border-t border-border"
+                  style={{ "--i": Math.min(i, 12) } as CSSProperties}
+                >
                   <td className="whitespace-nowrap px-3 py-1.5 text-text-muted">{formatTs(item.ts)}</td>
                   <td className="px-3 py-1.5 text-text">
                     {item.text}
