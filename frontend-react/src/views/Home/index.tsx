@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useApiHealth, type ApiState } from "../../health/apiHealthStore";
 import { navigate, type View } from "../../routing/useHashRoute";
 import { Badge } from "../../ui/Badge";
@@ -68,12 +68,14 @@ export function HomeView() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {OPS.map((op) => (
+        {OPS.map((op, index) => (
           <Card
             key={op.id}
             interactive
             role="button"
             tabIndex={0}
+            className="pd-enter pd-stagger"
+            style={{ "--i": index } as CSSProperties}
             onClick={() => navigate(op.id)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -103,16 +105,17 @@ export function HomeView() {
         />
       ) : (
         <div className="space-y-2">
-          {recent.map((item) => (
-            <ResultCard
-              key={item.key}
-              compact
-              operationLabel={item.title}
-              timestamp={item.ts}
-              inputSummary={item.subtitle ?? ""}
-              outputFilename={item.outputFilename}
-              status={item.status}
-            />
+          {recent.map((item, index) => (
+            <div key={item.key} className="pd-enter pd-stagger" style={{ "--i": index } as CSSProperties}>
+              <ResultCard
+                compact
+                operationLabel={item.title}
+                timestamp={item.ts}
+                inputSummary={item.subtitle ?? ""}
+                outputFilename={item.outputFilename}
+                status={item.status}
+              />
+            </div>
           ))}
         </div>
       )}
