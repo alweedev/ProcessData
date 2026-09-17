@@ -109,7 +109,7 @@ export function HistoricoTab() {
           {`Itens visíveis: ${filtered.length} (local: ${state.localCount} | API: ${state.serverCount})`}
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-border" id="historico_table_wrap">
+        <div className="overflow-x-auto rounded-surface border border-border" id="historico_table_wrap">
           <table id="historico_table" aria-describedby="historico_summary" className="w-full text-sm">
             <thead className="bg-surface-sunken">
               <tr>

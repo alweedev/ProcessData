@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useRegisterPrimaryAction } from "../../app/actionContext";
 import { FileDropzone } from "../../components/FileDropzone";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../ui/Button";
@@ -56,14 +55,6 @@ export function InativacaoTab() {
     await inativacao.generate(clearBase);
   }
 
-  useRegisterPrimaryAction(
-    inativacao.results.length > 0
-      ? () => void handleGenerate()
-      : inativacao.canSearch
-        ? () => void handleSearch()
-        : null,
-  );
-
   const showResults = inativacao.results.length > 0 || inativacao.searching;
 
   return (
@@ -116,7 +107,7 @@ export function InativacaoTab() {
         >
           <div id="inativacao_base_feedback" aria-live="polite" className="mt-3">
             {inativacao.baseFile && (
-              <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-2 py-1 pl-3 pr-1.5 text-sm text-text">
+              <span className="inline-flex items-center gap-2 rounded-pill border border-border bg-surface-2 py-1 pl-3 pr-1.5 text-sm text-text">
                 {inativacao.baseFile.name}
                 <button
                   id="inativacao_clear_base_btn"
@@ -127,7 +118,7 @@ export function InativacaoTab() {
                     e.stopPropagation();
                     clearBase();
                   }}
-                  className="flex h-5 w-5 items-center justify-center rounded-full text-text-subtle transition-colors hover:bg-danger/10 hover:text-danger"
+                  className="flex h-5 w-5 items-center justify-center rounded-pill text-text-subtle transition-colors hover:bg-danger/10 hover:text-danger"
                 >
                   ✕
                 </button>
@@ -162,7 +153,7 @@ export function InativacaoTab() {
         </div>
 
         {inativacao.generating && (
-          <div id="inativacao_progress" className="mt-3 h-2 overflow-hidden rounded-full bg-surface-sunken">
+          <div id="inativacao_progress" className="mt-3 h-2 overflow-hidden rounded-pill bg-surface-sunken">
             <div
               id="inativacao_progressBar"
               role="progressbar"
@@ -223,7 +214,7 @@ export function InativacaoTab() {
               )}
             </div>
 
-            <div id="inativacao_results" className="mt-3 overflow-x-auto rounded-lg border border-border">
+            <div id="inativacao_results" className="mt-3 overflow-x-auto rounded-surface border border-border">
               <table id="results_table" className="w-full text-sm">
                 <thead className="bg-surface-sunken">
                   <tr>

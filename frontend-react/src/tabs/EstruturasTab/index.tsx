@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRegisterPrimaryAction } from "../../app/actionContext";
 import { FileDropzone } from "../../components/FileDropzone";
 import { Modal } from "../../components/Modal";
 import { pushToast } from "../../toast/toastStore";
@@ -18,7 +17,7 @@ function FileFeedback({ file, onClear }: { file: File | null; onClear: () => voi
   if (!file) return null;
   return (
     <div className="mt-3" aria-live="polite">
-      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-2 py-1 pl-3 pr-1.5 text-sm text-text">
+      <span className="inline-flex items-center gap-2 rounded-pill border border-border bg-surface-2 py-1 pl-3 pr-1.5 text-sm text-text">
         {file.name}
         <button
           type="button"
@@ -28,7 +27,7 @@ function FileFeedback({ file, onClear }: { file: File | null; onClear: () => voi
             e.stopPropagation();
             onClear();
           }}
-          className="flex h-5 w-5 items-center justify-center rounded-full text-text-subtle transition-colors hover:bg-danger/10 hover:text-danger"
+          className="flex h-5 w-5 items-center justify-center rounded-pill text-text-subtle transition-colors hover:bg-danger/10 hover:text-danger"
         >
           ✕
         </button>
@@ -44,8 +43,6 @@ export function EstruturasTab() {
   const [confirm, setConfirm] = useState<{ exportMode: "all" | "selected"; affected: { aprovacaoId: string }[] } | null>(
     null,
   );
-
-  useRegisterPrimaryAction(e.previewLoading ? null : () => void e.preview());
 
   async function handleExport(exportMode: "all" | "selected") {
     const affected = await e.doExport(exportMode);
@@ -74,7 +71,7 @@ export function EstruturasTab() {
       <div
         role="group"
         aria-label="Modo de operação: remover ou substituir aprovador"
-        className="mb-4 inline-flex rounded-lg border border-border bg-surface-2 p-1"
+        className="mb-4 inline-flex rounded-control border border-border bg-surface-2 p-1"
       >
         <button
           type="button"
@@ -201,7 +198,7 @@ export function EstruturasTab() {
         </div>
 
         {e.hasPreview && (
-          <div id="aprovacao_preview_panel" className="mt-4 rounded-lg border border-border bg-surface-2 p-4">
+          <div id="aprovacao_preview_panel" className="mt-4 rounded-surface border border-border bg-surface-2 p-4">
             <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
               <div className="flex flex-wrap gap-6">
                 <div>
@@ -305,7 +302,7 @@ export function EstruturasTab() {
             </div>
 
             {e.items.length > 0 && (
-              <div id="aprovacao_table_wrap" className="overflow-x-auto rounded-lg border border-border">
+              <div id="aprovacao_table_wrap" className="overflow-x-auto rounded-surface border border-border">
                 <table className="w-full text-sm">
                   <thead className="bg-surface-sunken">
                     <tr>

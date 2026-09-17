@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { FileDropzone } from "../../components/FileDropzone";
 import { Modal } from "../../components/Modal";
-import { useRegisterPrimaryAction } from "../../app/actionContext";
 import { usePersistedState } from "../../hooks/usePersistedState";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
@@ -23,8 +22,6 @@ export function CadastroTab() {
   async function handleSubmit() {
     await cadastro.submit(prefs.login_choice, prefs.fluxo, () => setResetKey((k) => k + 1));
   }
-
-  useRegisterPrimaryAction(cadastro.generating ? null : () => void handleSubmit());
 
   function clear() {
     cadastro.clear();
@@ -121,28 +118,39 @@ export function CadastroTab() {
           </Field>
         </div>
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <Button
             id="cadastro_validate_btn"
             variant="secondary"
-            size="sm"
             disabled={cadastro.files.length === 0}
             loading={cadastro.validation.status === "loading"}
             onClick={() => cadastro.validate(prefs.login_choice, prefs.fluxo)}
           >
             {cadastro.validation.status === "loading" ? "Validando..." : "Validar planilha"}
           </Button>
-          {cadastro.validation.status !== "idle" && (
+          <Button
+            id="cadastro_btn"
+            aria-label="Gerar cadastro"
+            title="Processar a planilha e gerar arquivo tratado"
+            loading={cadastro.generating}
+            onClick={handleSubmit}
+          >
+            {cadastro.generating ? "Processando..." : "Gerar"}
+          </Button>
+        </div>
+
+        {cadastro.validation.status !== "idle" && (
+          <div className="mt-3">
             <ValidationReport
               report={cadastro.validation.report}
               loading={cadastro.validation.status === "loading"}
               error={cadastro.validation.status === "error" ? cadastro.validation.error : null}
             />
-          )}
-        </div>
+          </div>
+        )}
 
         {cadastro.generating && (
-          <div id="cadastro_progress" className="mt-4 h-2 overflow-hidden rounded-full bg-surface-sunken">
+          <div id="cadastro_progress" className="mt-4 h-2 overflow-hidden rounded-pill bg-surface-sunken">
             <div
               id="cadastro_progressBar"
               role="progressbar"
@@ -154,18 +162,6 @@ export function CadastroTab() {
             />
           </div>
         )}
-
-        <div className="mt-4">
-          <Button
-            id="cadastro_btn"
-            aria-label="Gerar cadastro"
-            title="Processar a planilha e gerar arquivo tratado"
-            loading={cadastro.generating}
-            onClick={handleSubmit}
-          >
-            {cadastro.generating ? "Processando..." : "Gerar"}
-          </Button>
-        </div>
 
         <div id="cadastro_status" className="mt-3 text-sm" aria-live="polite">
           {cadastro.done && <span className="font-medium text-success">✔ Concluído</span>}

@@ -4,6 +4,7 @@ import { navigate, type View } from "../../routing/useHashRoute";
 import { Badge } from "../../ui/Badge";
 import { Card } from "../../ui/Card";
 import { EmptyState } from "../../ui/EmptyState";
+import { IconChip } from "../../ui/IconChip";
 import { IconClock, IconInbox, IconSitemap, IconUpload, IconUserMinus } from "../../ui/icons";
 import { PageHeader } from "../../ui/PageHeader";
 import { ResultCard } from "../../ui/ResultCard";
@@ -61,12 +62,12 @@ export function HomeView() {
   return (
     <div>
       <PageHeader
-        title="ProcessData"
+        title="Visão geral"
         description="Ferramentas de tratamento de planilhas do suporte Vermari."
         actions={<Badge tone={API_TONE[api]}>API {API_TEXT[api]}</Badge>}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {OPS.map((op) => (
           <Card
             key={op.id}
@@ -82,12 +83,7 @@ export function HomeView() {
             }}
           >
             <div className="flex items-start gap-3">
-              <span
-                aria-hidden="true"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand"
-              >
-                {op.icon}
-              </span>
+              <IconChip icon={op.icon} />
               <div>
                 <p className="font-medium text-text">{op.label}</p>
                 <p className="mt-0.5 text-sm text-text-muted">{op.desc}</p>
@@ -103,6 +99,7 @@ export function HomeView() {
           icon={<IconInbox className="h-5 w-5" />}
           title="Nada por aqui ainda"
           description="As execuções que você rodar aparecem aqui e no Histórico."
+          compact
         />
       ) : (
         <div className="space-y-2">

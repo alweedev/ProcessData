@@ -1,6 +1,11 @@
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+
+const pkg = JSON.parse(
+  readFileSync(fileURLToPath(new URL("./package.json", import.meta.url)), "utf-8"),
+) as { version: string };
 
 // Build de biblioteca (não um app Vite-servido): o resultado é injetado como
 // <script type="module">/<link> dentro de frontend/index.html, que o Flask já
@@ -18,6 +23,7 @@ export default defineConfig({
   // "ReferenceError: process is not defined" assim que carrega no browser.
   define: {
     "process.env.NODE_ENV": '"production"',
+    __APP_VERSION__: JSON.stringify(pkg.version),
   },
   build: {
     outDir: "../frontend/static/react",
