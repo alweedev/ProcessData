@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { Button } from "../ui/Button";
 
 interface ModalProps {
   open: boolean;
@@ -74,7 +75,7 @@ export function Modal({ open, title, onClose, children, footer }: ModalProps) {
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="w-full max-w-lg rounded-xl border border-border bg-surface shadow-pop outline-none"
+        className="w-full max-w-lg rounded-surface border border-border bg-surface shadow-pop outline-none"
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h3 className="text-base font-semibold text-text">{title}</h3>
@@ -90,13 +91,9 @@ export function Modal({ open, title, onClose, children, footer }: ModalProps) {
         <div className="px-4 py-4 text-sm text-text-muted">{children}</div>
         <div className="flex justify-end gap-2 border-t border-border px-4 py-3">
           {footer ?? (
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-accent-fg hover:bg-accent-hover"
-            >
+            <Button type="button" onClick={onClose}>
               Fechar
-            </button>
+            </Button>
           )}
         </div>
       </div>

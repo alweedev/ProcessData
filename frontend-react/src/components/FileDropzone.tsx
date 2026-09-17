@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Button } from "../ui/Button";
 
 interface FileDropzoneProps {
   id: string;
@@ -65,7 +66,7 @@ export function FileDropzone({
         setDragOver(false);
         if (e.dataTransfer.files?.length) onFiles(e.dataTransfer.files);
       }}
-      className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
+      className={`rounded-control border-2 border-dashed p-6 text-center transition-colors ${
         dragOver ? "border-accent bg-accent/5" : "border-border-strong hover:border-accent/50"
       }`}
     >
@@ -82,13 +83,9 @@ export function FileDropzone({
           if (e.target.files?.length) onFiles(e.target.files);
         }}
       />
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-fg transition-colors hover:bg-accent-hover"
-      >
+      <Button type="button" onClick={() => inputRef.current?.click()}>
         Selecionar
-      </button>
+      </Button>
       {children}
     </div>
   );

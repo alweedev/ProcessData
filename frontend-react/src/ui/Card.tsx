@@ -18,7 +18,7 @@ export function Card({ interactive = false, padding = "md", className, children,
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-surface shadow-card",
+        "rounded-surface border border-border bg-surface shadow-card",
         PAD[padding],
         interactive &&
           "cursor-pointer transition hover:-translate-y-0.5 hover:border-border-strong hover:shadow-card-hover",

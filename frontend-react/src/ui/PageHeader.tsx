@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { IconChip } from "./IconChip";
 
 interface PageHeaderProps {
   title: string;
@@ -12,12 +13,9 @@ export function PageHeader({ title, description, icon, actions }: PageHeaderProp
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div className="flex items-start gap-3">
         {icon && (
-          <span
-            aria-hidden="true"
-            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand"
-          >
-            {icon}
-          </span>
+          <div className="mt-0.5">
+            <IconChip icon={icon} />
+          </div>
         )}
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-text">{title}</h2>

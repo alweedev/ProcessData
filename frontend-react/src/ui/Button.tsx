@@ -11,6 +11,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 
+// Variantes usam preenchimento SÓLIDO para dar ênfase de ação — não migrar
+// para `tone.ts` (TONE_SOFT/TONE_TEXT), que representa "tom suave de status"
+// (Badge/StatCard/alertas), um conceito visual diferente.
 const VARIANTS: Record<Variant, string> = {
   primary: "bg-accent text-accent-fg hover:bg-accent-hover",
   secondary: "border border-border bg-surface-2 text-text hover:bg-surface-sunken",
@@ -40,7 +43,7 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center rounded-lg font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex items-center justify-center rounded-control font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50",
         VARIANTS[variant],
         SIZES[size],
         className,

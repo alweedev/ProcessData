@@ -15,7 +15,7 @@ export function FileChips({ files, onRemove, onClearAll, clearAllId, removeLabel
       {files.map((file, index) => (
         <span
           key={`${file.name}-${index}`}
-          className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-2 py-1 pl-3 pr-1.5 text-sm text-text"
+          className="inline-flex items-center gap-2 rounded-pill border border-border bg-surface-2 py-1 pl-3 pr-1.5 text-sm text-text"
         >
           <span className="max-w-[16rem] truncate">{file.name}</span>
           <span className="text-xs text-text-subtle">{humanFileSize(file.size)}</span>
@@ -26,7 +26,7 @@ export function FileChips({ files, onRemove, onClearAll, clearAllId, removeLabel
               e.stopPropagation();
               onRemove(index);
             }}
-            className="flex h-5 w-5 items-center justify-center rounded-full text-text-subtle transition-colors hover:bg-danger/10 hover:text-danger"
+            className="flex h-5 w-5 items-center justify-center rounded-pill text-text-subtle transition-colors hover:bg-danger/10 hover:text-danger"
           >
             ✕
           </button>

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { IconChip } from "./IconChip";
 
 interface ResultCardProps {
   operationLabel: string;
@@ -32,15 +33,15 @@ export function ResultCard({
   const lines = Array.isArray(inputSummary) ? inputSummary : [inputSummary];
   return (
     <div
-      className={`flex items-start gap-3 rounded-lg border border-border bg-surface ${compact ? "px-3 py-2" : "p-3.5"}`}
+      className={`flex items-start gap-3 rounded-surface border border-border bg-surface ${compact ? "px-3 py-2" : "p-3.5"}`}
     >
-      <span
-        aria-hidden="true"
-        className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm ${
-          status === "success" ? "bg-success-soft text-success" : "bg-danger-soft text-danger"
-        }`}
-      >
-        {icon ?? (status === "success" ? "✓" : "!")}
+      <span className="mt-0.5 text-sm">
+        <IconChip
+          icon={icon ?? (status === "success" ? "✓" : "!")}
+          size="sm"
+          shape="circle"
+          tone={status === "success" ? "success" : "danger"}
+        />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">

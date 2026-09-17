@@ -27,8 +27,9 @@
   --color-text-subtle: var(--pd-text-subtle);
 
   --color-brand: var(--pd-brand);
-  --color-brand-from: #00b3bb;
-  --color-brand-to: #00cdd7;
+  --color-brand-soft: var(--pd-brand-soft);
+  --color-brand-from: var(--pd-brand-from);
+  --color-brand-to: var(--pd-brand-to);
 
   --color-accent: var(--pd-accent);
   --color-accent-hover: var(--pd-accent-hover);
@@ -47,6 +48,12 @@
   --shadow-card: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.1);
   --shadow-card-hover: 0 6px 20px rgb(16 24 40 / 0.1);
   --shadow-pop: 0 12px 32px rgb(16 24 40 / 0.18);
+
+  /* Radius semântico — nomeia a intenção em vez do valor cru, resolvendo a
+     mistura de rounded-lg/xl/md sem regra que havia entre componentes. */
+  --radius-control: var(--radius-lg); /* botões, inputs, dropzone, badges de header */
+  --radius-surface: var(--radius-xl); /* Card, Modal, containers de página */
+  --radius-pill: var(--radius-full); /* Badge, chips, avatares */
 
   /* Stack do sistema — "Segoe UI Variable" no Windows 11 (público-alvo),
      "system-ui"/-apple-system cobrem macOS/Linux sem baixar nada. */
@@ -67,6 +74,9 @@
   --pd-text-subtle: #838b97;
 
   --pd-brand: #008a9c;
+  --pd-brand-soft: #e3f6f7;
+  --pd-brand-from: #00b3bb;
+  --pd-brand-to: #00cdd7;
   --pd-accent: #2563eb;
   --pd-accent-hover: #1d4ed8;
 
@@ -96,7 +106,13 @@
   --pd-text-subtle: #6a7480;
 
   --pd-brand: #22d3ee;
-  --pd-accent: #3b82f6;
+  --pd-brand-soft: #0f2a2d;
+  --pd-brand-from: #0e9aad;
+  --pd-brand-to: #22d3ee;
+  /* Escurecido em relação ao #3b82f6 "padrão" — branco sobre #3b82f6 dá
+     ~3:1 (abaixo do AA 4.5:1 exigido em texto pequeno, ex. Button size=sm).
+     #2f6fe0 sobre branco dá ~4.69:1. */
+  --pd-accent: #2f6fe0;
   --pd-accent-hover: #60a5fa;
 
   --pd-success: #4ade80;
@@ -117,12 +133,29 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  /* Toggle "Reduzir movimentos" (MotionToggle seta .reduce-motion em <body>). */
-  body.reduce-motion *,
-  body.reduce-motion *::before,
-  body.reduce-motion *::after {
-    animation-duration: 0.001ms !important;
-    transition-duration: 0.001ms !important;
+
+  /* Transição suave de tema: como só as --pd-* trocam de valor (classe
+     .dark liga/desliga), o browser já anima as propriedades computadas
+     (background-color/border-color/color) nativamente — não precisa animar
+     a custom property em si. */
+  *,
+  *::before,
+  *::after {
+    transition:
+      background-color 200ms ease,
+      border-color 200ms ease,
+      color 200ms ease;
+  }
+
+  /* Preferência nativa do SO — sem toggle manual na UI (ver histórico do
+     MotionToggle, removido). */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
+    }
   }
 }
 

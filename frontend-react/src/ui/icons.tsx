@@ -97,12 +97,16 @@ export function IconInbox({ className }: IconProps) {
   );
 }
 
-export function IconKeyboard({ className }: IconProps) {
+export function IconSun({ className }: IconProps) {
   return svg(
     <>
-      <rect x="2.5" y="6" width="19" height="12" rx="2" />
-      <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.657-6.343l1.414-1.414M4.929 19.071l1.414-1.414m0-11.314L4.93 4.93m13.657 13.657l1.414 1.414" />
     </>,
     className,
   );
+}
+
+export function IconMoon({ className }: IconProps) {
+  return svg(<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />, className);
 }

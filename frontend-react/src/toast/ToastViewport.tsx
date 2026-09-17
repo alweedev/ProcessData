@@ -19,7 +19,7 @@ export function ToastViewport() {
           key={item.id}
           role="status"
           aria-live="polite"
-          className={`flex items-center gap-2.5 rounded-lg border px-3.5 py-2 text-sm shadow-card animate-[pd-toast-in_160ms_ease-out] ${STYLE[item.type].wrap}`}
+          className={`flex items-center gap-2.5 rounded-control border px-3.5 py-2 text-sm shadow-card animate-[pd-toast-in_160ms_ease-out] ${STYLE[item.type].wrap}`}
         >
           <span aria-hidden="true" className="shrink-0 text-base font-bold leading-none">
             {STYLE[item.type].icon}
