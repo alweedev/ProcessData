@@ -229,3 +229,13 @@
     transition-delay: calc(var(--i, 0) * 40ms);
   }
 }
+
+@keyframes pd-shimmer {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

@@ -7,6 +7,7 @@ import { Field } from "../../ui/Field";
 import { IconUserMinus } from "../../ui/icons";
 import { PageHeader } from "../../ui/PageHeader";
 import { RunHistoryPanel } from "../../ui/RunHistoryPanel";
+import { Skeleton } from "../../ui/Skeleton";
 import { TextInput } from "../../ui/TextInput";
 import { Textarea } from "../../ui/Textarea";
 import { formatCpf, useInativacao } from "./useInativacao";
@@ -225,6 +226,17 @@ export function InativacaoTab() {
                   </tr>
                 </thead>
                 <tbody id="results_body">
+                  {inativacao.searching && pageRows.length === 0 && (
+                    <tr aria-hidden="true">
+                      <td colSpan={4} className="px-3 py-2">
+                        <div className="space-y-1.5">
+                          <Skeleton className="h-5 w-full" />
+                          <Skeleton className="h-5 w-full" />
+                          <Skeleton className="h-5 w-full" />
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   {pageRows.map((r, i) => (
                     <tr
                       key={`${r.cpf}-${i}`}
