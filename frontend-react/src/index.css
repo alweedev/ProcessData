@@ -202,3 +202,30 @@
     transform: translateY(6px);
   }
 }
+
+/* Entrada de conteúdo (`.pd-enter`) e escalonamento (`.pd-stagger`) —
+   usados por Home, Histórico e a tabela de Estruturas. `@starting-style`
+   dá o estado inicial da transição no 1º paint/inserção no DOM, sem JS;
+   `--i` (setado inline por item, ex. style={{ "--i": index }}) atrasa cada
+   item em `40ms * i` via transition-delay. Cobertos pelo gate global de
+   prefers-reduced-motion no topo deste arquivo (zera duration/delay). */
+@layer utilities {
+  .pd-enter {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity 240ms ease-out,
+      transform 240ms ease-out;
+  }
+
+  @starting-style {
+    .pd-enter {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+
+  .pd-stagger {
+    transition-delay: calc(var(--i, 0) * 40ms);
+  }
+}
