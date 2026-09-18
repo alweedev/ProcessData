@@ -135,7 +135,25 @@
 }
 
 @layer base {
+  /* Reserva o espaço da barra de rolagem vertical mesmo quando o conteúdo
+     não precisa dela, mas sem forçar a barra a aparecer sempre. Sem isso,
+     trocar pra uma aba mais curta (Inativação, sem tabela/grid) removia a
+     barra, a viewport ficava ~15-17px mais larga, e o layout inteiro (barra
+     lateral + conteúdo) deslocava pro lado.
+
+     `scrollbar-gutter: stable` no <html> não reserva o espaço nesse caso —
+     é o elemento que rola a viewport, um caso especial que esse Chrome
+     ignora pra esse fim (testado). Passar a rolagem pra `body` (uma caixa
+     normal) resolve: `scrollbar-gutter` funciona nela, e a barra só aparece
+     quando o conteúdo daquela aba realmente excede a altura da tela. */
+  html {
+    overflow-y: hidden;
+  }
+
   body {
+    height: 100vh;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
     background-color: var(--color-bg);
     color: var(--color-text);
     font-family: var(--font-sans);
@@ -180,9 +198,37 @@
   }
 }
 
+/* Por padrão os pseudo-elementos de View Transition (overlay estático do
+   "antes"/"depois") interceptam clique — `elementFromPoint` nas coordenadas
+   de um botão real devolve <html> enquanto a transição roda. Sem isso, um
+   clique na aba durante a transição em andamento (troca de aba ou o
+   crossfade do ThemeToggle) é engolido, dando a impressão de que a troca
+   trava ou exige clicar de novo. */
+::view-transition,
+::view-transition-group(*),
+::view-transition-image-pair(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  pointer-events: none;
+}
+
 /* Transição de troca de aba (navigate() em routing/useHashRoute.ts) — classe
    `vt-nav` liga/desliga em <html> só durante essa transição, pra não afetar
-   o crossfade simples que o ThemeToggle já usa (sem essa classe). */
+   o crossfade simples que o ThemeToggle já usa (sem essa classe).
+
+   `::view-transition-group(root)` tem uma animação própria do navegador
+   (250ms por padrão, movendo/redimensionando o grupo — um no-op aqui, já
+   que "root" sempre ocupa a viewport inteira) que não tínhamos sobrescrito.
+   Como a transição só é considerada concluída quando TODAS as animações do
+   overlay terminam, isso mantinha o clique bloqueado por ~250-300ms mesmo
+   com o fade customizado abaixo durando só 150ms — dava pra confirmar com
+   `document.elementFromPoint()` nas coordenadas de um botão real durante a
+   troca: voltava `<html>`, não o botão, até a animação do grupo também
+   acabar. Igualar a duração aqui fecha essa janela junto com o fade. */
+:root.vt-nav::view-transition-group(root) {
+  animation-duration: 150ms;
+}
+
 :root.vt-nav::view-transition-old(root) {
   animation: pd-vt-out 150ms ease-in both;
 }
@@ -191,17 +237,39 @@
   animation: pd-vt-in 150ms ease-out both;
 }
 
+/* Só opacidade — sem translateY. Esse efeito captura a página inteira
+   (::view-transition-old/new(root)), incluindo a barra lateral de
+   navegação, que não faz parte do conteúdo que troca; com deslocamento
+   vertical ela parecia "subir" junto a cada troca de aba, e como cada
+   aba tem uma altura diferente, dava a sensação de a página inteira
+   mudar de tamanho. Um crossfade parado evita isso. */
 @keyframes pd-vt-out {
   to {
     opacity: 0;
-    transform: translateY(-6px);
   }
 }
 
 @keyframes pd-vt-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+  }
+}
+
+/* Abas inativas em App.tsx (Cadastro/Inativação/Estruturas/Histórico) usam
+   isso em vez do atributo `hidden` pra ficarem fora da tela sem passar por
+   `display: none`. Elas continuam montadas o tempo todo (preserva estado de
+   formulário ao trocar de aba), e `@starting-style` só reanima elementos
+   quando o `display` sai de `none` — com `hidden`, cada troca de aba fazia
+   as linhas de tabela com `.pd-enter`/`.pd-stagger` (abaixo) entrarem de
+   novo do zero, dando a sensação de "expandir"/instabilidade ao navegar.
+   `inert` (setado junto, em App.tsx) cobre foco/leitor de tela. */
+@layer utilities {
+  .pd-tabpanel-hidden {
+    position: absolute;
+    visibility: hidden;
+    width: 0;
+    height: 0;
+    overflow: hidden;
   }
 }
 

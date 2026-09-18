@@ -335,7 +335,7 @@ export function EstruturasTab() {
                       return (
                         <tr
                           key={item.aprovacaoId}
-                          className={`pd-enter pd-stagger border-t border-border ${flagged ? "bg-warning/15" : ""}`}
+                          className={`pd-enter pd-stagger border-t border-border ${flagged ? "bg-warning-soft" : ""}`}
                           style={{ "--i": Math.min(index, 12) } as CSSProperties}
                         >
                           <td className="px-2 py-1.5">
