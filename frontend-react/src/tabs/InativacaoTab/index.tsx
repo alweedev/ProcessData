@@ -16,9 +16,14 @@ const PAGE_SIZE = 10;
 
 function rowStatusClass(found: boolean, status: string): string {
   const s = (status || "").trim().toUpperCase();
-  if (!found) return "bg-warning/15";
-  if (s === "ATIVO") return "bg-success/10";
-  if (s) return "bg-danger/10";
+  // Tokens `-soft` (não opacidade sobre a cor base) — a cor base muda de
+  // tom entre claro/escuro (ex.: warning é marrom no claro, amarelo vivo no
+  // escuro), então aplicar a mesma opacidade nela dava tintas de intensidade
+  // bem diferente entre os temas. Os tokens `-soft` já são escolhidos por
+  // tema pra ter o mesmo peso visual dos dois lados.
+  if (!found) return "bg-warning-soft";
+  if (s === "ATIVO") return "bg-success-soft";
+  if (s) return "bg-danger-soft";
   return "";
 }
 

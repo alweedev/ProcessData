@@ -22,6 +22,7 @@ export function RunHistoryPanel({ operation }: { operation: RunOperation }) {
           icon={<IconInbox className="h-5 w-5" />}
           title="Nenhuma execução ainda"
           description="O resultado de cada geração aparece aqui, com opção de baixar de novo."
+          compact
         />
       ) : (
         <div className="space-y-2">

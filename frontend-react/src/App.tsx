@@ -88,16 +88,40 @@ export function App() {
 
           <main className="min-w-0 flex-1">
             {view === "home" && <HomeView />}
-            <div id="cadastro" role="tabpanel" aria-labelledby="cadastro-tab" hidden={active !== "cadastro"}>
+            <div
+              id="cadastro"
+              role="tabpanel"
+              aria-labelledby="cadastro-tab"
+              inert={active !== "cadastro"}
+              className={active !== "cadastro" ? "pd-tabpanel-hidden" : undefined}
+            >
               <CadastroTab />
             </div>
-            <div id="inativacao" role="tabpanel" aria-labelledby="inativacao-tab" hidden={active !== "inativacao"}>
+            <div
+              id="inativacao"
+              role="tabpanel"
+              aria-labelledby="inativacao-tab"
+              inert={active !== "inativacao"}
+              className={active !== "inativacao" ? "pd-tabpanel-hidden" : undefined}
+            >
               <InativacaoTab />
             </div>
-            <div id="estruturas" role="tabpanel" aria-labelledby="estruturas-tab" hidden={active !== "estruturas"}>
+            <div
+              id="estruturas"
+              role="tabpanel"
+              aria-labelledby="estruturas-tab"
+              inert={active !== "estruturas"}
+              className={active !== "estruturas" ? "pd-tabpanel-hidden" : undefined}
+            >
               <EstruturasTab />
             </div>
-            <div id="historico" role="tabpanel" aria-labelledby="historico-tab" hidden={active !== "historico"}>
+            <div
+              id="historico"
+              role="tabpanel"
+              aria-labelledby="historico-tab"
+              inert={active !== "historico"}
+              className={active !== "historico" ? "pd-tabpanel-hidden" : undefined}
+            >
               <HistoricoTab />
             </div>
           </main>
