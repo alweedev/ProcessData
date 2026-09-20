@@ -1,7 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { useApiHealth, type ApiState } from "../../health/apiHealthStore";
 import { navigate, type View } from "../../routing/useHashRoute";
-import { Badge } from "../../ui/Badge";
 import { Card } from "../../ui/Card";
 import { EmptyState } from "../../ui/EmptyState";
 import { IconChip } from "../../ui/IconChip";
@@ -44,19 +42,7 @@ const OPS: Op[] = [
   },
 ];
 
-const API_TEXT: Record<ApiState, string> = {
-  online: "Online",
-  offline: "Offline",
-  checking: "Verificando…",
-};
-const API_TONE: Record<ApiState, "success" | "danger" | "neutral"> = {
-  online: "success",
-  offline: "danger",
-  checking: "neutral",
-};
-
 export function HomeView() {
-  const api = useApiHealth();
   const recent = useRecentRuns(6);
 
   return (
@@ -64,7 +50,6 @@ export function HomeView() {
       <PageHeader
         title="Visão geral"
         description="Ferramentas de tratamento de planilhas do suporte Vermari."
-        actions={<Badge tone={API_TONE[api]}>API {API_TEXT[api]}</Badge>}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

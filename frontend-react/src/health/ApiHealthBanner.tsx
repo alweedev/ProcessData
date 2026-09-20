@@ -30,15 +30,17 @@ export function ApiHealthBanner() {
   if (!show) return null;
 
   return (
-    <div role="alert" aria-live="assertive" className={`border-b px-4 py-2 text-sm ${TONE_OUTLINE.danger}`}>
-      <div className="mx-auto flex max-w-[1360px] items-center justify-between gap-3">
-        <span>
-          {state === "checking" ? "Verificando conexão com o servidor…" : "Não foi possível conectar ao servidor."}
-        </span>
-        <Button variant="outline" size="sm" onClick={() => void checkApiHealth(true)}>
-          Tentar novamente
-        </Button>
-      </div>
+    <div
+      role="alert"
+      aria-live="assertive"
+      className={`flex items-center justify-between gap-3 border-b px-4 py-2 text-sm md:px-8 ${TONE_OUTLINE.danger}`}
+    >
+      <span>
+        {state === "checking" ? "Verificando conexão com o servidor…" : "Não foi possível conectar ao servidor."}
+      </span>
+      <Button variant="outline" size="sm" onClick={() => void checkApiHealth(true)}>
+        Tentar novamente
+      </Button>
     </div>
   );
 }
