@@ -110,3 +110,33 @@ export function IconSun({ className }: IconProps) {
 export function IconMoon({ className }: IconProps) {
   return svg(<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />, className);
 }
+
+export function IconCheck({ className }: IconProps) {
+  return svg(<path d="m5 12.5 4.5 4.5L19 7.5" />, className);
+}
+
+export function IconX({ className }: IconProps) {
+  return svg(<path d="M6 6l12 12M18 6 6 18" />, className);
+}
+
+export function IconFile({ className }: IconProps) {
+  return svg(
+    <>
+      <path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7z" />
+      <path d="M14 3v4h4" />
+      <path d="m9.5 12.5 5 5m0-5-5 5" />
+    </>,
+    className,
+  );
+}
+
+export function IconAlert({ className }: IconProps) {
+  return svg(
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v5" />
+      <path d="M12 16.5h.01" />
+    </>,
+    className,
+  );
+}

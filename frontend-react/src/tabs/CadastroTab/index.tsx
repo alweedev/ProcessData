@@ -2,16 +2,29 @@ import { useState } from "react";
 import { FileDropzone } from "../../components/FileDropzone";
 import { Modal } from "../../components/Modal";
 import { usePersistedState } from "../../hooks/usePersistedState";
+import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
-import { Field } from "../../ui/Field";
-import { FileChips } from "../../ui/FileChips";
-import { IconUpload } from "../../ui/icons";
+import { FileList } from "../../ui/FileList";
+import { IconAlert, IconCheck, IconUpload } from "../../ui/icons";
 import { PageHeader } from "../../ui/PageHeader";
 import { RunHistoryPanel } from "../../ui/RunHistoryPanel";
-import { Select } from "../../ui/Select";
+import { SegmentedControl } from "../../ui/SegmentedControl";
+import { StepSection } from "../../ui/StepSection";
+import { Stepper, type StepperItem } from "../../ui/Stepper";
+import { TONE_OUTLINE } from "../../ui/tone";
 import { ValidationReport } from "../../ui/ValidationReport";
-import { useCadastro } from "./useCadastro";
+import { MAX_FILES, useCadastro } from "./useCadastro";
+
+const LOGIN_OPTIONS = [
+  { value: "CPF", label: "CPF", description: "Acesso pelo CPF do usuário" },
+  { value: "EMAIL", label: "E-mail", description: "Acesso pelo e-mail" },
+];
+
+const FLUXO_OPTIONS = [
+  { value: "SELF", label: "SELF", description: "Cadastro feito pelo próprio usuário" },
+  { value: "FRONT", label: "FRONT", description: "Cadastro feito pelo atendimento" },
+];
 
 export function CadastroTab() {
   const cadastro = useCadastro();
@@ -27,6 +40,27 @@ export function CadastroTab() {
     cadastro.clear();
     setResetKey((k) => k + 1);
   }
+
+  const hasFiles = cadastro.files.length > 0;
+  const loginLabel = LOGIN_OPTIONS.find((o) => o.value === prefs.login_choice)?.label ?? prefs.login_choice;
+
+  const steps: StepperItem[] = [
+    {
+      label: "Enviar fichas",
+      detail: hasFiles ? `${cadastro.files.length} ${cadastro.files.length === 1 ? "arquivo" : "arquivos"}` : "Planilhas .xlsx ou .xls",
+      state: hasFiles || cadastro.done ? "done" : "current",
+    },
+    {
+      label: "Configurar",
+      detail: `${loginLabel} · ${prefs.fluxo}`,
+      state: hasFiles || cadastro.done ? "done" : "todo",
+    },
+    {
+      label: "Validar e gerar",
+      detail: cadastro.done ? "Arquivo gerado" : "Arquivo pronto para carga",
+      state: cadastro.done ? "done" : hasFiles ? "current" : "todo",
+    },
+  ];
 
   return (
     <div>
@@ -66,114 +100,158 @@ export function CadastroTab() {
         <p className="mt-2 text-text-subtle">Dica: valide a planilha antes de gerar para evitar retrabalho.</p>
       </Modal>
 
-      <Card>
-        <FileDropzone
-          key={resetKey}
-          id="cadastro_files"
-          containerId="cadastro_uploadArea"
-          accept=".xlsx,.xls"
-          multiple
-          ariaLabel="Upload da base de cadastro. Pressione para selecionar arquivo"
-          description="Arraste o Excel (.xlsx) ou pressione para selecionar."
-          syncFiles={cadastro.files}
-          onFiles={(list) => {
-            const accepted = cadastro.pickFiles(list);
-            if (!accepted) setResetKey((k) => k + 1);
-          }}
-        >
-          <div id="cadastro_uploadFeedback" aria-live="polite">
-            <FileChips
-              files={cadastro.files}
-              onRemove={cadastro.removeFile}
-              onClearAll={clear}
-              clearAllId="cadastro_clear_btn"
+      <Stepper label="Etapas do cadastro" steps={steps} />
+
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <Card padding="lg">
+          <StepSection number={1} title="Enviar fichas" description="arraste ou selecione as planilhas">
+            <FileDropzone
+              key={resetKey}
+              variant="rich"
+              compact={hasFiles}
+              buttonLabel={hasFiles ? "Trocar arquivos" : "Selecionar"}
+              id="cadastro_files"
+              containerId="cadastro_uploadArea"
+              accept=".xlsx,.xls"
+              multiple
+              ariaLabel="Upload da base de cadastro. Pressione para selecionar arquivo"
+              description={hasFiles ? "Arraste outras planilhas aqui para trocar a seleção" : "Arraste as planilhas aqui ou clique para selecionar"}
+              hint={`Excel .xlsx ou .xls · até ${MAX_FILES} arquivos · 10 MB cada`}
+              syncFiles={cadastro.files}
+              onFiles={(list) => {
+                const accepted = cadastro.pickFiles(list);
+                if (!accepted) setResetKey((k) => k + 1);
+              }}
             />
-          </div>
-        </FileDropzone>
+            <div id="cadastro_uploadFeedback" aria-live="polite">
+              <FileList
+                files={cadastro.files}
+                maxFiles={MAX_FILES}
+                onRemove={cadastro.removeFile}
+                onClearAll={clear}
+                clearAllId="cadastro_clear_btn"
+              />
+            </div>
+          </StepSection>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Field id="cadastro_login_choice" label="Tipo de login">
-            <Select
-              id="cadastro_login_choice"
-              aria-label="Escolher tipo de login"
-              title="Selecionar formato principal de acesso"
-              value={prefs.login_choice}
-              onChange={(e) => setPrefs({ login_choice: e.target.value })}
-            >
-              <option value="CPF">CPF</option>
-              <option value="EMAIL">E-MAIL</option>
-            </Select>
-          </Field>
-          <Field id="cadastro_fluxo" label="Fluxo">
-            <Select
-              id="cadastro_fluxo"
-              aria-label="Escolher fluxo"
-              title="Definir processo operacional (SELF ou FRONT)"
-              value={prefs.fluxo}
-              onChange={(e) => setPrefs({ fluxo: e.target.value })}
-            >
-              <option value="SELF">SELF</option>
-              <option value="FRONT">FRONT</option>
-            </Select>
-          </Field>
+          <StepSection number={2} title="Configurar" description="como o arquivo de carga será montado">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SegmentedControl
+                id="cadastro_login_choice"
+                label="Tipo de login"
+                value={prefs.login_choice}
+                options={LOGIN_OPTIONS}
+                onChange={(value) => setPrefs({ login_choice: value })}
+              />
+              <SegmentedControl
+                id="cadastro_fluxo"
+                label="Fluxo"
+                value={prefs.fluxo}
+                options={FLUXO_OPTIONS}
+                onChange={(value) => setPrefs({ fluxo: value })}
+              />
+            </div>
+          </StepSection>
+
+          <StepSection number={3} title="Validar e gerar" description="confira antes de gerar o arquivo">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                id="cadastro_validate_btn"
+                variant="secondary"
+                disabled={!hasFiles || cadastro.generating}
+                loading={cadastro.validation.status === "loading"}
+                onClick={() => cadastro.validate(prefs.login_choice, prefs.fluxo)}
+              >
+                {cadastro.validation.status === "loading" ? "Validando..." : "Validar planilha"}
+              </Button>
+              <Button
+                id="cadastro_btn"
+                aria-label="Gerar cadastro"
+                title="Processar a planilha e gerar arquivo tratado"
+                loading={cadastro.generating}
+                onClick={handleSubmit}
+              >
+                {cadastro.generating ? "Processando..." : "Gerar cadastro"}
+              </Button>
+              {hasFiles ? (
+                <span className="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
+                  Pronto para gerar:
+                  <Badge tone="neutral">
+                    {cadastro.files.length} {cadastro.files.length === 1 ? "arquivo" : "arquivos"}
+                  </Badge>
+                  <Badge tone="neutral">Login {loginLabel}</Badge>
+                  <Badge tone="neutral">Fluxo {prefs.fluxo}</Badge>
+                </span>
+              ) : (
+                <span className="text-xs text-text-muted">Envie ao menos uma ficha para validar e gerar.</span>
+              )}
+            </div>
+
+            {cadastro.validation.status !== "idle" && (
+              <div className="mt-4">
+                <ValidationReport
+                  report={cadastro.validation.report}
+                  loading={cadastro.validation.status === "loading"}
+                  error={cadastro.validation.status === "error" ? cadastro.validation.error : null}
+                />
+              </div>
+            )}
+
+            {cadastro.generating && (
+              <div className="mt-4">
+                <div className="mb-1 flex items-center justify-between text-xs text-text-muted">
+                  <span>Processando as fichas…</span>
+                  <span className="tabular-nums">{Math.round(cadastro.progress)}%</span>
+                </div>
+                <div id="cadastro_progress" className="h-2 overflow-hidden rounded-pill bg-surface-sunken">
+                  <div
+                    id="cadastro_progressBar"
+                    role="progressbar"
+                    aria-label="Progresso do processamento"
+                    aria-valuenow={Math.round(cadastro.progress)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    style={{ width: `${cadastro.progress}%` }}
+                    className="h-full bg-accent transition-[width]"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div id="cadastro_status" aria-live="polite">
+              {cadastro.done && (
+                <div className="mt-4 flex items-start gap-3 rounded-control border border-success/40 bg-success-soft px-4 py-3">
+                  <span className="mt-0.5 text-success">
+                    <IconCheck className="h-5 w-5" />
+                  </span>
+                  <div className="text-sm">
+                    <p className="font-medium text-success">Cadastro gerado com sucesso</p>
+                    <p className="mt-0.5 text-text-muted">
+                      O download de <strong className="font-medium text-text">saida_cadastro.xlsx</strong> começou. O
+                      arquivo também fica em “Nesta sessão”, para baixar de novo.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {cadastro.debugMsg && (
+              <div
+                id="cadastro_debug"
+                aria-live="assertive"
+                className={`mt-4 flex items-start gap-3 rounded-control border px-4 py-3 text-sm ${TONE_OUTLINE.danger}`}
+              >
+                <IconAlert className="mt-0.5 h-5 w-5 shrink-0" />
+                <span>{cadastro.debugMsg}</span>
+              </div>
+            )}
+          </StepSection>
+        </Card>
+
+        <div className="xl:sticky xl:top-20">
+          <RunHistoryPanel operation="cadastro" className="mt-0" />
         </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button
-            id="cadastro_validate_btn"
-            variant="secondary"
-            disabled={cadastro.files.length === 0}
-            loading={cadastro.validation.status === "loading"}
-            onClick={() => cadastro.validate(prefs.login_choice, prefs.fluxo)}
-          >
-            {cadastro.validation.status === "loading" ? "Validando..." : "Validar planilha"}
-          </Button>
-          <Button
-            id="cadastro_btn"
-            aria-label="Gerar cadastro"
-            title="Processar a planilha e gerar arquivo tratado"
-            loading={cadastro.generating}
-            onClick={handleSubmit}
-          >
-            {cadastro.generating ? "Processando..." : "Gerar"}
-          </Button>
-        </div>
-
-        {cadastro.validation.status !== "idle" && (
-          <div className="mt-3">
-            <ValidationReport
-              report={cadastro.validation.report}
-              loading={cadastro.validation.status === "loading"}
-              error={cadastro.validation.status === "error" ? cadastro.validation.error : null}
-            />
-          </div>
-        )}
-
-        {cadastro.generating && (
-          <div id="cadastro_progress" className="mt-4 h-2 overflow-hidden rounded-pill bg-surface-sunken">
-            <div
-              id="cadastro_progressBar"
-              role="progressbar"
-              aria-valuenow={Math.round(cadastro.progress)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              style={{ width: `${cadastro.progress}%` }}
-              className="h-full bg-accent transition-[width]"
-            />
-          </div>
-        )}
-
-        <div id="cadastro_status" className="mt-3 text-sm" aria-live="polite">
-          {cadastro.done && <span className="font-medium text-success">✔ Concluído</span>}
-        </div>
-        {cadastro.debugMsg && (
-          <div id="cadastro_debug" className="mt-3 text-sm text-danger" aria-live="assertive">
-            {cadastro.debugMsg}
-          </div>
-        )}
-      </Card>
-
-      <RunHistoryPanel operation="cadastro" />
+      </div>
     </div>
   );
 }

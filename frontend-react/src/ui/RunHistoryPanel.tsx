@@ -11,11 +11,11 @@ const LABEL: Record<RunOperation, string> = {
 };
 
 /** Lista de execuções da sessão para uma operação (com "baixar novamente"). */
-export function RunHistoryPanel({ operation }: { operation: RunOperation }) {
+export function RunHistoryPanel({ operation, className }: { operation: RunOperation; className?: string }) {
   const runs = useRuns().filter((run) => run.operation === operation);
 
   return (
-    <div className="mt-6">
+    <div className={className ?? "mt-6"}>
       <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-text-subtle">Nesta sessão</h3>
       {runs.length === 0 ? (
         <EmptyState

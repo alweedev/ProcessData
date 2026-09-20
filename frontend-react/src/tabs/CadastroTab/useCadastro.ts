@@ -5,7 +5,7 @@ import { triggerAnchorDownload } from "../../lib/downloadFile";
 import { addRun } from "../../runs/runsStore";
 import { pushToast } from "../../toast/toastStore";
 
-const MAX_FILES = 5;
+export const MAX_FILES = 5;
 const MAX_SIZE = 10 * 1024 * 1024;
 const VALIDATE_TIMEOUT_MS = 15000;
 
