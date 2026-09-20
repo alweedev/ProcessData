@@ -1,6 +1,6 @@
 // @ts-check
 import { test, expect } from "@playwright/test";
-import { escolherConfigCadastro, xlsxFile, validCpf } from "./fixtures.mjs";
+import { avancarAteGerar, xlsxFile, validCpf } from "./fixtures.mjs";
 
 const XSS = '<img src=x onerror="window.__xss=1"> "><script>window.__xss=1</script>';
 
@@ -24,7 +24,7 @@ test("showToast renderiza mensagem maliciosa como texto, nunca como HTML", async
 
   await page.goto("/");
   await page.locator("#cadastro-tab").click();
-  await expect(page.locator("#cadastro_btn")).toBeVisible();
+  await expect(page.locator("#cadastro_files")).toBeAttached(); // 1ª etapa do assistente
   await page.setInputFiles(
     "#cadastro_files",
     xlsxFile("cadastro.xlsx", [
@@ -38,7 +38,7 @@ test("showToast renderiza mensagem maliciosa como texto, nunca como HTML", async
       },
     ]),
   );
-  await escolherConfigCadastro(page);
+  await avancarAteGerar(page);
   await page.locator("#cadastro_btn").click();
 
   // Não usa .first(): o ApiStatusBadge dispara um toast "API Online" ao

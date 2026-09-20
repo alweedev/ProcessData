@@ -31,9 +31,11 @@ export function validCpf(seed = 0) {
   return digits.join("");
 }
 
-/** O Cadastro não tem valor padrão nem lembra a última escolha: tipo de login e
- *  fluxo precisam ser escolhidos a cada cadastro. */
-export async function escolherConfigCadastro(page, login = "CPF", fluxo = "SELF") {
+/** Percorre o assistente do Cadastro até a etapa "Gerar", com as fichas já enviadas:
+ *  Continuar (fichas -> tipo de login), escolher o login e o fluxo (cada clique avança sozinho).
+ *  Não há valor padrão nem memória da última escolha: sempre se escolhe. */
+export async function avancarAteGerar(page, login = "CPF", fluxo = "SELF") {
+  await page.locator("#cadastro_next_btn").click();
   await page.locator(`#cadastro_login_choice-${login}`).click();
   await page.locator(`#cadastro_fluxo-${fluxo}`).click();
 }

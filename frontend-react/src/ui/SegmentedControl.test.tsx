@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SegmentedControl } from "./SegmentedControl";
 
 const OPTIONS = [
@@ -99,6 +99,37 @@ describe("SegmentedControl", () => {
       await userEvent.keyboard("{ArrowRight}");
 
       expect(screen.getByRole("radio", { name: "E-mail" })).toHaveAttribute("aria-checked", "true");
+    });
+  });
+
+  describe("onCommit — confirmar a escolha", () => {
+    it("clicar numa opção confirma com o valor clicado", async () => {
+      const onCommit = vi.fn();
+      render(<SegmentedControl id="login" label="Tipo" value="CPF" options={OPTIONS} onChange={() => {}} onCommit={onCommit} />);
+
+      await userEvent.click(screen.getByRole("radio", { name: "E-mail" }));
+
+      expect(onCommit).toHaveBeenCalledExactlyOnceWith("EMAIL");
+    });
+
+    it("navegar com as setas escolhe mas NÃO confirma (quem usa teclado ainda está decidindo)", async () => {
+      const onCommit = vi.fn();
+      render(<SegmentedControl id="login" label="Tipo" value="CPF" options={OPTIONS} onChange={() => {}} onCommit={onCommit} />);
+      screen.getByRole("radio", { name: "CPF" }).focus();
+
+      await userEvent.keyboard("{ArrowRight}");
+
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
+    it("Enter na opção em foco confirma", async () => {
+      const onCommit = vi.fn();
+      render(<SegmentedControl id="login" label="Tipo" value="CPF" options={OPTIONS} onChange={() => {}} onCommit={onCommit} />);
+      screen.getByRole("radio", { name: "CPF" }).focus();
+
+      await userEvent.keyboard("{Enter}");
+
+      expect(onCommit).toHaveBeenCalledExactlyOnceWith("CPF");
     });
   });
 

@@ -314,6 +314,45 @@
   }
 }
 
+/* Anel da linha do tempo (Stepper): sobe em arco e pousa, como um pulo entre os pontos. */
+@keyframes pd-hop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-14px) scale(1.12);
+  }
+  75% {
+    transform: translateY(1px) scale(0.97);
+  }
+}
+
+/* ✓ que aparece quando uma etapa é concluída. */
+@keyframes pd-pop {
+  from {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.3);
+  }
+}
+
+/* Entrada do conteúdo de uma etapa, vindo do lado para onde o usuário está indo. */
+@keyframes pd-step-in-fwd {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes pd-step-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
 @keyframes pd-shimmer {
   0%,
   100% {

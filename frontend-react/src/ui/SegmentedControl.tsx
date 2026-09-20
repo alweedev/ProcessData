@@ -13,6 +13,10 @@ interface SegmentedControlProps {
   value: string | null;
   options: SegmentedOption[];
   onChange: (value: string) => void;
+  /** Chamado ao CONFIRMAR uma opção (clique, Enter ou Espaço) — não ao navegar pelas setas, que só escolhem. */
+  onCommit?: (value: string) => void;
+  /** `lg`: opções maiores, para quando o controle ocupa uma etapa inteira. */
+  size?: "md" | "lg";
   /** Escolha obrigatória: anuncia `aria-required` e mostra "obrigatório" enquanto não houver escolha. */
   required?: boolean;
 }
@@ -22,7 +26,16 @@ const ARROW_STEP: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowL
 /** Escolha exclusiva entre poucas opções (radiogroup): mostra todas de uma
  *  vez, no lugar de um <select> que as esconde. Setas movem a seleção; só a
  *  opção marcada entra na ordem de Tab. */
-export function SegmentedControl({ id, label, value, options, onChange, required = false }: SegmentedControlProps) {
+export function SegmentedControl({
+  id,
+  label,
+  value,
+  options,
+  onChange,
+  onCommit,
+  size = "md",
+  required = false,
+}: SegmentedControlProps) {
   const labelId = useId();
 
   function onKeyDown(e: KeyboardEvent<HTMLButtonElement>, index: number) {
@@ -60,14 +73,24 @@ export function SegmentedControl({ id, label, value, options, onChange, required
               aria-checked={checked}
               // Sem escolha, a 1ª opção segue alcançável por Tab (senão o grupo ficaria inacessível).
               tabIndex={checked || (value === null && index === 0) ? 0 : -1}
-              onClick={() => onChange(option.value)}
+              onClick={() => {
+                onChange(option.value);
+                onCommit?.(option.value);
+              }}
               onKeyDown={(e) => onKeyDown(e, index)}
               className={cn(
-                "rounded-control border px-3 py-2.5 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/50",
+                size === "lg" ? "py-5" : "py-2.5",
+                "rounded-control border px-3 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/50",
                 checked ? "border-accent bg-accent/10" : "border-border bg-surface hover:border-border-strong hover:bg-surface-2",
               )}
             >
-              <span className={cn("block text-sm font-semibold", checked ? "text-accent-text" : "text-text")}>
+              <span
+                className={cn(
+                  "block font-semibold",
+                  size === "lg" ? "text-base" : "text-sm",
+                  checked ? "text-accent-text" : "text-text",
+                )}
+              >
                 {option.label}
               </span>
             </button>
