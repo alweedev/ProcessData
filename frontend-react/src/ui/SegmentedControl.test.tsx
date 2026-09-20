@@ -61,6 +61,47 @@ describe("SegmentedControl", () => {
     expect(screen.getByRole("radio", { name: "Outro" })).toHaveAttribute("aria-checked", "true");
   });
 
+  describe("sem opção escolhida (value nulo)", () => {
+    function Vazio() {
+      const [value, setValue] = useState<string | null>(null);
+      return <SegmentedControl id="login" label="Tipo de login" value={value} options={OPTIONS} onChange={setValue} />;
+    }
+
+    it("nenhuma opção vem marcada e a primeira continua alcançável por Tab", () => {
+      render(<Vazio />);
+      const radios = screen.getAllByRole("radio");
+
+      expect(radios.map((r) => r.getAttribute("aria-checked"))).toEqual(["false", "false", "false"]);
+      expect(radios.map((r) => r.getAttribute("tabindex"))).toEqual(["0", "-1", "-1"]);
+    });
+
+    it("com `required`, avisa que a escolha é obrigatória até alguém escolher", async () => {
+      function Obrigatorio() {
+        const [value, setValue] = useState<string | null>(null);
+        return (
+          <SegmentedControl id="login" label="Tipo de login" value={value} options={OPTIONS} onChange={setValue} required />
+        );
+      }
+      render(<Obrigatorio />);
+
+      expect(screen.getByRole("radiogroup", { name: /Tipo de login/ })).toHaveAttribute("aria-required", "true");
+      expect(screen.getByText("obrigatório")).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("radio", { name: "CPF" }));
+
+      expect(screen.queryByText("obrigatório")).not.toBeInTheDocument();
+    });
+
+    it("→ a partir da primeira opção seleciona a segunda", async () => {
+      render(<Vazio />);
+      screen.getByRole("radio", { name: "CPF" }).focus();
+
+      await userEvent.keyboard("{ArrowRight}");
+
+      expect(screen.getByRole("radio", { name: "E-mail" })).toHaveAttribute("aria-checked", "true");
+    });
+  });
+
   it("outras teclas não mudam a seleção", async () => {
     render(<Harness />);
     screen.getByRole("radio", { name: "CPF" }).focus();

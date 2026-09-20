@@ -1,6 +1,6 @@
 // @ts-check
 import { test, expect } from "@playwright/test";
-import { xlsxFile, validCpf } from "./fixtures.mjs";
+import { escolherConfigCadastro, xlsxFile, validCpf } from "./fixtures.mjs";
 
 const cadastroRows = (n) =>
   Array.from({ length: n }, (_, i) => ({
@@ -21,6 +21,7 @@ test.beforeEach(async ({ page }) => {
 
 test("gera saida_cadastro.xlsx e limpa a selecao no sucesso", async ({ page }) => {
   await page.setInputFiles("#cadastro_files", xlsxFile("cadastro.xlsx", cadastroRows(1)));
+  await escolherConfigCadastro(page);
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -41,18 +42,65 @@ test("gera saida_cadastro.xlsx e limpa a selecao no sucesso", async ({ page }) =
     .toBe(0);
 });
 
-test("'Gerar cadastro' fica bloqueado até escolher uma planilha", async ({ page }) => {
+test("sem planilha, validar e gerar ficam bloqueados", async ({ page }) => {
+  await expect(page.locator("#cadastro_validate_btn")).toBeDisabled();
   await expect(page.locator("#cadastro_btn")).toBeDisabled();
+});
 
+test("com planilha mas sem escolher login e fluxo, continua bloqueado e diz o que falta", async ({ page }) => {
   await page.setInputFiles("#cadastro_files", xlsxFile("cadastro.xlsx", cadastroRows(1)));
 
+  await expect(page.locator("#cadastro_btn")).toBeDisabled();
+  await expect(page.locator("#cadastro_validate_btn")).toBeDisabled();
+  await expect(page.locator("#cadastro_hint")).toContainText("tipo de login");
+  await expect(page.locator("#cadastro_hint")).toContainText("fluxo");
+
+  await page.locator("#cadastro_login_choice-CPF").click();
+  await expect(page.locator("#cadastro_btn")).toBeDisabled();
+  await expect(page.locator("#cadastro_hint")).not.toContainText("tipo de login");
+  await expect(page.locator("#cadastro_hint")).toContainText("fluxo");
+
+  await page.locator("#cadastro_fluxo-FRONT").click();
   await expect(page.locator("#cadastro_btn")).toBeEnabled();
+  await expect(page.locator("#cadastro_validate_btn")).toBeEnabled();
+});
+
+test("as opções começam sem nenhuma escolha", async ({ page }) => {
+  for (const id of ["CPF", "EMAIL"]) {
+    await expect(page.locator(`#cadastro_login_choice-${id}`)).toHaveAttribute("aria-checked", "false");
+  }
+  for (const id of ["SELF", "FRONT"]) {
+    await expect(page.locator(`#cadastro_fluxo-${id}`)).toHaveAttribute("aria-checked", "false");
+  }
+});
+
+test("as escolhas não ficam salvas: ao fechar e reabrir é preciso escolher de novo", async ({ page }) => {
+  await escolherConfigCadastro(page, "EMAIL", "FRONT");
+  await expect(page.locator("#cadastro_login_choice-EMAIL")).toHaveAttribute("aria-checked", "true");
+
+  await page.reload();
+  await page.locator("#cadastro-tab").click();
+
+  await expect(page.locator("#cadastro_login_choice-EMAIL")).toHaveAttribute("aria-checked", "false");
+  await expect(page.locator("#cadastro_fluxo-FRONT")).toHaveAttribute("aria-checked", "false");
+});
+
+test("depois de gerar, as escolhas voltam a zero para o próximo cadastro", async ({ page }) => {
+  await page.setInputFiles("#cadastro_files", xlsxFile("cadastro.xlsx", cadastroRows(1)));
+  await escolherConfigCadastro(page, "EMAIL", "FRONT");
+
+  await Promise.all([page.waitForEvent("download"), page.locator("#cadastro_btn").click()]);
+  await expect(page.locator("#cadastro_status")).toContainText("Cadastro concluído");
+
+  await expect(page.locator("#cadastro_login_choice-EMAIL")).toHaveAttribute("aria-checked", "false");
+  await expect(page.locator("#cadastro_fluxo-FRONT")).toHaveAttribute("aria-checked", "false");
 });
 
 test("depois de validar, o relatório aparece dentro da área visível da tela", async ({ page }) => {
   // Viewport baixa: o relatório nasce abaixo dos botões, fora da tela.
   await page.setViewportSize({ width: 1280, height: 560 });
   await page.setInputFiles("#cadastro_files", xlsxFile("cadastro.xlsx", cadastroRows(3)));
+  await escolherConfigCadastro(page);
 
   await page.locator("#cadastro_validate_btn").click();
 

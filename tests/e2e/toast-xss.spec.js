@@ -1,6 +1,6 @@
 // @ts-check
 import { test, expect } from "@playwright/test";
-import { xlsxFile, validCpf } from "./fixtures.mjs";
+import { escolherConfigCadastro, xlsxFile, validCpf } from "./fixtures.mjs";
 
 const XSS = '<img src=x onerror="window.__xss=1"> "><script>window.__xss=1</script>';
 
@@ -38,6 +38,7 @@ test("showToast renderiza mensagem maliciosa como texto, nunca como HTML", async
       },
     ]),
   );
+  await escolherConfigCadastro(page);
   await page.locator("#cadastro_btn").click();
 
   // Não usa .first(): o ApiStatusBadge dispara um toast "API Online" ao

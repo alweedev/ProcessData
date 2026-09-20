@@ -9,9 +9,12 @@ export interface SegmentedOption {
 interface SegmentedControlProps {
   id: string;
   label: string;
-  value: string;
+  /** `null` = nenhuma opção escolhida (não há valor padrão). */
+  value: string | null;
   options: SegmentedOption[];
   onChange: (value: string) => void;
+  /** Escolha obrigatória: anuncia `aria-required` e mostra "obrigatório" enquanto não houver escolha. */
+  required?: boolean;
 }
 
 const ARROW_STEP: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
@@ -19,7 +22,7 @@ const ARROW_STEP: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowL
 /** Escolha exclusiva entre poucas opções (radiogroup): mostra todas de uma
  *  vez, no lugar de um <select> que as esconde. Setas movem a seleção; só a
  *  opção marcada entra na ordem de Tab. */
-export function SegmentedControl({ id, label, value, options, onChange }: SegmentedControlProps) {
+export function SegmentedControl({ id, label, value, options, onChange, required = false }: SegmentedControlProps) {
   const labelId = useId();
 
   function onKeyDown(e: KeyboardEvent<HTMLButtonElement>, index: number) {
@@ -33,10 +36,19 @@ export function SegmentedControl({ id, label, value, options, onChange }: Segmen
 
   return (
     <div>
-      <p id={labelId} className="mb-1.5 text-sm font-medium text-text">
-        {label}
-      </p>
-      <div id={id} role="radiogroup" aria-labelledby={labelId} className="grid grid-cols-2 gap-2">
+      <div className="mb-1.5 flex items-baseline gap-2">
+        <p id={labelId} className="text-sm font-medium text-text">
+          {label}
+        </p>
+        {required && value === null && <span className="text-xs text-text-muted">obrigatório</span>}
+      </div>
+      <div
+        id={id}
+        role="radiogroup"
+        aria-labelledby={labelId}
+        aria-required={required || undefined}
+        className="grid grid-cols-2 gap-2"
+      >
         {options.map((option, index) => {
           const checked = option.value === value;
           return (
@@ -46,7 +58,8 @@ export function SegmentedControl({ id, label, value, options, onChange }: Segmen
               type="button"
               role="radio"
               aria-checked={checked}
-              tabIndex={checked ? 0 : -1}
+              // Sem escolha, a 1ª opção segue alcançável por Tab (senão o grupo ficaria inacessível).
+              tabIndex={checked || (value === null && index === 0) ? 0 : -1}
               onClick={() => onChange(option.value)}
               onKeyDown={(e) => onKeyDown(e, index)}
               className={cn(

@@ -30,3 +30,10 @@ export function validCpf(seed = 0) {
   }
   return digits.join("");
 }
+
+/** O Cadastro não tem valor padrão nem lembra a última escolha: tipo de login e
+ *  fluxo precisam ser escolhidos a cada cadastro. */
+export async function escolherConfigCadastro(page, login = "CPF", fluxo = "SELF") {
+  await page.locator(`#cadastro_login_choice-${login}`).click();
+  await page.locator(`#cadastro_fluxo-${fluxo}`).click();
+}

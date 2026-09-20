@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FileDropzone } from "../../components/FileDropzone";
 import { Modal } from "../../components/Modal";
-import { usePersistedState } from "../../hooks/usePersistedState";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
@@ -15,6 +14,7 @@ import { StepSection } from "../../ui/StepSection";
 import { Stepper, type StepperItem } from "../../ui/Stepper";
 import { TONE_OUTLINE } from "../../ui/tone";
 import { ValidationReport } from "../../ui/ValidationReport";
+import { descreverPendencias } from "./pendencias";
 import { MAX_FILES, OUTPUT_FILENAME, useCadastro } from "./useCadastro";
 
 const LOGIN_OPTIONS = [
@@ -27,14 +27,33 @@ const FLUXO_OPTIONS = [
   { value: "FRONT", label: "FRONT" },
 ];
 
+interface Configuracao {
+  login: string | null;
+  fluxo: string | null;
+}
+
+/** Sem valor padrão e sem memória da última escolha (nem no localStorage): tipo de
+ *  login e fluxo são escolhidos a cada cadastro, para não gerar com o da vez anterior. */
+const SEM_CONFIGURACAO: Configuracao = { login: null, fluxo: null };
+
 export function CadastroTab() {
   const cadastro = useCadastro();
-  const [prefs, setPrefs] = usePersistedState("cadastro_prefs", { login_choice: "CPF", fluxo: "SELF" });
+  const [config, setConfig] = useState<Configuracao>(SEM_CONFIGURACAO);
   const [resetKey, setResetKey] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
+  const { login, fluxo } = config;
 
   async function handleSubmit() {
-    await cadastro.submit(prefs.login_choice, prefs.fluxo, () => setResetKey((k) => k + 1));
+    if (login === null || fluxo === null) return;
+    await cadastro.submit(login, fluxo, () => {
+      setResetKey((k) => k + 1);
+      setConfig(SEM_CONFIGURACAO); // o próximo cadastro exige escolher de novo
+    });
+  }
+
+  function handleValidate() {
+    if (login === null || fluxo === null) return;
+    void cadastro.validate(login, fluxo);
   }
 
   function clear() {
@@ -61,23 +80,31 @@ export function CadastroTab() {
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     resultRef.current?.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
   }, [resultKey]);
-  const loginLabel = LOGIN_OPTIONS.find((o) => o.value === prefs.login_choice)?.label ?? prefs.login_choice;
+  const configCompleta = login !== null && fluxo !== null;
+  const podeRodar = hasFiles && configCompleta;
+  const pendencias = descreverPendencias(hasFiles, login, fluxo);
+  const loginLabel = LOGIN_OPTIONS.find((o) => o.value === login)?.label ?? login;
+  const finished = cadastro.done;
 
   const steps: StepperItem[] = [
     {
       label: "Enviar fichas",
-      detail: hasFiles ? `${cadastro.files.length} ${cadastro.files.length === 1 ? "arquivo" : "arquivos"}` : "Planilhas .xlsx ou .xls",
-      state: hasFiles || cadastro.done ? "done" : "current",
+      detail: finished
+        ? "Fichas enviadas"
+        : hasFiles
+          ? `${cadastro.files.length} ${cadastro.files.length === 1 ? "arquivo" : "arquivos"}`
+          : "Planilhas .xlsx ou .xls",
+      state: hasFiles || finished ? "done" : "current",
     },
     {
       label: "Configurar",
-      detail: `${loginLabel} · ${prefs.fluxo}`,
-      state: hasFiles || cadastro.done ? "done" : "todo",
+      detail: finished ? "Configurado" : configCompleta ? `${loginLabel} · ${fluxo}` : "Escolha login e fluxo",
+      state: finished || configCompleta ? "done" : hasFiles ? "current" : "todo",
     },
     {
       label: "Validar e gerar",
-      detail: cadastro.done ? "Concluído" : "Arquivo pronto para carga",
-      state: cadastro.done ? "done" : hasFiles ? "current" : "todo",
+      detail: finished ? "Arquivo gerado" : "Arquivo pronto para carga",
+      state: finished ? "done" : podeRodar ? "current" : "todo",
     },
   ];
 
@@ -108,6 +135,7 @@ export function CadastroTab() {
           </li>
           <li>
             <strong>2º Passo:</strong> escolha o <strong>tipo de login</strong> (CPF ou e-mail) e o <strong>fluxo</strong> (SELF ou FRONT).
+            Essas escolhas não ficam salvas: é preciso informá-las a cada cadastro.
           </li>
           <li>
             <strong>3º Passo:</strong> clique em <em>Gerar</em> para processar e obter o arquivo pronto para carga.
@@ -158,16 +186,18 @@ export function CadastroTab() {
               <SegmentedControl
                 id="cadastro_login_choice"
                 label="Tipo de login"
-                value={prefs.login_choice}
+                value={login}
                 options={LOGIN_OPTIONS}
-                onChange={(value) => setPrefs({ login_choice: value })}
+                onChange={(value) => setConfig((c) => ({ ...c, login: value }))}
+                required
               />
               <SegmentedControl
                 id="cadastro_fluxo"
                 label="Fluxo"
-                value={prefs.fluxo}
+                value={fluxo}
                 options={FLUXO_OPTIONS}
-                onChange={(value) => setPrefs({ fluxo: value })}
+                onChange={(value) => setConfig((c) => ({ ...c, fluxo: value }))}
+                required
               />
             </div>
           </StepSection>
@@ -177,10 +207,10 @@ export function CadastroTab() {
               <Button
                 id="cadastro_validate_btn"
                 variant="secondary"
-                disabled={!hasFiles || cadastro.generating}
-                aria-describedby={hasFiles ? undefined : "cadastro_hint"}
+                disabled={!podeRodar || cadastro.generating}
+                aria-describedby={pendencias ? "cadastro_hint" : undefined}
                 loading={cadastro.validation.status === "loading"}
-                onClick={() => cadastro.validate(prefs.login_choice, prefs.fluxo)}
+                onClick={handleValidate}
               >
                 {cadastro.validation.status === "loading" ? "Validando..." : "Validar planilha"}
               </Button>
@@ -188,25 +218,25 @@ export function CadastroTab() {
                 id="cadastro_btn"
                 aria-label="Gerar cadastro"
                 title="Processar a planilha e gerar arquivo tratado"
-                disabled={!hasFiles}
-                aria-describedby={hasFiles ? undefined : "cadastro_hint"}
+                disabled={!podeRodar}
+                aria-describedby={pendencias ? "cadastro_hint" : undefined}
                 loading={cadastro.generating}
                 onClick={handleSubmit}
               >
                 {cadastro.generating ? "Processando..." : "Gerar cadastro"}
               </Button>
-              {hasFiles ? (
+              {pendencias === null ? (
                 <span className="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
                   Pronto para gerar:
                   <Badge tone="neutral">
                     {cadastro.files.length} {cadastro.files.length === 1 ? "arquivo" : "arquivos"}
                   </Badge>
                   <Badge tone="neutral">Login {loginLabel}</Badge>
-                  <Badge tone="neutral">Fluxo {prefs.fluxo}</Badge>
+                  <Badge tone="neutral">Fluxo {fluxo}</Badge>
                 </span>
               ) : (
                 <span id="cadastro_hint" className="text-xs text-text-muted">
-                  Envie ao menos uma ficha para validar e gerar.
+                  {pendencias}
                 </span>
               )}
             </div>
