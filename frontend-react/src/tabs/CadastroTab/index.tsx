@@ -17,13 +17,13 @@ import { ValidationReport } from "../../ui/ValidationReport";
 import { MAX_FILES, useCadastro } from "./useCadastro";
 
 const LOGIN_OPTIONS = [
-  { value: "CPF", label: "CPF", description: "CPF sem pontos" },
-  { value: "EMAIL", label: "E-mail", description: "E-mail em maiúsculas" },
+  { value: "CPF", label: "CPF" },
+  { value: "EMAIL", label: "E-mail" },
 ];
 
 const FLUXO_OPTIONS = [
-  { value: "SELF", label: "SELF", description: "Login inalterado, sem viajante master" },
-  { value: "FRONT", label: "FRONT", description: "Viajante master e login com prefixo FRONT" },
+  { value: "SELF", label: "SELF" },
+  { value: "FRONT", label: "FRONT" },
 ];
 
 export function CadastroTab() {
@@ -135,26 +135,21 @@ export function CadastroTab() {
           </StepSection>
 
           <StepSection number={2} title="Configurar" description="como o arquivo de carga será montado">
-            {/* Container query: os dois grupos só ficam lado a lado se o card tiver
-                largura para quatro opções; senão empilham (o card já divide a linha
-                com a coluna "Nesta sessão", então a largura do viewport engana). */}
-            <div className="@container">
-              <div className="grid gap-4 @2xl:grid-cols-2">
-                <SegmentedControl
-                  id="cadastro_login_choice"
-                  label="Tipo de login"
-                  value={prefs.login_choice}
-                  options={LOGIN_OPTIONS}
-                  onChange={(value) => setPrefs({ login_choice: value })}
-                />
-                <SegmentedControl
-                  id="cadastro_fluxo"
-                  label="Fluxo"
-                  value={prefs.fluxo}
-                  options={FLUXO_OPTIONS}
-                  onChange={(value) => setPrefs({ fluxo: value })}
-                />
-              </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SegmentedControl
+                id="cadastro_login_choice"
+                label="Tipo de login"
+                value={prefs.login_choice}
+                options={LOGIN_OPTIONS}
+                onChange={(value) => setPrefs({ login_choice: value })}
+              />
+              <SegmentedControl
+                id="cadastro_fluxo"
+                label="Fluxo"
+                value={prefs.fluxo}
+                options={FLUXO_OPTIONS}
+                onChange={(value) => setPrefs({ fluxo: value })}
+              />
             </div>
           </StepSection>
 

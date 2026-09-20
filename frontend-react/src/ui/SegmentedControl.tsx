@@ -4,8 +4,6 @@ import { cn } from "./cn";
 export interface SegmentedOption {
   value: string;
   label: string;
-  /** Explicação curta exibida sob o rótulo. */
-  description?: string;
 }
 
 interface SegmentedControlProps {
@@ -52,14 +50,13 @@ export function SegmentedControl({ id, label, value, options, onChange }: Segmen
               onClick={() => onChange(option.value)}
               onKeyDown={(e) => onKeyDown(e, index)}
               className={cn(
-                "min-h-[5.5rem] rounded-control border px-3 py-2 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/50",
+                "rounded-control border px-3 py-2.5 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/50",
                 checked ? "border-accent bg-accent/10" : "border-border bg-surface hover:border-border-strong hover:bg-surface-2",
               )}
             >
               <span className={cn("block text-sm font-semibold", checked ? "text-accent" : "text-text")}>
                 {option.label}
               </span>
-              {option.description && <span className="mt-0.5 block text-xs text-text-muted">{option.description}</span>}
             </button>
           );
         })}
