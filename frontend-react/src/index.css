@@ -53,7 +53,7 @@
      mistura de rounded-lg/xl/md sem regra que havia entre componentes. */
   --radius-control: var(--radius-lg); /* botões, inputs, dropzone, badges de header */
   --radius-surface: var(--radius-xl); /* Card, Modal, containers de página */
-  --radius-pill: var(--radius-full); /* Badge, chips, avatares */
+  --radius-pill: 9999px; /* Badge, chips, avatares (o Tailwind v4 não tem --radius-full) */
 
   /* Stack do sistema — "Segoe UI Variable" no Windows 11 (público-alvo),
      "system-ui"/-apple-system cobrem macOS/Linux sem baixar nada. */
