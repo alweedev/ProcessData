@@ -11,7 +11,7 @@ export function Credits({ className = "" }: { className?: string }) {
           href="https://www.linkedin.com/in/alejandro-gabriel/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-accent hover:underline"
+          className="text-accent-text hover:underline"
         >
           Alejandro Gabriel
         </a>

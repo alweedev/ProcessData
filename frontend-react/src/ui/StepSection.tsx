@@ -13,7 +13,7 @@ export function StepSection({ number, title, description, children }: StepSectio
   return (
     <section className="border-t border-border py-5 first:border-t-0 first:pt-0 last:pb-0">
       <header className="mb-3 flex items-baseline gap-2">
-        <span aria-hidden="true" className="text-xs font-semibold tabular-nums text-brand">
+        <span aria-hidden="true" className="text-xs font-semibold tabular-nums text-text-muted">
           {String(number).padStart(2, "0")}
         </span>
         <h3 className="text-base font-semibold text-text">{title}</h3>

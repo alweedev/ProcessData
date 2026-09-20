@@ -146,7 +146,7 @@ export function InativacaoTab() {
             />
           </Field>
           <div id="lista_valid_summary" className="mt-2 text-sm text-text-muted">
-            <span className="rounded bg-accent/10 px-2 py-0.5 font-medium text-accent">
+            <span className="rounded bg-accent/10 px-2 py-0.5 font-medium text-accent-text">
               {inativacao.classification.totalValid}
             </span>{" "}
             itens válidos (CPF, Nome Completo ou E-mail)

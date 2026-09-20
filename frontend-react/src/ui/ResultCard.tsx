@@ -59,7 +59,7 @@ export function ResultCard({
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             {outputFilename && <span className="font-mono text-xs text-text-subtle">{outputFilename}</span>}
             {onRedownload && (
-              <button type="button" onClick={onRedownload} className="text-xs font-medium text-accent hover:underline">
+              <button type="button" onClick={onRedownload} className="text-xs font-medium text-accent-text hover:underline">
                 Baixar novamente
               </button>
             )}

@@ -54,7 +54,7 @@ export function SegmentedControl({ id, label, value, options, onChange }: Segmen
                 checked ? "border-accent bg-accent/10" : "border-border bg-surface hover:border-border-strong hover:bg-surface-2",
               )}
             >
-              <span className={cn("block text-sm font-semibold", checked ? "text-accent" : "text-text")}>
+              <span className={cn("block text-sm font-semibold", checked ? "text-accent-text" : "text-text")}>
                 {option.label}
               </span>
             </button>

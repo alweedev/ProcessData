@@ -13,7 +13,7 @@ function itemClass(current: boolean): string {
     // Barra de destaque à esquerda só no layout de coluna (md+).
     "md:before:absolute md:before:inset-y-1.5 md:before:left-0 md:before:w-0.5 md:before:rounded-full md:before:transition-colors",
     current
-      ? "bg-accent/10 text-accent md:before:bg-accent"
+      ? "bg-accent/10 text-accent-text md:before:bg-accent"
       : "text-text-muted hover:bg-surface-2 hover:text-text md:before:bg-transparent",
   ].join(" ");
 }
