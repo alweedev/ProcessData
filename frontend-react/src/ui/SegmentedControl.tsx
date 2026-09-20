@@ -52,7 +52,7 @@ export function SegmentedControl({ id, label, value, options, onChange }: Segmen
               onClick={() => onChange(option.value)}
               onKeyDown={(e) => onKeyDown(e, index)}
               className={cn(
-                "rounded-control border px-3 py-2 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/50",
+                "min-h-[5.5rem] rounded-control border px-3 py-2 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/50",
                 checked ? "border-accent bg-accent/10" : "border-border bg-surface hover:border-border-strong hover:bg-surface-2",
               )}
             >
