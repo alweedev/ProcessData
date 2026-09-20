@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Credits } from "./chrome/Credits";
+import { SkipLink } from "./chrome/SkipLink";
 import { Sidebar } from "./chrome/Sidebar";
 import { TopBar } from "./chrome/TopBar";
 import { ApiHealthBanner } from "./health/ApiHealthBanner";
@@ -34,6 +35,7 @@ export function App() {
 
   return (
     <>
+      <SkipLink />
       <div className="grid min-h-screen grid-cols-1 bg-bg text-text md:grid-cols-[15rem_minmax(0,1fr)] md:grid-rows-[auto_1fr]">
         <TopBar view={view} />
         <Sidebar view={view} />
@@ -41,7 +43,7 @@ export function App() {
         <div className="flex min-w-0 flex-col md:col-start-2 md:row-start-2">
           <ApiHealthBanner />
 
-          <main className="w-full max-w-[1600px] flex-1 px-4 py-6 md:px-8 md:py-8">
+          <main id="conteudo" tabIndex={-1} className="w-full max-w-[1600px] flex-1 px-4 py-6 outline-none md:px-8 md:py-8">
             {view === "home" && <HomeView />}
             {PANELS.map(({ id, content }) => (
               <div

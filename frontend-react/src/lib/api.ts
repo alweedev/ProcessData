@@ -58,6 +58,9 @@ export function postFormForBlob(url: string, formData: FormData, onProgress?: (p
     xhr.upload.addEventListener("progress", (e) => {
       if (e.lengthComputable && onProgress) onProgress((e.loaded / e.total) * 100);
     });
+    // Arquivos pequenos podem terminar sem nenhum evento de progresso; o "load"
+    // do upload garante o 100% (a resposta do servidor vem depois, em onload).
+    xhr.upload.addEventListener("load", () => onProgress?.(100));
     xhr.open("POST", url, true);
     xhr.responseType = "blob";
     xhr.onload = () => {

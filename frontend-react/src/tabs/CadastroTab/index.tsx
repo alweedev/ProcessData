@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileDropzone } from "../../components/FileDropzone";
 import { Modal } from "../../components/Modal";
 import { usePersistedState } from "../../hooks/usePersistedState";
@@ -8,6 +8,7 @@ import { Card } from "../../ui/Card";
 import { FileList } from "../../ui/FileList";
 import { IconAlert, IconCheck, IconUpload } from "../../ui/icons";
 import { PageHeader } from "../../ui/PageHeader";
+import { ProcessingProgress } from "../../ui/ProcessingProgress";
 import { RunHistoryPanel } from "../../ui/RunHistoryPanel";
 import { SegmentedControl } from "../../ui/SegmentedControl";
 import { StepSection } from "../../ui/StepSection";
@@ -42,6 +43,24 @@ export function CadastroTab() {
   }
 
   const hasFiles = cadastro.files.length > 0;
+
+  // O relatório/sucesso/erro nascem abaixo dos botões, muitas vezes fora da
+  // tela; leva o resultado à vista quando ele muda.
+  const resultRef = useRef<HTMLDivElement>(null);
+  const validationStatus = cadastro.validation.status;
+  const resultKey =
+    validationStatus === "done" || validationStatus === "error"
+      ? "validacao"
+      : cadastro.done
+        ? "sucesso"
+        : cadastro.debugMsg
+          ? "erro"
+          : null;
+  useEffect(() => {
+    if (!resultKey) return;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    resultRef.current?.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+  }, [resultKey]);
   const loginLabel = LOGIN_OPTIONS.find((o) => o.value === prefs.login_choice)?.label ?? prefs.login_choice;
 
   const steps: StepperItem[] = [
@@ -159,6 +178,7 @@ export function CadastroTab() {
                 id="cadastro_validate_btn"
                 variant="secondary"
                 disabled={!hasFiles || cadastro.generating}
+                aria-describedby={hasFiles ? undefined : "cadastro_hint"}
                 loading={cadastro.validation.status === "loading"}
                 onClick={() => cadastro.validate(prefs.login_choice, prefs.fluxo)}
               >
@@ -168,6 +188,8 @@ export function CadastroTab() {
                 id="cadastro_btn"
                 aria-label="Gerar cadastro"
                 title="Processar a planilha e gerar arquivo tratado"
+                disabled={!hasFiles}
+                aria-describedby={hasFiles ? undefined : "cadastro_hint"}
                 loading={cadastro.generating}
                 onClick={handleSubmit}
               >
@@ -183,68 +205,57 @@ export function CadastroTab() {
                   <Badge tone="neutral">Fluxo {prefs.fluxo}</Badge>
                 </span>
               ) : (
-                <span className="text-xs text-text-muted">Envie ao menos uma ficha para validar e gerar.</span>
+                <span id="cadastro_hint" className="text-xs text-text-muted">
+                  Envie ao menos uma ficha para validar e gerar.
+                </span>
               )}
             </div>
-
-            {cadastro.validation.status !== "idle" && (
-              <div className="mt-4">
-                <ValidationReport
-                  report={cadastro.validation.report}
-                  loading={cadastro.validation.status === "loading"}
-                  error={cadastro.validation.status === "error" ? cadastro.validation.error : null}
-                />
-              </div>
-            )}
 
             {cadastro.generating && (
               <div className="mt-4">
-                <div className="mb-1 flex items-center justify-between text-xs text-text-muted">
-                  <span>Processando as fichas…</span>
-                  <span className="tabular-nums">{Math.round(cadastro.progress)}%</span>
-                </div>
-                <div id="cadastro_progress" className="h-2 overflow-hidden rounded-pill bg-surface-sunken">
-                  <div
-                    id="cadastro_progressBar"
-                    role="progressbar"
-                    aria-label="Progresso do processamento"
-                    aria-valuenow={Math.round(cadastro.progress)}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    style={{ width: `${cadastro.progress}%` }}
-                    className="h-full bg-accent transition-[width]"
-                  />
-                </div>
+                <ProcessingProgress id="cadastro_progress" progress={cadastro.progress} />
               </div>
             )}
 
-            <div id="cadastro_status" aria-live="polite">
-              {cadastro.done && (
-                <div className="mt-4 flex items-start gap-3 rounded-control border border-success/40 bg-success-soft px-4 py-3">
-                  <span className="mt-0.5 text-success">
-                    <IconCheck className="h-5 w-5" />
-                  </span>
-                  <div className="text-sm">
-                    <p className="font-medium text-success">Cadastro gerado com sucesso</p>
-                    <p className="mt-0.5 text-text-muted">
-                      O download de <strong className="font-medium text-text">saida_cadastro.xlsx</strong> começou. O
-                      arquivo também fica em “Nesta sessão”, para baixar de novo.
-                    </p>
+            <div ref={resultRef} className="scroll-mt-16">
+              {cadastro.validation.status !== "idle" && (
+                <div className="mt-4">
+                  <ValidationReport
+                    report={cadastro.validation.report}
+                    loading={cadastro.validation.status === "loading"}
+                    error={cadastro.validation.status === "error" ? cadastro.validation.error : null}
+                  />
+                </div>
+              )}
+
+              <div id="cadastro_status" aria-live="polite">
+                {cadastro.done && (
+                  <div className="mt-4 flex items-start gap-3 rounded-control border border-success/40 bg-success-soft px-4 py-3">
+                    <span className="mt-0.5 text-success">
+                      <IconCheck className="h-5 w-5" />
+                    </span>
+                    <div className="text-sm">
+                      <p className="font-medium text-success">Cadastro gerado com sucesso</p>
+                      <p className="mt-0.5 text-text-muted">
+                        O download de <strong className="font-medium text-text">saida_cadastro.xlsx</strong> começou. O
+                        arquivo também fica em “Nesta sessão”, para baixar de novo.
+                      </p>
+                    </div>
                   </div>
+                )}
+              </div>
+
+              {cadastro.debugMsg && (
+                <div
+                  id="cadastro_debug"
+                  aria-live="assertive"
+                  className={`mt-4 flex items-start gap-3 rounded-control border px-4 py-3 text-sm ${TONE_OUTLINE.danger}`}
+                >
+                  <IconAlert className="mt-0.5 h-5 w-5 shrink-0" />
+                  <span>{cadastro.debugMsg}</span>
                 </div>
               )}
             </div>
-
-            {cadastro.debugMsg && (
-              <div
-                id="cadastro_debug"
-                aria-live="assertive"
-                className={`mt-4 flex items-start gap-3 rounded-control border px-4 py-3 text-sm ${TONE_OUTLINE.danger}`}
-              >
-                <IconAlert className="mt-0.5 h-5 w-5 shrink-0" />
-                <span>{cadastro.debugMsg}</span>
-              </div>
-            )}
           </StepSection>
         </Card>
 

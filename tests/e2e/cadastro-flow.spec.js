@@ -34,6 +34,24 @@ test("gera saida_cadastro.xlsx e limpa a selecao no sucesso", async ({ page }) =
     .toBe(0);
 });
 
+test("'Gerar cadastro' fica bloqueado até escolher uma planilha", async ({ page }) => {
+  await expect(page.locator("#cadastro_btn")).toBeDisabled();
+
+  await page.setInputFiles("#cadastro_files", xlsxFile("cadastro.xlsx", cadastroRows(1)));
+
+  await expect(page.locator("#cadastro_btn")).toBeEnabled();
+});
+
+test("depois de validar, o relatório aparece dentro da área visível da tela", async ({ page }) => {
+  // Viewport baixa: o relatório nasce abaixo dos botões, fora da tela.
+  await page.setViewportSize({ width: 1280, height: 560 });
+  await page.setInputFiles("#cadastro_files", xlsxFile("cadastro.xlsx", cadastroRows(3)));
+
+  await page.locator("#cadastro_validate_btn").click();
+
+  await expect(page.getByText("A validação é informativa")).toBeInViewport();
+});
+
 test("bloqueia mais de 5 arquivos no cliente", async ({ page }) => {
   const files = cadastroRows(6).map((r, i) => xlsxFile(`c${i}.xlsx`, [r]));
   await page.setInputFiles("#cadastro_files", files);

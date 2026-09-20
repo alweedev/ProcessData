@@ -38,6 +38,7 @@ export function useCadastro() {
    *  demais) — o chamador deve então forçar a limpeza do <input> nativo,
    *  já que setFiles([]) sozinho não reflete no FileList real do browser. */
   function pickFiles(list: FileList): boolean {
+    setDebugMsg("");
     const candidates = Array.from(list);
     const error = validateCadastroFiles(candidates);
     if (error) {
@@ -53,6 +54,7 @@ export function useCadastro() {
   }
 
   function removeFile(index: number) {
+    setDebugMsg("");
     setFiles((prev) => prev.filter((_, i) => i !== index));
     setDone(false);
     setValidation(IDLE_VALIDATION);
