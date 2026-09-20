@@ -15,7 +15,7 @@ import { StepSection } from "../../ui/StepSection";
 import { Stepper, type StepperItem } from "../../ui/Stepper";
 import { TONE_OUTLINE } from "../../ui/tone";
 import { ValidationReport } from "../../ui/ValidationReport";
-import { MAX_FILES, useCadastro } from "./useCadastro";
+import { MAX_FILES, OUTPUT_FILENAME, useCadastro } from "./useCadastro";
 
 const LOGIN_OPTIONS = [
   { value: "CPF", label: "CPF" },
@@ -76,7 +76,7 @@ export function CadastroTab() {
     },
     {
       label: "Validar e gerar",
-      detail: cadastro.done ? "Arquivo gerado" : "Arquivo pronto para carga",
+      detail: cadastro.done ? "Concluído" : "Arquivo pronto para carga",
       state: cadastro.done ? "done" : hasFiles ? "current" : "todo",
     },
   ];
@@ -235,10 +235,10 @@ export function CadastroTab() {
                       <IconCheck className="h-5 w-5" />
                     </span>
                     <div className="text-sm">
-                      <p className="font-medium text-success">Cadastro gerado com sucesso</p>
+                      <p className="font-medium text-success">Cadastro concluído</p>
                       <p className="mt-0.5 text-text-muted">
-                        O download de <strong className="font-medium text-text">saida_cadastro.xlsx</strong> começou. O
-                        arquivo também fica em “Nesta sessão”, para baixar de novo.
+                        O arquivo <strong className="font-medium text-text">{OUTPUT_FILENAME}</strong> foi gerado. Se o
+                        navegador não o salvou, baixe de novo em “Nesta sessão”.
                       </p>
                     </div>
                   </div>

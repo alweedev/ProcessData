@@ -5,6 +5,9 @@ import { triggerAnchorDownload } from "../../lib/downloadFile";
 import { addRun } from "../../runs/runsStore";
 import { pushToast } from "../../toast/toastStore";
 
+/** Nome do arquivo gerado: única fonte para o download, o registro da sessão e as mensagens da tela. */
+export const OUTPUT_FILENAME = "saida_cadastro.xlsx";
+
 export const MAX_FILES = 5;
 const MAX_SIZE = 10 * 1024 * 1024;
 const VALIDATE_TIMEOUT_MS = 15000;
@@ -127,17 +130,17 @@ export function useCadastro() {
       fd.append("fluxo", fluxo);
       const blob = await postFormForBlob("/api/process_cadastro", fd, setProgress);
       const url = URL.createObjectURL(blob);
-      triggerAnchorDownload(url, "saida_cadastro.xlsx");
+      triggerAnchorDownload(url, OUTPUT_FILENAME);
       setDone(true);
       setFiles([]);
       setValidation(IDLE_VALIDATION);
       addRun({
         operation: "cadastro",
         inputSummary: [count === 1 ? firstName : `${count} arquivos`, `Login ${loginChoice} · Fluxo ${fluxo}`],
-        outputFilename: "saida_cadastro.xlsx",
+        outputFilename: OUTPUT_FILENAME,
         blobUrl: url,
       });
-      pushToast(`Cadastro processado! Opções: ${loginChoice}, ${fluxo}.`, "success");
+      pushToast(`Cadastro concluído: login ${loginChoice}, fluxo ${fluxo}.`, "success");
       addLocalEntry(`Cadastro gerado: ${firstName} - ${new Date().toLocaleString("pt-BR")}`);
       onSuccess?.();
     } catch (err) {

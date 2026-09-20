@@ -28,6 +28,13 @@ test("gera saida_cadastro.xlsx e limpa a selecao no sucesso", async ({ page }) =
   ]);
   expect(download.suggestedFilename()).toBe("saida_cadastro.xlsx");
 
+  // A mensagem final descreve o estado real: o cadastro JÁ está concluído (não
+  // "o download começou") e cita o mesmo arquivo que o navegador recebeu.
+  const status = page.locator("#cadastro_status");
+  await expect(status).toContainText("Cadastro concluído");
+  await expect(status).toContainText(download.suggestedFilename());
+  await expect(status).not.toContainText("começou");
+
   // selecao limpa apos sucesso
   await expect
     .poll(async () => page.locator("#cadastro_files").evaluate((el) => el.files.length))
