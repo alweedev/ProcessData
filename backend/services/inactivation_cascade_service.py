@@ -100,11 +100,25 @@ def _usuario(registro: dict[str, Any], situacao: str, alerta: str | None = None)
     }
 
 
+def _nomes_homonimos(df_cadastro: pd.DataFrame, nomes_digitados: set[str]) -> set[str]:
+    """Nomes digitados (normalizados) que aparecem em mais de uma linha do cadastro.
+
+    Vem do cadastro, não da busca: `search_matches` omite da busca por nome quem já veio por CPF, então
+    o grupo do nome pode ter 1 linha mesmo havendo homônimo.
+    """
+    nome_col = InactivationService._detect_base_cols(df_cadastro)[1]
+    if not nome_col or not nomes_digitados:
+        return set()
+    contagem = df_cadastro[nome_col].map(lambda v: upper_no_accents(str(v)).strip()).value_counts()
+    return {n for n in nomes_digitados if contagem.get(n, 0) > 1}
+
+
 def _resolver_usuarios(
-    busca: dict[str, Any], itens: list[str], escolhidos: set[str]
+    busca: dict[str, Any], itens: list[str], escolhidos: set[str], df_cadastro: pd.DataFrame
 ) -> tuple[list[dict[str, Any]], set[str]]:
     """Transforma o resultado de `search_matches` em usuários com situação; devolve também os CPFs executáveis."""
     digitados_cpf, digitados_email, digitados_nome = _classificar(itens)
+    homonimos = _nomes_homonimos(df_cadastro, set(digitados_nome))
     diretos: list[dict[str, Any]] = []
     por_nome: dict[str, list[dict[str, Any]]] = {}
     for r in (r for r in busca["items"] if r.get("found")):
@@ -140,7 +154,7 @@ def _resolver_usuarios(
     for r in diretos:
         adicionar(r)
     for norm, grupo in por_nome.items():
-        if len(grupo) == 1:
+        if len(grupo) == 1 and norm not in homonimos:
             adicionar(grupo[0])
             continue
         escolhidos_do_grupo = [r for r in grupo if clean_cpf(r.get("cpf")) in escolhidos]
@@ -187,7 +201,7 @@ class InactivationCascadeService:
 
         escolhidos = {c for c in (clean_cpf(x) for x in (selecionados or [])) if c}
         busca = InactivationService.search_matches(df_cadastro, lista)
-        usuarios, cpfs = _resolver_usuarios(busca, lista, escolhidos)
+        usuarios, cpfs = _resolver_usuarios(busca, lista, escolhidos, df_cadastro)
 
         viajante = ApprovalService.find_traveler_structures(df_est, cpfs, cols)
         excluidas: set[str] = set().union(*viajante.values())

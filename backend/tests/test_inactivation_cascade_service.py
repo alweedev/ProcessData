@@ -150,3 +150,29 @@ def test_usuario_fora_da_lista_nao_e_tocado():
     a = _analisar(cad(USR_A, USR_C), est(viajante("S1", D, A, C)), [A])
     assert a.cpfs == {A}
     assert a.orfas == frozenset()
+
+
+def test_homonimo_digitado_por_nome_e_outro_por_cpf_nao_entra_sem_escolha():
+    cadastro = cad((A, "Joao Silva", "j1@x.com", "ATIVO"), (B, "Joao Silva", "j2@x.com", "ATIVO"))
+    a = _analisar(cadastro, est(viajante("S9", C, D)), ["Joao Silva", A])
+    situacoes = {u["cpf"]: u["situacao"] for u in a.payload["usuarios"] if u["cpf"]}
+    assert situacoes == {A: "EXECUTAVEL"}
+    pendente = [u for u in a.payload["usuarios"] if u["situacao"] == "PENDENTE_SELECAO"]
+    assert len(pendente) == 1
+    assert {c["cpf"] for c in pendente[0]["candidatos"]} == {B}
+    assert a.cpfs == {A}
+
+
+def test_homonimo_digitado_por_nome_e_outro_por_email_nao_entra_sem_escolha():
+    cadastro = cad((A, "Joao Silva", "j1@x.com", "ATIVO"), (B, "Joao Silva", "j2@x.com", "ATIVO"))
+    a = _analisar(cadastro, est(viajante("S9", C, D)), ["Joao Silva", "j1@x.com"])
+    assert [u["situacao"] for u in a.payload["usuarios"]].count("PENDENTE_SELECAO") == 1
+    assert [u["cpf"] for u in a.payload["usuarios"] if u["situacao"] == "EXECUTAVEL"] == [A]
+    assert a.cpfs == {A}
+
+
+def test_homonimo_digitado_por_nome_entra_quando_escolhido():
+    cadastro = cad((A, "Joao Silva", "j1@x.com", "ATIVO"), (B, "Joao Silva", "j2@x.com", "ATIVO"))
+    a = _analisar(cadastro, est(viajante("S9", C, D)), ["Joao Silva", A], selecionados=[B])
+    assert {u["cpf"]: u["situacao"] for u in a.payload["usuarios"]} == {A: "EXECUTAVEL", B: "EXECUTAVEL"}
+    assert a.cpfs == {A, B}
