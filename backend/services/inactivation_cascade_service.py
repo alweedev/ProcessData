@@ -126,6 +126,8 @@ def _resolver_usuarios(
     """Transforma o resultado de `search_matches` em usuários com situação; devolve também os CPFs executáveis."""
     digitados_cpf, digitados_email, digitados_nome = _classificar(itens)
     homonimos = _nomes_homonimos(df_cadastro, set(digitados_nome))
+    # Espelha o motor da ficha: com coluna de status, só quem está exatamente ATIVO é inativado.
+    tem_status = InactivationService._detect_base_cols(df_cadastro)[3] is not None
     diretos: list[dict[str, Any]] = []
     por_nome: dict[str, list[dict[str, Any]]] = {}
     for r in (r for r in busca["items"] if r.get("found")):
@@ -152,8 +154,9 @@ def _resolver_usuarios(
             return
         vistos.add(cpf)
         status = upper_no_accents(str(r.get("status_atual", ""))).strip()
-        if status and status != "ATIVO":
-            usuarios.append(_usuario(r, "JA_INATIVO", f"Usuário já consta como {status} no cadastro."))
+        if tem_status and status != "ATIVO":
+            alerta = f"Usuário não está ATIVO no cadastro (Status: '{status}')."
+            usuarios.append(_usuario(r, "JA_INATIVO", alerta))
             return
         usuarios.append(_usuario(r, "EXECUTAVEL"))
         cpfs.add(cpf)
@@ -303,6 +306,13 @@ class InactivationCascadeService:
                 "NADA_A_EXECUTAR", "A ficha de inativação saiu vazia: nenhum usuário ATIVO correspondeu."
             )
 
+        # A ficha (MODEL_COLS) não traz CPF: confere ao menos que há uma linha por usuário analisado, para
+        # a cascata nunca mexer em estruturas de alguém que a ficha não inativa.
+        if len(ficha) < len(analise.cpfs):
+            raise InativacaoError(
+                "ERRO_INTERNO", "A ficha de inativação não cobre todos os usuários analisados.", status=500
+            )
+
         df_est, cols = analise.df_estruturas, analise.cols
         atualizado, stats = ApprovalService.remove_cpfs_and_compact(
             df_est, set(analise.cpfs), cols, set(analise.alvo_compactacao), True
@@ -317,7 +327,7 @@ class InactivationCascadeService:
         estruturas = estruturas[["Operacao", *[c for c in estruturas.columns if c != "Operacao"]]]
 
         resumo = {
-            "usuariosInativados": len(ficha),
+            "usuariosInativados": len(analise.cpfs),
             "estruturasExcluidas": len(analise.excluidas),
             "estruturasCompactadas": len(analise.alvo_compactacao - analise.orfas),
             "estruturasOrfas": len(analise.orfas),

@@ -176,3 +176,18 @@ def test_homonimo_digitado_por_nome_entra_quando_escolhido():
     a = _analisar(cadastro, est(viajante("S9", C, D)), ["Joao Silva", A], selecionados=[B])
     assert {u["cpf"]: u["situacao"] for u in a.payload["usuarios"]} == {A: "EXECUTAVEL", B: "EXECUTAVEL"}
     assert a.cpfs == {A, B}
+
+
+def test_status_em_branco_com_coluna_de_status_nao_e_executavel():
+    a = _analisar(cad((A, "Ana Souza", "ana@x.com", "")), est(viajante("S1", A, B)), [A])
+    u = _usuario(a)
+    assert u["situacao"] == "JA_INATIVO"
+    assert u["alerta"] == "Usuário não está ATIVO no cadastro (Status: '')."
+    assert a.cpfs == frozenset()
+
+
+def test_cadastro_sem_coluna_de_status_continua_executavel():
+    cadastro = cad(USR_A).drop(columns=["Status"])
+    a = _analisar(cadastro, est(viajante("S1", A, B)), [A])
+    assert _usuario(a)["situacao"] == "EXECUTAVEL"
+    assert a.cpfs == {A}

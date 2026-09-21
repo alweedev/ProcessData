@@ -6,6 +6,7 @@ from _cascade_fixtures import USR_A, A, B, C, D, cad, est, viajante
 
 from backend.services.export_service import ExportService
 from backend.services.inactivation_cascade_service import InactivationCascadeService, InativacaoError
+from backend.services.inactivation_service import InactivationService
 
 
 def _digital(cadastro, estruturas, cpfs):
@@ -89,3 +90,39 @@ def test_to_zip_bytes_guarda_cada_arquivo_com_o_nome_dado():
     with zipfile.ZipFile(saida) as z:
         assert z.namelist() == ["a.xlsx", "b.xlsx"]
         assert z.read("b.xlsx") == b"2"
+
+
+def test_usuario_com_status_em_branco_nao_e_inativado_nem_tem_estruturas_alteradas():
+    usr_b_sem_status = (B, "Bruno Lima", "bruno@x.com", "")
+    cadastro = cad(USR_A, usr_b_sem_status)
+    estruturas = est(viajante("S1", C, A, D), viajante("S2", B, D), viajante("S3", C, B, D))
+    r = _executar(cadastro, estruturas, [A, B])
+    assert len(r.ficha) == 1
+    assert r.resumo["usuariosInativados"] == 1
+    assert set(r.estruturas["AprovacaoId"]) == {"S1"}
+    with pytest.raises(InativacaoError) as erro:
+        _executar(cadastro, estruturas, [B])
+    assert erro.value.code == "NADA_A_EXECUTAR"
+
+
+def test_cpf_repetido_no_cadastro_conta_um_usuario_e_a_ficha_guarda_as_duas_linhas():
+    cadastro = cad(USR_A, (A, "Ana Souza", "ana2@x.com", "ATIVO"))
+    r = _executar(cadastro, est(viajante("S1", A, B)), [A])
+    assert len(r.ficha) == 2
+    assert r.resumo["usuariosInativados"] == 1
+
+
+def test_ficha_que_nao_cobre_todos_os_usuarios_e_erro_interno(monkeypatch):
+    cadastro = cad(USR_A, (B, "Bruno Lima", "bruno@x.com", "ATIVO"))
+    estruturas = est(viajante("S1", A, C), viajante("S2", B, C))
+    real = InactivationService.process_from_dataframes
+
+    def ficha_incompleta(df_base, df_lista):
+        ficha, stats = real(df_base, df_lista)
+        return ficha.iloc[:1], stats
+
+    monkeypatch.setattr(InactivationService, "process_from_dataframes", staticmethod(ficha_incompleta))
+    with pytest.raises(InativacaoError) as erro:
+        _executar(cadastro, estruturas, [A, B])
+    assert erro.value.code == "ERRO_INTERNO"
+    assert erro.value.status == 500
