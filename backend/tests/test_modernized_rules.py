@@ -34,17 +34,17 @@ def test_text_normalization_and_name_split():
     assert last == "SILVA"
 
 
-def test_validation_rejects_invalid_solicitante_and_missing_name():
+def test_validation_rejects_missing_name_and_ignores_solicitante():
     row = {
-        "Solicitante": "X",
+        "Solicitante": "X",  # sim/não nunca invalida: o pipeline normaliza depois
         "NomeCompleto": "",
         "Email": "",
         "Nivel": "OPERACIONAL",
         "CPF": "12345678909",
     }
     errors = ValidationService.validate_row(row)
-    assert any("Solicitante" in msg for msg in errors)
-    assert any("NomeCompleto" in msg for msg in errors)
+    assert "Campo obrigatório em branco: Nome completo" in errors
+    assert not any("Solicitante" in msg for msg in errors)
 
 
 def test_validation_accepts_cpf_missing_one_leading_zero():
@@ -72,6 +72,10 @@ def test_processing_service_generates_output_for_self_flow():
                 "Solicitante": "S",
                 "Email": "ana@empresa.com",
                 "Empresa": "Empresa A",
+                "Centro de custo": "CC1",
+                "Descrição Centro de Custo": "ADMINISTRATIVO",
+                "Telefone": "11999990001",
+                "Data de Nascimento": "12/05/1990",
             },
             {
                 "CPF": "22233344455",
@@ -79,6 +83,10 @@ def test_processing_service_generates_output_for_self_flow():
                 "Solicitante": "N",
                 "Email": "bruno@empresa.com",
                 "Empresa": "Empresa A",
+                "Centro de custo": "CC1",
+                "Descrição Centro de Custo": "ADMINISTRATIVO",
+                "Telefone": "11999990002",
+                "Data de Nascimento": "03/11/1985",
             },
         ]
     )

@@ -44,7 +44,8 @@ def test_build_quality_report_counts_rows_and_errors():
     assert report["invalid_rows"] == 1
     assert report["valid_rows"] == 2
     assert report["duplicated_rows"] >= 1
-    assert "NomeEmpresa" in report["required_blank"]
+    assert report["required_blank"]["Empresa"] == 1  # chaves são os nomes da ficha, não os internos
+    assert report["required_blank"]["Centro de custo - Descrição"] == 1
     assert report["general_errors"] == "Coluna obrigatória ausente: X"
 
 

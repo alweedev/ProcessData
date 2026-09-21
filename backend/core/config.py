@@ -7,6 +7,11 @@ from dataclasses import dataclass
 # git); sobrescrevivel por variavel de ambiente em producao.
 _DEFAULT_UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", os.path.join(tempfile.gettempdir(), "processdata_uploads"))
 _DEFAULT_HISTORY_LOG_FILE = os.getenv("HISTORY_LOG_FILE", os.path.join(_DEFAULT_UPLOAD_FOLDER, "history.log.jsonl"))
+# Vocabulário de nomes aprendido com as conferências (só palavras soltas + contagem, nunca nome completo nem CPF).
+# Fora do repositório e, ao contrário dos uploads, num lugar que o sistema não limpa: é o que se aprendeu com o uso.
+_DEFAULT_NAME_VOCAB_FILE = os.getenv(
+    "NAME_VOCAB_FILE", os.path.join(os.path.expanduser("~"), ".processdata", "name_vocabulary.json")
+)
 
 
 @dataclass
@@ -20,6 +25,7 @@ class Settings:
     # Uploads / persistência (env: UPLOAD_FOLDER, HISTORY_LOG_FILE)
     UPLOAD_FOLDER: str = _DEFAULT_UPLOAD_FOLDER
     HISTORY_LOG_FILE: str = _DEFAULT_HISTORY_LOG_FILE
+    NAME_VOCAB_FILE: str = _DEFAULT_NAME_VOCAB_FILE  # env: NAME_VOCAB_FILE
     MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024
 
     # Server (can be overridden by environment variables)

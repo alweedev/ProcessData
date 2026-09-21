@@ -25,6 +25,8 @@ def _isolate_state(tmp_path, monkeypatch):
 
     monkeypatch.setattr(settings, "UPLOAD_FOLDER", str(upload_dir), raising=False)
     monkeypatch.setattr(settings, "HISTORY_LOG_FILE", str(history_file), raising=False)
+    # O vocabulário aprendido também vai para dentro do tmp_path: nenhum teste toca o do usuário nem vaza para outro.
+    monkeypatch.setattr(settings, "NAME_VOCAB_FILE", str(tmp_path / "vocab" / "name_vocabulary.json"), raising=False)
     yield
 
 

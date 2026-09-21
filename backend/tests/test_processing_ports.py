@@ -95,4 +95,4 @@ def test_geral_validation_reports_missing_or_empty_required_columns(tmp_path):
     df.to_excel(p, index=False)
     errors, _out = ProcessingService.process_records_from_files([str(p)], login_choice="EMAIL", fluxo="SELF")
     assert "__geral__" in errors
-    assert "obrigatoria" in errors["__geral__"].lower()
+    assert "obrigatória ausente na ficha: Telefone" in errors["__geral__"]

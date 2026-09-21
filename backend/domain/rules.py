@@ -46,6 +46,31 @@ REQUIRED_OUTPUT_COLS = [
     "EmpresaCCustoParaUsuario",
 ]
 
+# Campos OBRIGATÓRIOS da ficha de cadastro: campo interno -> rótulo mostrado ao usuário.
+# Em branco = linha inválida. Os demais campos da ficha são opcionais; os de sim/não
+# (Solicitante, Terceiro...) nunca invalidam a linha: Sim -> S, N -> N, branco -> N.
+REQUIRED_FICHA_FIELDS = {
+    "CPF": "CPF",
+    "NomeEmpresa": "Empresa",
+    "CodigoCCustoEmpresa": "Centro de custo - Código",
+    "DescricaoCCustoEmpresa": "Centro de custo - Descrição",
+    "NomeCompleto": "Nome completo",
+    "Email": "E-mail",
+    "Telefone": "Telefone",
+    "DataNascimento": "Data de nascimento",
+}
+
+# Lidos da ficha mas que NÃO fazem parte do arquivo de carga (ficam fora de MODEL_COLS):
+# - CPF e DataNascimento só servem para validar;
+# - CelularContato é a 2ª opção do Telefone;
+# - EmailLogin ("E-MAIL (LOGIN)") tem prioridade sobre o Email normal, que vira reserva;
+# - Passaporte dispensa o CPF de estrangeiro (só quando o login não é por CPF).
+SOURCE_ONLY_COLS = ["CPF", "DataNascimento", "CelularContato", "EmailLogin", "Passaporte"]
+
+# Login por CPF (o Login é gerado a partir do CPF) ou por e-mail; fluxo SELF ou FRONT.
+LOGIN_CHOICES = ("CPF", "EMAIL")
+FLUXOS = ("SELF", "FRONT")
+
 FICHA_MAP = {
     "CPF": "CPF",
     "CPF (SEM PONTOS)": "CPF",
@@ -66,11 +91,41 @@ FICHA_MAP = {
     "NOME COMPLETO": "NomeCompleto",
     "NomeCompleto": "NomeCompleto",
     "NOME COMPLETO (limite 50 caracteres)": "NomeCompleto",
+    "NOME COMPLETO (até 50 caracteres)": "NomeCompleto",
+    "NOME (limite 20 caracteres)": "Nome",
+    "SOBRENOME (limite 20 caracteres)": "SobreNome",
     "EMAIL": "Email",
     "E-MAIL": "Email",
     "Email": "Email",
+    "E-MAIL (LOGIN)": "EmailLogin",
+    "LOGIN (E-MAIL CORPORATIVO)": "EmailLogin",
+    "NÚMERO PASSAPORTE": "Passaporte",
+    "NÚMERO PASSAPORTE (obrigatório para estrangeiro)": "Passaporte",
+    # Ficha em inglês ("Registration form"): só apelidos para os mesmos campos.
+    "Company": "NomeEmpresa",
+    "Cost center code": "CodigoCCustoEmpresa",
+    "Cost center description": "DescricaoCCustoEmpresa",
+    "First Name": "Nome",
+    "Last name (20 caracteres)": "SobreNome",
+    "Full Name (50 caracteres)": "NomeCompleto",
+    "Mobile Number": "Telefone",
+    "Passport": "Passaporte",
+    "Position": "Cargo",
+    "Department": "Departamento",
+    "Applicant? (Y/N)": "Solicitante",
+    "Third Part? (Y/N)": "Terceiro",
+    "Birth date": "DataNascimento",
     "TELEFONE": "Telefone",
     "Telefone": "Telefone",
+    "CELULAR - CONTATO": "CelularContato",
+    "CELULAR CONTATO": "CelularContato",
+    "CELULAR-CONTATO": "CelularContato",
+    "Data de Nascimento": "DataNascimento",
+    "DATA NASCIMENTO": "DataNascimento",
+    "DATA DE NASC.": "DataNascimento",
+    "DT NASCIMENTO": "DataNascimento",
+    "DT. NASCIMENTO": "DataNascimento",
+    "NASCIMENTO": "DataNascimento",
     "CARGO": "Cargo",
     "DEPARTAMENTO": "Departamento",
     "NIVEL": "Nivel",
