@@ -27,6 +27,9 @@ export default defineConfig({
       PORT,
       UPLOAD_FOLDER: path.join(os.tmpdir(), "processdata_e2e_uploads"),
       HISTORY_LOG_FILE: path.join(os.tmpdir(), "processdata_e2e_uploads", "history.log.jsonl"),
+      // O vocabulário de nomes aprende com as conferências: os testes não podem gravar no do usuário, e cada
+      // execução começa de um vocabulário limpo (senão o que uma rodada ensinou mudaria a seguinte).
+      NAME_VOCAB_FILE: path.join(os.tmpdir(), "processdata_e2e_uploads", `name_vocabulary_${Date.now()}.json`),
     },
   },
 });

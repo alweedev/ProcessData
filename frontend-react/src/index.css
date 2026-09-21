@@ -338,6 +338,87 @@
   }
 }
 
+/* Ficha recém-adicionada (FileList): sobe e assenta, escalonada por `--d` (atraso da linha),
+   com o ícone "estourando" e um feixe de luz que varre a linha uma vez, como uma leitura.
+   Só entra quem acabou de ser adicionado; o gate global de prefers-reduced-motion zera tudo. */
+@keyframes pd-file-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@keyframes pd-file-sweep {
+  from {
+    opacity: 1;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+.pd-file-in {
+  animation: pd-file-in 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+.pd-file-chip {
+  animation: pd-pop 420ms ease-out both;
+  animation-delay: calc(var(--d, 0ms) + 120ms);
+}
+
+.pd-file-sweep {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-accent) 28%, transparent),
+    transparent
+  );
+  animation: pd-file-sweep 900ms ease-out both;
+  animation-delay: calc(var(--d, 0ms) + 180ms);
+}
+
+/* Dropzone ao receber as planilhas: um halo que se dissipa e um reflexo que cruza a área. */
+@keyframes pd-drop-halo {
+  from {
+    opacity: 1;
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--color-accent) 55%, transparent),
+      inset 0 0 28px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  }
+  to {
+    opacity: 0;
+    box-shadow:
+      0 0 0 14px color-mix(in srgb, var(--color-accent) 0%, transparent),
+      inset 0 0 0 transparent;
+  }
+}
+
+@keyframes pd-drop-sheen {
+  from {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(420%) skewX(-18deg);
+  }
+}
+
+.pd-drop-halo {
+  animation: pd-drop-halo 750ms ease-out both;
+}
+
+.pd-drop-sheen {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-accent) 24%, transparent),
+    transparent
+  );
+  animation: pd-drop-sheen 800ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
 /* Entrada do conteúdo de uma etapa, vindo do lado para onde o usuário está indo. */
 @keyframes pd-step-in-fwd {
   from {

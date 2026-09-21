@@ -35,8 +35,21 @@ describe("estadosDaLinhaDoTempo", () => {
     expect(estadosDaLinhaDoTempo(1, [true, false, false], false)).toEqual(["done", "current", "todo", "todo"]);
   });
 
-  it("voltar a uma etapa já concluída a mostra como atual, sem apagar as outras concluídas", () => {
-    expect(estadosDaLinhaDoTempo(0, [true, true, true], false)).toEqual(["current", "done", "done", "todo"]);
+  it("voltar a uma etapa a mostra como atual e troca o verde das seguintes por 'preenchida' (valor guardado)", () => {
+    expect(estadosDaLinhaDoTempo(0, [true, true, true], false)).toEqual(["current", "ready", "ready", "todo"]);
+    expect(estadosDaLinhaDoTempo(1, [true, true, true], false)).toEqual(["done", "current", "ready", "todo"]);
+    expect(estadosDaLinhaDoTempo(2, [true, true, true], false)).toEqual(["done", "done", "current", "todo"]);
+  });
+
+  it("'preenchida' só vale com tudo antes preenchido: fluxo escolhido com o login vazio continua pendente", () => {
+    expect(estadosDaLinhaDoTempo(0, [true, true, false], false)).toEqual(["current", "ready", "todo", "todo"]);
+    expect(estadosDaLinhaDoTempo(0, [true, false, true], false)).toEqual(["current", "todo", "todo", "todo"]);
+  });
+
+  it("sem fichas nenhuma etapa seguinte fica concluída, mesmo com login e fluxo guardados", () => {
+    expect(estadosDaLinhaDoTempo(0, [false, true, true], false)).toEqual(["current", "todo", "todo", "todo"]);
+    // Defensivo: mesmo que a tela esteja numa etapa adiante, o que não tem base não conta como concluído.
+    expect(estadosDaLinhaDoTempo(2, [false, true, true], false)).toEqual(["todo", "todo", "current", "todo"]);
   });
 
   it("a etapa final só fica atual quando é a que está sendo vista", () => {

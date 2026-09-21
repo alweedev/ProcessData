@@ -84,6 +84,17 @@ describe("FileDropzone", () => {
       expect(screen.getByText("Arraste aqui")).toBeInTheDocument();
     });
 
+    it("ao receber arquivos mostra o efeito de 'recebido' e o reinicia a cada nova seleção", () => {
+      const { area } = setup({ variant: "rich" });
+      expect(screen.queryByTestId("dropzone-received")).not.toBeInTheDocument();
+
+      fireEvent.drop(area, { dataTransfer: { files: [new File(["x"], "a.xlsx")] } });
+      const primeiro = screen.getByTestId("dropzone-received");
+
+      fireEvent.drop(area, { dataTransfer: { files: [new File(["x"], "b.xlsx")] } });
+      expect(screen.getByTestId("dropzone-received")).not.toBe(primeiro); // remontou: a animação recomeça
+    });
+
     it("no modo compacto esconde a dica de formatos", () => {
       setup({ variant: "rich", compact: true });
 
@@ -107,6 +118,14 @@ describe("FileDropzone", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "Selecionar" }));
       expect(abrir).toHaveBeenCalledOnce();
+    });
+
+    it("não tem o efeito de 'recebido' (só a variante rich)", () => {
+      const { area } = setup({ variant: "classic" });
+
+      fireEvent.drop(area, { dataTransfer: { files: [new File(["x"], "a.xlsx")] } });
+
+      expect(screen.queryByTestId("dropzone-received")).not.toBeInTheDocument();
     });
 
     it("não mostra a dica de formatos (recurso só da variante rich)", () => {

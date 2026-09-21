@@ -5,14 +5,20 @@ import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import { cn } from "../../ui/cn";
 import { FileList } from "../../ui/FileList";
-import { IconAlert, IconCheck, IconUpload } from "../../ui/icons";
+import { IconCheck, IconUpload } from "../../ui/icons";
 import { PageHeader } from "../../ui/PageHeader";
 import { ProcessingProgress } from "../../ui/ProcessingProgress";
 import { RunHistoryPanel } from "../../ui/RunHistoryPanel";
 import { SegmentedControl } from "../../ui/SegmentedControl";
+import type { NameReviewItem } from "../../lib/api";
+import { acceptAll, buildOverrides, pendingItems, type Decisions, type NameDecision } from "../../lib/nameReview";
+import { explainFailure } from "../../lib/failure";
+import { pendenciasDoRelatorio } from "../../lib/qualityReport";
+import { GenerationError } from "../../ui/GenerationError";
+import { NamesReview } from "../../ui/NamesReview";
 import { Stepper, type StepperItem } from "../../ui/Stepper";
-import { TONE_OUTLINE } from "../../ui/tone";
 import { ValidationReport } from "../../ui/ValidationReport";
+import { ValidationSummary } from "../../ui/ValidationSummary";
 import { MAX_FILES, OUTPUT_FILENAME, useCadastro } from "./useCadastro";
 import { estadosDaLinhaDoTempo, etapaMaxima, podeIrPara, ULTIMA_ETAPA } from "./wizard";
 
@@ -27,10 +33,26 @@ const FLUXO_OPTIONS = [
 ];
 
 const ETAPAS = [
-  { rotulo: "Fichas", titulo: "Enviar fichas", descricao: "Arraste ou selecione as planilhas de cadastro." },
-  { rotulo: "Tipo de login", titulo: "Tipo de login", descricao: "Como os usuários vão acessar." },
-  { rotulo: "Fluxo", titulo: "Fluxo", descricao: "Qual fluxo será usado neste cadastro." },
-  { rotulo: "Gerar", titulo: "Validar e gerar", descricao: "Confira o resumo e gere o arquivo pronto para carga." },
+  {
+    rotulo: "Fichas",
+    titulo: "Enviar fichas",
+    descricao: "Arraste ou selecione as planilhas de cadastro.",
+  },
+  {
+    rotulo: "Tipo de login",
+    titulo: "Tipo de login",
+    descricao: "Como os usuários vão acessar.",
+  },
+  {
+    rotulo: "Fluxo",
+    titulo: "Fluxo",
+    descricao: "Qual fluxo será usado neste cadastro.",
+  },
+  {
+    rotulo: "Gerar",
+    titulo: "Validar e gerar",
+    descricao: "Confira o resumo e gere o arquivo pronto para carga.",
+  },
 ];
 
 interface Configuracao {
@@ -50,12 +72,15 @@ function LinhaDoResumo({
   rotulo,
   valor,
   idAlterar,
+  acao = "Alterar",
   onAlterar,
   travado,
 }: {
   rotulo: string;
   valor: string;
   idAlterar: string;
+  /** o que o botão diz: para as fichas, "Trocar arquivos" (abre a escolha ali mesmo) */
+  acao?: string;
   onAlterar: () => void;
   travado: boolean;
 }) {
@@ -63,15 +88,9 @@ function LinhaDoResumo({
     <li className="flex items-center gap-3 px-3 py-2.5 text-sm">
       <span className="w-28 shrink-0 text-text-muted">{rotulo}</span>
       <span className="min-w-0 flex-1 truncate font-medium text-text">{valor}</span>
-      <button
-        type="button"
-        id={idAlterar}
-        disabled={travado}
-        onClick={onAlterar}
-        className="rounded-control px-2 py-1 text-xs font-medium text-accent-text outline-none hover:underline focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Alterar
-      </button>
+      <Button id={idAlterar} variant="outline" size="sm" disabled={travado} onClick={onAlterar}>
+        {acao}
+      </Button>
     </li>
   );
 }
@@ -104,22 +123,101 @@ export function CadastroTab() {
     setEtapa(destino);
   }
 
-  async function handleSubmit() {
-    if (login === null || fluxo === null) return;
-    await cadastro.submit(login, fluxo, () => {
-      setResetKey((k) => k + 1);
-      setConfig(SEM_CONFIGURACAO); // o próximo cadastro exige escolher de novo
+  const [confirmando, setConfirmando] = useState(false);
+  const validando = cadastro.validation.status === "loading";
+  // O servidor recusou a ficha (ilegível, sem colunas conhecidas, vazia): gerar falharia pelo mesmo motivo.
+  const planilhaRecusada = Object.keys(cadastro.validation.failure?.fileErrors ?? {}).length > 0;
+  const relatorio = cadastro.validation.status === "done" ? cadastro.validation.report : null;
+  const { graves, avisos } = relatorio ? pendenciasDoRelatorio(relatorio) : { graves: [], avisos: [] };
+
+  // Conferência de nomes: o que o usuário decidiu para cada nome duvidoso (ou acima de 20 caracteres). As decisões valem
+  // para UMA validação — a lista muda de identidade quando a validação recomeça, e aí elas são descartadas.
+  const nameReview = cadastro.validation.nameReview;
+  const [decisionState, setDecisionState] = useState<{
+    review: NameReviewItem[];
+    decisions: Decisions;
+  }>({
+    review: nameReview,
+    decisions: {},
+  });
+  const decisoes = decisionState.review === nameReview ? decisionState.decisions : {};
+  const nomesPendentes = pendingItems(nameReview, decisoes).length;
+
+  function decidirNome(key: string, decision: NameDecision) {
+    setDecisionState({
+      review: nameReview,
+      decisions: { ...decisoes, [key]: decision },
     });
   }
 
-  function handleValidate() {
-    if (login === null || fluxo === null) return;
-    void cadastro.validate(login, fluxo);
+  function aceitarTodasAsSugestoes() {
+    setDecisionState({
+      review: nameReview,
+      decisions: acceptAll(nameReview, decisoes),
+    });
   }
 
+  async function gerar() {
+    setConfirmando(false);
+    if (login === null || fluxo === null) return;
+    await cadastro.submit(
+      login,
+      fluxo,
+      () => {
+        setResetKey((k) => k + 1);
+        setConfig(SEM_CONFIGURACAO); // o próximo cadastro exige escolher de novo
+      },
+      buildOverrides(nameReview, decisoes),
+    );
+  }
+
+  /** Com pendências graves apontadas pela validação, gerar exige confirmação; sem elas (ou só com avisos), gera direto. */
+  function handleSubmit() {
+    if (graves.length > 0) setConfirmando(true);
+    else void gerar();
+  }
+
+  // Ao chegar em "Gerar" a planilha é validada sozinha: o veredito já está à vista, sem depender de
+  // o usuário lembrar do botão. Mudou algo (fichas, login, fluxo)? A validação foi descartada e roda de novo.
+  const validarSozinha =
+    etapa === ULTIMA_ETAPA &&
+    !finished &&
+    !travado &&
+    hasFiles &&
+    login !== null &&
+    fluxo !== null &&
+    cadastro.validation.status === "idle";
+  const { validate } = cadastro;
+  useEffect(() => {
+    if (validarSozinha && login !== null && fluxo !== null) void validate(login, fluxo);
+  }, [validarSozinha, login, fluxo, validate]);
+
+  /** Sem fichas o que veio depois perde o sentido: recomeça a escolha de login e fluxo, para a
+   *  linha do tempo e o resumo não seguirem mostrando como certo algo sem base. */
   function limparFichas() {
     cadastro.clear();
+    setConfig(SEM_CONFIGURACAO);
     setResetKey((k) => k + 1);
+  }
+
+  /** Trocar as fichas sem sair da última etapa: escolhe os arquivos ali mesmo; login e fluxo ficam como estão e a
+   *  validação roda de novo sozinha. */
+  const trocarFichasInput = useRef<HTMLInputElement>(null);
+  function trocarFichas(list: FileList | null) {
+    if (list && list.length > 0) cadastro.pickFiles(list);
+    if (trocarFichasInput.current) trocarFichasInput.current.value = ""; // permite escolher o mesmo arquivo de novo
+  }
+
+  function removerFicha(index: number) {
+    cadastro.removeFile(index);
+    if (cadastro.files.length === 1) setConfig(SEM_CONFIGURACAO); // era a última
+  }
+
+  /** O relatório de validação vale só para o login e o fluxo com que foi rodado. */
+  function escolher(campo: keyof Configuracao, valor: string) {
+    if (config[campo] === valor) return;
+    setConfig((c) => ({ ...c, [campo]: valor }));
+    cadastro.invalidateValidation();
   }
 
   function novoCadastro() {
@@ -141,32 +239,40 @@ export function CadastroTab() {
     tituloRef.current?.focus({ preventScroll: true });
   }, [etapa]);
 
-  // O relatório/sucesso/erro nascem abaixo dos botões, muitas vezes fora da
-  // tela; leva o resultado à vista quando ele muda.
+  // O sucesso/erro da geração nasce abaixo dos botões, muitas vezes fora da tela: leva à vista quando ele muda. (O
+  // veredito da validação não precisa: roda sozinha ao chegar em "Gerar" e fica acima dos botões.)
   const resultRef = useRef<HTMLDivElement>(null);
-  const validationStatus = cadastro.validation.status;
-  const resultKey =
-    validationStatus === "done" || validationStatus === "error"
-      ? "validacao"
-      : cadastro.done
-        ? "sucesso"
-        : cadastro.debugMsg
-          ? "erro"
-          : null;
+  const resultKey = cadastro.done ? "sucesso" : cadastro.failure ? "erro" : null;
   useEffect(() => {
     if (!resultKey) return;
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    resultRef.current?.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+    resultRef.current?.scrollIntoView({
+      block: "nearest",
+      behavior: reduced ? "auto" : "smooth",
+    });
   }, [resultKey]);
 
   const passos: StepperItem[] = [
     {
       label: ETAPAS[0].rotulo,
-      detail: finished ? "Enviadas" : hasFiles ? plural(cadastro.files.length, "arquivo", "arquivos") : "Planilhas .xlsx ou .xls",
+      detail: finished
+        ? "Enviadas"
+        : hasFiles
+          ? plural(cadastro.files.length, "arquivo", "arquivos")
+          : "Planilhas .xlsx ou .xls",
     },
-    { label: ETAPAS[1].rotulo, detail: finished ? "Definido" : (loginLabel ?? "Escolha uma opção") },
-    { label: ETAPAS[2].rotulo, detail: finished ? "Definido" : (fluxo ?? "Escolha uma opção") },
-    { label: ETAPAS[3].rotulo, detail: finished ? "Arquivo gerado" : "Validar e baixar" },
+    {
+      label: ETAPAS[1].rotulo,
+      detail: finished ? "Definido" : (loginLabel ?? "Escolha uma opção"),
+    },
+    {
+      label: ETAPAS[2].rotulo,
+      detail: finished ? "Definido" : (fluxo ?? "Escolha uma opção"),
+    },
+    {
+      label: ETAPAS[3].rotulo,
+      detail: finished ? "Arquivo gerado" : "Validar e baixar",
+    },
   ].map((passo, i) => ({
     ...passo,
     state: estados[i],
@@ -175,7 +281,10 @@ export function CadastroTab() {
 
   // Depois de gerar, o cabeçalho deixa de pedir para "conferir o resumo".
   const cabecalho = finished
-    ? { titulo: "Tudo pronto", descricao: "Comece outro cadastro quando quiser." }
+    ? {
+        titulo: "Tudo pronto",
+        descricao: "Comece outro cadastro quando quiser.",
+      }
     : ETAPAS[etapa];
 
   const nomeDasFichas =
@@ -216,14 +325,38 @@ export function CadastroTab() {
             salvas: é preciso informá-las a cada cadastro.
           </li>
           <li>
-            <strong>4º Passo:</strong> confira o resumo, valide se quiser e clique em <em>Gerar cadastro</em>.
-            Recupere execuções no <strong>Histórico</strong> quando precisar.
+            <strong>4º Passo:</strong> confira o resumo, valide se quiser e clique em <em>Gerar cadastro</em>. Recupere
+            execuções no <strong>Histórico</strong> quando precisar.
           </li>
         </ol>
         <p className="mt-2 text-text-subtle">
-          Dica: valide a planilha antes de gerar para evitar retrabalho. Os pontos já concluídos da linha do tempo
-          levam de volta à etapa.
+          Dica: valide a planilha antes de gerar para evitar retrabalho. Os pontos já concluídos da linha do tempo levam
+          de volta à etapa.
         </p>
+      </Modal>
+
+      <Modal
+        open={confirmando}
+        onClose={() => setConfirmando(false)}
+        title="Gerar mesmo com pendências?"
+        footer={
+          <>
+            <Button id="cadastro_confirm_cancel_btn" variant="ghost" onClick={() => setConfirmando(false)}>
+              Revisar antes
+            </Button>
+            <Button id="cadastro_confirm_generate_btn" onClick={() => void gerar()}>
+              Gerar mesmo assim
+            </Button>
+          </>
+        }
+      >
+        <p>A validação encontrou pendências nesta planilha:</p>
+        <ul className="my-2 list-disc space-y-0.5 pl-5 text-text">
+          {[...graves, ...avisos].map((pendencia) => (
+            <li key={pendencia}>{pendencia}</li>
+          ))}
+        </ul>
+        <p>Confira o relatório antes de gerar, ou gere assim mesmo se estiver ciente.</p>
       </Modal>
 
       <Stepper label="Etapas do cadastro" steps={passos} onSelect={irPara} />
@@ -233,7 +366,10 @@ export function CadastroTab() {
           <div
             key={etapa}
             className={cn(
-              navegou && (sentido === "fwd" ? "animate-[pd-step-in-fwd_280ms_ease-out]" : "animate-[pd-step-in-back_280ms_ease-out]"),
+              navegou &&
+                (sentido === "fwd"
+                  ? "animate-[pd-step-in-fwd_280ms_ease-out]"
+                  : "animate-[pd-step-in-back_280ms_ease-out]"),
             )}
           >
             <header className="mb-4">
@@ -272,6 +408,7 @@ export function CadastroTab() {
                   syncFiles={cadastro.files}
                   onFiles={(list) => {
                     const accepted = cadastro.pickFiles(list);
+                    // Recusada: o que já estava escolhido fica; só o <input> nativo, com a lista recusada, é refeito.
                     if (!accepted) setResetKey((k) => k + 1);
                   }}
                 />
@@ -279,7 +416,7 @@ export function CadastroTab() {
                   <FileList
                     files={cadastro.files}
                     maxFiles={MAX_FILES}
-                    onRemove={cadastro.removeFile}
+                    onRemove={removerFicha}
                     onClearAll={limparFichas}
                     clearAllId="cadastro_clear_btn"
                   />
@@ -294,7 +431,7 @@ export function CadastroTab() {
                 size="lg"
                 value={login}
                 options={LOGIN_OPTIONS}
-                onChange={(value) => setConfig((c) => ({ ...c, login: value }))}
+                onChange={(value) => escolher("login", value)}
                 onCommit={() => irPara(etapaMaxima([hasFiles, true, fluxo !== null]))}
                 required
               />
@@ -307,7 +444,7 @@ export function CadastroTab() {
                 size="lg"
                 value={fluxo}
                 options={FLUXO_OPTIONS}
-                onChange={(value) => setConfig((c) => ({ ...c, fluxo: value }))}
+                onChange={(value) => escolher("fluxo", value)}
                 onCommit={() => irPara(etapaMaxima([hasFiles, login !== null, true]))}
                 required
               />
@@ -317,12 +454,23 @@ export function CadastroTab() {
               <>
                 {!finished && (
                   <>
+                    <input
+                      ref={trocarFichasInput}
+                      id="cadastro_swap_files"
+                      type="file"
+                      accept=".xlsx,.xls"
+                      multiple
+                      hidden
+                      aria-label="Escolher outras fichas"
+                      onChange={(e) => trocarFichas(e.target.files)}
+                    />
                     <ul className="mb-4 divide-y divide-border rounded-control border border-border">
                       <LinhaDoResumo
                         rotulo="Fichas"
                         valor={nomeDasFichas}
                         idAlterar="cadastro_edit_fichas"
-                        onAlterar={() => irPara(0)}
+                        acao="Trocar arquivos"
+                        onAlterar={() => trocarFichasInput.current?.click()}
                         travado={travado}
                       />
                       <LinhaDoResumo
@@ -341,20 +489,50 @@ export function CadastroTab() {
                       />
                     </ul>
 
+                    {/* O resultado vem ANTES dos botões: o veredito com o que corrigir num cartão só, e os nomes a conferir. */}
+                    <div>
+                      <ValidationSummary status={cadastro.validation.status} report={relatorio}>
+                        <ValidationReport report={relatorio} />
+                      </ValidationSummary>
+
+                      {nameReview.length > 0 && (
+                        <NamesReview
+                          items={nameReview}
+                          decisions={decisoes}
+                          onDecision={decidirNome}
+                          onAcceptAll={aceitarTodasAsSugestoes}
+                        />
+                      )}
+
+                      {cadastro.validation.failure ? (
+                        <GenerationError
+                          id="cadastro_validation_error"
+                          className="mb-4"
+                          view={explainFailure(cadastro.validation.failure, "Não foi possível validar a planilha")}
+                        />
+                      ) : (
+                        cadastro.validation.status === "error" && (
+                          <ValidationReport report={null} error={cadastro.validation.error} />
+                        )
+                      )}
+                    </div>
+
                     <div className="flex flex-wrap items-center gap-3">
                       <Button
-                        id="cadastro_validate_btn"
-                        variant="secondary"
-                        disabled={travado}
-                        loading={cadastro.validation.status === "loading"}
-                        onClick={handleValidate}
-                      >
-                        {cadastro.validation.status === "loading" ? "Validando..." : "Validar planilha"}
-                      </Button>
-                      <Button
                         id="cadastro_btn"
+                        // Com pendência, gerar segue à vista, em âmbar (pede confirmação): destaque sem fingir que está tudo certo.
+                        variant={graves.length > 0 ? "warning" : "primary"}
                         aria-label="Gerar cadastro"
-                        title="Processar a planilha e gerar arquivo tratado"
+                        title={
+                          validando
+                            ? "Aguarde a validação terminar"
+                            : planilhaRecusada
+                              ? "A planilha foi recusada: troque a ficha em “Alterar”"
+                              : nomesPendentes > 0
+                                ? "Confira os nomes destacados antes de gerar"
+                                : "Processar a planilha e gerar arquivo tratado"
+                        }
+                        disabled={validando || planilhaRecusada || nomesPendentes > 0}
                         loading={cadastro.generating}
                         onClick={handleSubmit}
                       >
@@ -371,16 +549,6 @@ export function CadastroTab() {
                 )}
 
                 <div ref={resultRef} className="scroll-mt-16">
-                  {cadastro.validation.status !== "idle" && (
-                    <div className="mt-4">
-                      <ValidationReport
-                        report={cadastro.validation.report}
-                        loading={cadastro.validation.status === "loading"}
-                        error={cadastro.validation.status === "error" ? cadastro.validation.error : null}
-                      />
-                    </div>
-                  )}
-
                   <div id="cadastro_status" aria-live="polite">
                     {finished && (
                       <div className="flex items-start gap-3 rounded-control border border-success/40 bg-success-soft px-4 py-3">
@@ -398,16 +566,7 @@ export function CadastroTab() {
                     )}
                   </div>
 
-                  {cadastro.debugMsg && (
-                    <div
-                      id="cadastro_debug"
-                      aria-live="assertive"
-                      className={`mt-4 flex items-start gap-3 rounded-control border px-4 py-3 text-sm ${TONE_OUTLINE.danger}`}
-                    >
-                      <IconAlert className="mt-0.5 h-5 w-5 shrink-0" />
-                      <span>{cadastro.debugMsg}</span>
-                    </div>
-                  )}
+                  {cadastro.failure && <GenerationError className="mt-4" view={explainFailure(cadastro.failure)} />}
                 </div>
               </>
             )}

@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "./cn";
 
-type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "success";
+type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "success" | "warning";
 type Size = "sm" | "md";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -21,6 +21,8 @@ const VARIANTS: Record<Variant, string> = {
   ghost: "text-text-muted hover:bg-surface-2 hover:text-text",
   danger: "bg-danger text-white hover:bg-danger-hover",
   success: "bg-success text-white hover:brightness-95",
+  // Âmbar sólido: ação que segue disponível mas pede atenção (ex.: gerar com pendências). No escuro o âmbar é claro: texto escuro.
+  warning: "bg-warning text-white hover:brightness-95 dark:text-[#1a1305]",
 };
 
 const SIZES: Record<Size, string> = {

@@ -52,6 +52,14 @@ export function FileDropzone({
   const rich = variant === "rich";
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  // A cada seleção entregue sobe um número: é a `key` do efeito de "recebido", que assim
+  // recomeça a cada envio. Se quem chama recusa a seleção, ele remonta a zona e isto zera.
+  const [received, setReceived] = useState(0);
+
+  function handleFiles(files: FileList) {
+    onFiles(files);
+    setReceived((n) => n + 1);
+  }
 
   useEffect(() => {
     if (!syncFiles || !inputRef.current) return;
@@ -93,11 +101,11 @@ export function FileDropzone({
       onDrop={(e) => {
         e.preventDefault();
         setDragOver(false);
-        if (e.dataTransfer.files?.length) onFiles(e.dataTransfer.files);
+        if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
       }}
       className={cn(
         "border-2 border-dashed text-center transition",
-        rich ? cn("cursor-pointer rounded-surface px-6", compact ? "py-4" : "py-8") : "rounded-control p-6",
+        rich ? cn("relative cursor-pointer rounded-surface px-6", compact ? "py-4" : "py-8") : "rounded-control p-6",
         dragOver
           ? "border-accent bg-accent/10"
           : rich
@@ -106,6 +114,19 @@ export function FileDropzone({
         rich && dragOver && "scale-[1.01]",
       )}
     >
+      {rich && received > 0 && (
+        <span
+          key={received}
+          aria-hidden="true"
+          data-testid="dropzone-received"
+          className="pointer-events-none absolute inset-0 rounded-[inherit]"
+        >
+          <span className="pd-drop-halo absolute inset-0 rounded-[inherit]" />
+          <span className="absolute inset-0 overflow-hidden rounded-[inherit]">
+            <span className="pd-drop-sheen absolute inset-y-0 left-0 w-1/4" />
+          </span>
+        </span>
+      )}
       {rich && !compact && (
         <div className={cn("mx-auto mb-3 w-fit transition-transform", dragOver && "-translate-y-1")}>
           <IconChip icon={<IconUpload className="h-5 w-5" />} size="lg" shape="circle" />
@@ -124,7 +145,7 @@ export function FileDropzone({
         aria-label={ariaLabel}
         className="hidden"
         onChange={(e) => {
-          if (e.target.files?.length) onFiles(e.target.files);
+          if (e.target.files?.length) handleFiles(e.target.files);
         }}
       />
       <Button

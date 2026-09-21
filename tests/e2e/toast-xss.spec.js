@@ -30,10 +30,13 @@ test("showToast renderiza mensagem maliciosa como texto, nunca como HTML", async
     xlsxFile("cadastro.xlsx", [
       {
         CPF: validCpf(1),
-        "NOME COMPLETO": "Pessoa Um",
+        "NOME COMPLETO": "Ana Souza",
         EMAIL: "pessoa1@x.com",
         EMPRESA: "Empresa A",
         "Centro de custo": "CC1",
+        "Descrição Centro de Custo": "ADMINISTRATIVO",
+        TELEFONE: "11999990001",
+        "Data de Nascimento": "12/05/1990",
         "SOLICITANTE? (S/N)": "S",
       },
     ]),

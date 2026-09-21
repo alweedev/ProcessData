@@ -1,86 +1,124 @@
+import { useState } from "react";
 import type { QualityReport } from "../lib/api";
-import { StatCard } from "./StatCard";
-import { Skeleton } from "./Skeleton";
-import { TONE_OUTLINE } from "./tone";
+import { coveredByGeneral, generalProblems, lineDetails, summarizeProblems, type ProblemRow } from "../lib/problems";
+import { cn } from "./cn";
 
 interface ValidationReportProps {
   report: QualityReport | null;
-  loading: boolean;
   error?: string | null;
 }
 
-export function ValidationReport({ report, loading, error }: ValidationReportProps) {
-  if (loading) {
-    return (
-      <div className="rounded-surface border border-border bg-surface-2 p-4" aria-live="polite">
-        <span className="sr-only">Validando planilha…</span>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-hidden="true">
-          <Skeleton className="h-14" />
-          <Skeleton className="h-14" />
-          <Skeleton className="h-14" />
-          <Skeleton className="h-14" />
-        </div>
-      </div>
-    );
-  }
+const VISIBLE_ROWS = 5;
+
+/**
+ * O detalhe das pendências, para quem vai corrigir a planilha. Vai DENTRO do cartão do ValidationSummary (que já diz
+ * quantos cadastros têm pendência), então não tem título nem contagem própria e não repete nada:
+ * - problema da ficha inteira (coluna ausente): uma frase, e não o mesmo "em branco" de cada passageiro;
+ * - o que falta em todas as linhas, uma vez; cada passageiro uma vez, só com o que ele tem a mais;
+ * - linhas sem nenhum obrigatório: "parece que não foram preenchidas", sem listar os problemas de cada uma.
+ * Sem problema algum não mostra nada. O erro de validação (servidor recusou, rede) aparece sozinho, sem cartão.
+ */
+export function ValidationReport({ report, error }: ValidationReportProps) {
   if (error) {
     return (
-      <div className="rounded-surface border border-border bg-surface-2 px-4 py-4 text-sm text-text-muted">{error}</div>
+      <div className="mb-4 rounded-surface border border-border bg-surface-2 px-4 py-4 text-sm text-text-muted">
+        {error}
+      </div>
     );
   }
   if (!report) return null;
 
-  const lineErrors = Object.entries(report.line_errors);
-  const blanks = Object.entries(report.required_blank).filter(([, n]) => n > 0);
-  const clean =
-    report.invalid_rows === 0 && report.duplicated_rows === 0 && !report.general_errors && blanks.length === 0;
+  const general = generalProblems(report);
+  const { blankRows, common, rows } = summarizeProblems(lineDetails(report), coveredByGeneral(report));
+  if (general.length === 0 && blankRows.length === 0 && rows.length === 0) return null;
 
   return (
-    <div className="space-y-3 rounded-surface border border-border bg-surface-2 p-4">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <StatCard label="Linhas" value={report.total_rows} />
-        <StatCard label="Válidas" value={report.valid_rows} tone={report.valid_rows > 0 ? "success" : "neutral"} />
-        <StatCard label="Inválidas" value={report.invalid_rows} tone={report.invalid_rows > 0 ? "danger" : "neutral"} />
-        <StatCard
-          label="Duplicadas"
-          value={report.duplicated_rows}
-          tone={report.duplicated_rows > 0 ? "warning" : "neutral"}
-        />
-      </div>
-
-      {clean && <p className="text-sm text-success">Nenhum problema encontrado — pode gerar.</p>}
-
-      {report.general_errors && (
-        <div className={`rounded-control border px-3 py-2 text-sm ${TONE_OUTLINE.danger}`}>{report.general_errors}</div>
+    <div id="cadastro_problems" className="space-y-3">
+      {general.length > 0 && (
+        <ul className="space-y-1.5">
+          {general.map((problem) => (
+            <li key={problem} className="rounded-control border border-danger/40 px-3 py-2 text-sm text-danger">
+              {problem}
+            </li>
+          ))}
+        </ul>
       )}
 
-      {blanks.length > 0 && (
-        <div className="text-sm text-text">
-          <p className="mb-1 font-medium">Campos obrigatórios em branco</p>
-          <div className="flex flex-wrap gap-1.5">
-            {blanks.map(([col, n]) => (
-              <span key={col} className={`rounded-pill border px-2 py-0.5 text-xs ${TONE_OUTLINE.warning}`}>
-                {col}: {n}
+      {blankRows.length > 0 && (
+        <div id="cadastro_problems_blank">
+          <p className="text-sm font-medium text-text">
+            {blankRows.length}{" "}
+            {blankRows.length === 1 ? "linha sem nenhum campo obrigatório" : "linhas sem nenhum campo obrigatório"}
+            <span className="font-normal text-text-muted">
+              {blankRows.length === 1 ? " — parece que não foi preenchida" : " — parece que não foram preenchidas"}
+            </span>
+          </p>
+          <RowList rows={blankRows.map((row) => ({ ...row, extras: [] }))} />
+        </div>
+      )}
+
+      {rows.length > 0 && (
+        <div id="cadastro_problems_rows" className={blankRows.length > 0 ? "border-t border-border pt-3" : undefined}>
+          {common.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-sm font-medium text-text">
+                {rows.length === 2 ? "Nos dois:" : `Em todos os ${rows.length}:`}
               </span>
-            ))}
-          </div>
+              <ul className="contents">
+                {common.map((title) => (
+                  <li key={title} className="rounded-full border border-danger/40 px-2 py-0.5 text-xs text-danger">
+                    {title}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <RowList rows={rows} alsoPrefix={common.length > 0} />
         </div>
       )}
-
-      {lineErrors.length > 0 && (
-        <div className="text-sm text-text">
-          <p className="mb-1 font-medium">Erros por linha ({lineErrors.length})</p>
-          <ul className="max-h-48 space-y-1 overflow-y-auto rounded-control bg-surface px-3 py-2 text-xs text-text-muted">
-            {lineErrors.map(([line, msg]) => (
-              <li key={line}>
-                <span className="font-mono text-text-subtle">L{line}</span> — {msg}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <p className="text-xs text-text-subtle">A validação é informativa — a geração não depende dela.</p>
     </div>
+  );
+}
+
+type ListedRow = ProblemRow & { extras: string[] };
+
+function RowList({ rows, alsoPrefix = false }: { rows: ListedRow[]; alsoPrefix?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? rows : rows.slice(0, VISIBLE_ROWS);
+  const hidden = rows.length - visible.length;
+
+  return (
+    <>
+      <ul className={cn("mt-1.5 space-y-0.5 text-xs text-text-muted", expanded && "max-h-64 overflow-y-auto")}>
+        {visible.map((row, index) => (
+          <li key={`${row.label}-${index}`}>
+            <span className="font-medium text-text-subtle">{row.label}</span>
+            {row.nome && (
+              <>
+                {" · "}
+                <span className="text-text">{row.nome}</span>
+              </>
+            )}
+            {row.extras.length > 0 && (
+              <span>
+                {" — "}
+                {alsoPrefix ? "também: " : ""}
+                {row.extras.join("; ")}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      {rows.length > VISIBLE_ROWS && (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-1.5 rounded-control text-xs font-medium text-accent-text outline-none hover:underline focus-visible:ring-2 focus-visible:ring-accent/50"
+        >
+          {expanded ? "Mostrar menos" : `Mostrar todos (${hidden} a mais)`}
+        </button>
+      )}
+    </>
   );
 }

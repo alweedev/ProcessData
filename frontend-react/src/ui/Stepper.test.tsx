@@ -61,6 +61,47 @@ describe("Stepper", () => {
     });
   });
 
+  describe("etapa preenchida adiante da atual ('ready')", () => {
+    const comPreenchida = [
+      { label: "Enviar", state: "current" as const },
+      { label: "Configurar", state: "ready" as const },
+      { label: "Gerar", state: "todo" as const },
+    ];
+
+    it("anuncia '(preenchida)', mantém o número e usa o contorno tracejado, sem virar ✓ de concluída", () => {
+      render(<Stepper label="Etapas" steps={comPreenchida} />);
+
+      expect(screen.getByText("(preenchida)")).toBeInTheDocument();
+      expect(screen.getByTestId("stepper-dot-1")).toHaveTextContent("2");
+      expect(screen.getByTestId("stepper-dot-1").className).toContain("border-dashed");
+    });
+
+    it("a linha só se preenche até o que foi alcançado: 'ready' não avança o progresso", () => {
+      const { container } = render(<Stepper label="Etapas" steps={comPreenchida} />);
+
+      const [linhaAteConfigurar] = container.querySelectorAll("li > span[aria-hidden] > span");
+      expect(linhaAteConfigurar.className).toContain("scale-x-0");
+    });
+  });
+
+  it("o anel se centra no ponto da etapa atual nos dois eixos, mesmo com o ponto fora do topo da lista", () => {
+    // jsdom não faz layout: simula a lista em (100, 50) e o ponto atual 2px abaixo do topo dela
+    // (é o que acontece quando o texto ao lado é mais alto que o ponto).
+    const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      const isDot = this.dataset.testid === "stepper-dot-1";
+      const box = isDot ? { left: 300, top: 52, width: 32, height: 32 } : { left: 100, top: 50, width: 800, height: 36 };
+      return { ...box, right: box.left + box.width, bottom: box.top + box.height, x: box.left, y: box.top, toJSON: () => ({}) };
+    });
+    try {
+      render(<Stepper label="Etapas" steps={steps} />);
+
+      // centro do ponto na lista: x = 300-100+16 = 216, y = 52-50+16 = 18; o anel (40px) sai de (196, -2).
+      expect(screen.getByTestId("stepper-marker").style.transform).toBe("translate(196px, -2px)");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("mostra a linha de detalhe da etapa quando ela existe", () => {
     render(<Stepper label="Etapas" steps={steps} />);
 

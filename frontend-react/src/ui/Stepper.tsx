@@ -2,7 +2,8 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { cn } from "./cn";
 import { IconCheck } from "./icons";
 
-export type StepState = "done" | "current" | "todo";
+/** `ready`: adiante da etapa atual, mas já preenchida (o usuário voltou e a escolha continua guardada). */
+export type StepState = "done" | "current" | "ready" | "todo";
 
 export interface StepperItem {
   label: string;
@@ -23,12 +24,15 @@ interface StepperProps {
 const BUBBLE: Record<StepState, string> = {
   done: "border-success/40 bg-success-soft text-success",
   current: "border-accent bg-accent text-accent-fg",
+  // Tracejado verde: não é progresso (o preenchimento verde é de "done"), é valor guardado.
+  ready: "border-dashed border-success/60 bg-surface text-success",
   todo: "border-border-strong bg-surface text-text-subtle",
 };
 
 const STATE_HINT: Record<StepState, string> = {
   done: " (concluída)",
   current: " (etapa atual)",
+  ready: " (preenchida)",
   todo: "",
 };
 
@@ -44,8 +48,9 @@ export function Stepper({ steps, label, onSelect }: StepperProps) {
   const dotRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const currentIndex = steps.findIndex((step) => step.state === "current");
 
-  // Centro (x) do ponto atual, relativo à lista. O anel é posicionado por ele.
-  const [x, setX] = useState<number | null>(null);
+  // Centro (x, y) do ponto atual, relativo à lista. O anel é posicionado por ele — medido nos
+  // dois eixos: a altura do ponto dentro da lista muda com o texto ao lado, então não dá para fixá-la.
+  const [center, setCenter] = useState<{ x: number; y: number } | null>(null);
   // Só anima depois da 1ª medição, senão o anel "voaria" da esquerda ao abrir a tela.
   const [animate, setAnimate] = useState(false);
 
@@ -53,10 +58,12 @@ export function Stepper({ steps, label, onSelect }: StepperProps) {
     const measure = () => {
       const dot = dotRefs.current[currentIndex];
       const list = listRef.current;
-      if (!dot || !list) return setX(null);
+      if (!dot || !list) return setCenter(null);
       const d = dot.getBoundingClientRect();
       const l = list.getBoundingClientRect();
-      setX(d.left - l.left + d.width / 2);
+      const x = d.left - l.left + d.width / 2;
+      const y = d.top - l.top + d.height / 2;
+      setCenter((prev) => (prev && prev.x === x && prev.y === y ? prev : { x, y }));
     };
     measure(); // a cada render: o texto dos detalhes muda e desloca os pontos
     if (typeof ResizeObserver === "undefined" || !listRef.current) return;
@@ -76,17 +83,16 @@ export function Stepper({ steps, label, onSelect }: StepperProps) {
   if (hop.index !== currentIndex) setHop({ index: currentIndex, id: hop.id + 1 });
 
   return (
-    <ol ref={listRef} aria-label={label} className="relative mb-5 flex items-start">
-      {x !== null && (
+    <ol ref={listRef} aria-label={label} className="relative mb-5 flex items-center">
+      {center !== null && (
         <span
           aria-hidden="true"
           data-testid="stepper-marker"
-          className="pointer-events-none absolute left-0 z-10"
+          className="pointer-events-none absolute left-0 top-0 z-10"
           style={{
-            top: -(RING - 32) / 2,
             width: RING,
             height: RING,
-            transform: `translateX(${x - RING / 2}px)`,
+            transform: `translate(${center.x - RING / 2}px, ${center.y - RING / 2}px)`,
             transition: animate ? "transform 550ms cubic-bezier(0.34, 1.25, 0.64, 1)" : "none",
           }}
         >
@@ -107,7 +113,7 @@ export function Stepper({ steps, label, onSelect }: StepperProps) {
           <li
             key={step.label}
             aria-current={step.state === "current" ? "step" : undefined}
-            className={cn("flex items-start", index < steps.length - 1 ? "flex-1" : "flex-none")}
+            className={cn("flex items-center", index < steps.length - 1 ? "flex-1" : "flex-none")}
           >
             <Wrapper
               {...(interactive ? { type: "button" as const, onClick: () => onSelect?.(index) } : {})}
@@ -150,12 +156,14 @@ export function Stepper({ steps, label, onSelect }: StepperProps) {
               </span>
             </Wrapper>
             {index < steps.length - 1 && (
-              <span aria-hidden="true" className="relative mx-2 mt-4 h-px min-w-4 flex-1 bg-border sm:mx-3 sm:min-w-6">
-                {/* A linha se preenche quando a etapa seguinte é alcançada. */}
+              <span aria-hidden="true" className="relative mx-2 h-px min-w-4 flex-1 bg-border sm:mx-3 sm:min-w-6">
+                {/* A linha se preenche quando a etapa seguinte é alcançada (concluída ou atual); "ready" ainda não foi. */}
                 <span
                   className={cn(
                     "absolute inset-0 origin-left bg-success/60 transition-transform duration-500",
-                    steps[index + 1].state === "todo" ? "scale-x-0" : "scale-x-100",
+                    steps[index + 1].state === "done" || steps[index + 1].state === "current"
+                      ? "scale-x-100"
+                      : "scale-x-0",
                   )}
                 />
               </span>

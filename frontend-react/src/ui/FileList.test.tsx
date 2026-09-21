@@ -41,6 +41,44 @@ describe("FileList", () => {
     expect(onRemove).toHaveBeenCalledExactlyOnceWith(1);
   });
 
+  describe("efeito de entrada", () => {
+    const linhas = () => screen.getAllByRole("listitem");
+    const props = { maxFiles: 5, onRemove: () => {} };
+
+    it("ficha adicionada depois entra animada, escalonada; a que já estava ali não repete", () => {
+      const a = fakeFile("a.xlsx", 1);
+      const b = fakeFile("b.xlsx", 1);
+      const c = fakeFile("c.xlsx", 1);
+      const { rerender } = render(<FileList files={[]} {...props} />);
+
+      rerender(<FileList files={[a]} {...props} />);
+      expect(linhas()[0]).toHaveAttribute("data-entering");
+
+      rerender(<FileList files={[a, b, c]} {...props} />);
+      const [la, lb, lc] = linhas();
+      expect(la).toHaveAttribute("data-entering"); // já entrou animada; continua marcada, sem reiniciar
+      expect(lb.style.getPropertyValue("--d")).toBe("0ms");
+      expect(lc.style.getPropertyValue("--d")).toBe("80ms");
+    });
+
+    it("remover uma ficha não reanima as que ficaram", () => {
+      const a = fakeFile("a.xlsx", 1);
+      const b = fakeFile("b.xlsx", 1);
+      const { rerender } = render(<FileList files={[a, b]} {...props} />);
+      const linhaB = linhas()[1];
+
+      rerender(<FileList files={[b]} {...props} />);
+
+      expect(linhas()[0]).toBe(linhaB); // mesma linha no DOM: chave estável, nada remontou
+    });
+
+    it("ao montar já com fichas (voltar à etapa) nenhuma anima", () => {
+      render(<FileList files={[fakeFile("a.xlsx", 1), fakeFile("b.xlsx", 1)]} {...props} />);
+
+      for (const linha of linhas()) expect(linha).not.toHaveAttribute("data-entering");
+    });
+  });
+
   it("'Limpar todos' só existe quando há onClearAll e o aciona", async () => {
     const onClearAll = vi.fn();
     const { rerender } = render(<FileList files={[fakeFile("a.xlsx", 1)]} maxFiles={5} onRemove={() => {}} />);
