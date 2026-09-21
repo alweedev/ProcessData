@@ -53,6 +53,8 @@ export class InativacaoApiError extends Error {
   }
 }
 
+const MENSAGEM_GENERICA = "Não foi possível concluir a operação. Verifique a conexão e tente de novo.";
+
 function basesForm(cadastro: File, estruturas: File): FormData {
   const fd = new FormData();
   fd.append("cadastro", cadastro);
@@ -95,6 +97,7 @@ export async function postExecutar(
     return await postFormForBlob("/api/inativacao/executar", fd, onProgress);
   } catch (err) {
     if (err instanceof ApiRejection) throw new InativacaoApiError(err.message, err.code ?? "ERRO_INTERNO");
-    throw err;
+    // Corpo não-JSON (proxy/HTML), falha de rede ou arquivo inválido: nunca repassa o texto cru ao usuário.
+    throw new InativacaoApiError(MENSAGEM_GENERICA, "ERRO_INTERNO");
   }
 }

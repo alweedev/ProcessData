@@ -12,6 +12,7 @@ const ANALISE: AnaliseInativacao = {
 class FakeXhr {
   static respostas: { status: number; corpo: unknown }[] = [];
   static enviados: FormData[] = [];
+  static falhaDeRede = false;
   upload = { addEventListener: () => {} };
   responseType = "";
   status = 0;
@@ -23,6 +24,10 @@ class FakeXhr {
     FakeXhr.enviados.push(formData);
     const proxima = FakeXhr.respostas.shift();
     queueMicrotask(() => {
+      if (FakeXhr.falhaDeRede) {
+        this.onerror?.();
+        return;
+      }
       this.status = proxima?.status ?? 500;
       const corpo = proxima?.corpo ?? "";
       this.response = new Blob([typeof corpo === "string" ? corpo : JSON.stringify(corpo)]);
@@ -35,6 +40,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   FakeXhr.respostas = [];
   FakeXhr.enviados = [];
+  FakeXhr.falhaDeRede = false;
 });
 
 describe("postAnalisar", () => {
@@ -93,5 +99,30 @@ describe("postExecutar", () => {
 
     expect(erro).toBeInstanceOf(InativacaoApiError);
     expect(erro).toMatchObject({ code: "ANALISE_DIVERGENTE", message: "A análise mudou." });
+  });
+
+  it("corpo não-JSON (502 com HTML) vira ERRO_INTERNO sem expor o HTML", async () => {
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    FakeXhr.respostas.push({ status: 502, corpo: "<html><body>Bad Gateway</body></html>" });
+
+    const erro = await postExecutar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], "d", false).catch((e: unknown) => e);
+
+    expect(erro).toBeInstanceOf(InativacaoApiError);
+    expect(erro).toMatchObject({ code: "ERRO_INTERNO" });
+    expect((erro as Error).message).not.toContain("<html>");
+    expect((erro as Error).message).toBe("Não foi possível concluir a operação. Verifique a conexão e tente de novo.");
+  });
+
+  it("falha de rede vira ERRO_INTERNO com a mensagem genérica", async () => {
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    FakeXhr.falhaDeRede = true;
+
+    const erro = await postExecutar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], "d", false).catch((e: unknown) => e);
+
+    expect(erro).toBeInstanceOf(InativacaoApiError);
+    expect(erro).toMatchObject({
+      code: "ERRO_INTERNO",
+      message: "Não foi possível concluir a operação. Verifique a conexão e tente de novo.",
+    });
   });
 });
