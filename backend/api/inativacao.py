@@ -95,8 +95,10 @@ def _extrair_itens(paths: list[str]) -> list[str]:
 
 def _detalhes_analise(analise: Analise) -> dict:
     """Só contagens, impressão digital e CPF mascarado: nome e e-mail nunca vão para o histórico."""
+    resumo = dict(analise.payload["resumo"])
+    resumo["duplicados"] = [mascarar_cpf(c) for c in resumo.get("duplicados", [])]  # CPFs digitados em dobro
     return {
-        "resumo": analise.payload["resumo"],
+        "resumo": resumo,
         "impressaoDigital": analise.payload["impressaoDigital"],
         "usuarios": [{"cpf": u["cpfMascarado"], "situacao": u["situacao"]} for u in analise.payload["usuarios"]],
     }

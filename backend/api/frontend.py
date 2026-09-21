@@ -10,12 +10,6 @@ logger = get_logger()
 frontend_bp = Blueprint("frontend", __name__)
 
 
-@frontend_bp.route("/api/<path:path>", methods=["POST", "PUT", "PATCH", "DELETE"])
-def api_desconhecida(path):
-    # O curinga do SPA só aceita GET: sem esta rota, um POST numa rota /api removida responderia 405, não 404.
-    abort(404)
-
-
 @frontend_bp.route("/", defaults={"path": "index.html"})
 @frontend_bp.route("/<path:path>")
 def serve_frontend(path):

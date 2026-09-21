@@ -108,4 +108,5 @@ def test_erro_interno_vira_500_e_nunca_sucesso(client, monkeypatch):
 
 def test_rotas_antigas_foram_removidas(client):
     for rota in ("/api/process_inativacao", "/api/preview_inativacao", "/api/inativacao/buscar"):
-        assert client.post(rota, data={}, content_type="multipart/form-data").status_code == 404
+        # Rota removida: 404 (sem regra) ou 405 (só o curinga do SPA aceita GET); nunca 200/400/500.
+        assert client.post(rota, data={}, content_type="multipart/form-data").status_code in (404, 405)

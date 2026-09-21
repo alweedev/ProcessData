@@ -110,6 +110,15 @@ def test_auditoria_nao_guarda_dado_pessoal(client):
     assert "***." in texto
 
 
+def test_auditoria_mascara_cpf_duplicado(client):
+    resp = _post(client, *_bases(), itens=json.dumps([A, A]))
+    assert resp.status_code == 200
+    assert resp.get_json()["resumo"]["duplicados"] == [A]  # a resposta ao operador segue completa
+    texto = json.dumps(AuditService.list_events(), ensure_ascii=False)
+    assert A not in texto
+    assert "***." in texto
+
+
 def test_erro_interno_vira_500_sem_vazar_detalhe(client, monkeypatch):
     def boom(*args, **kwargs):
         raise RuntimeError("segredo interno")
