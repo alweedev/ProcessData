@@ -79,7 +79,7 @@ Removidos: `POST /api/inativacao/buscar`, `/api/preview_inativacao` e `/api/proc
 
 ## Testes
 
-`python -m pytest -q --cov` (suíte em `backend/tests/`, 123/123, cobertura
+`python -m pytest -q --cov` (suíte em `backend/tests/`, 365/365, cobertura
 medida mas sem gate de threshold ainda). `npm --prefix frontend-react run
 test` (Vitest, funções puras dos hooks). Fluxos críticos ponta-a-ponta em
 `tests/e2e/` (Playwright, 19 specs).

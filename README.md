@@ -180,11 +180,12 @@ do comando.
 
 - **Formula injection**: células que começam com `= + - @` / TAB / CR são
   gravadas como texto explícito na exportação.
-- **XSS**: valores vindos da planilha são escapados no preview antes de ir
-  para o DOM.
+- **XSS**: valores vindos da planilha são exibidos como texto (sem HTML) na
+  análise de inativação.
 - **Upload**: além da extensão (`.xlsx`, `.xls`, `.xltx`), o conteúdo
   `.xlsx`/`.xltx` é checado (assinatura ZIP + estrutura OOXML); limite de
-  16 MB por arquivo.
+  16 MB por requisição (`MAX_CONTENT_LENGTH`) e de 32 MB por requisição nas
+  duas rotas de inativação, que recebem duas planilhas.
 - **Path traversal**: o servidor estático só entrega arquivos cujo caminho
   real resolve para dentro de `frontend/`.
 - **CORS**: restrito à mesma origem por padrão; `CORS_ORIGINS` libera

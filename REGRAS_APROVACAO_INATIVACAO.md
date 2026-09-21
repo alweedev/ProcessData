@@ -233,7 +233,7 @@ Estrutura órfã bloqueia a execução até o operador confirmar (`ignore_orphan
 - Resumo da execução: `usuariosInativados` conta **usuários (CPFs)**, não linhas
   da ficha; por isso pode ser menor que o número de linhas de `saida_inativacao.xlsx`.
 - Auditoria: `inativacao_analise` e `inativacao_execucao` registram só contagens,
-  a impressão digital e **CPFs mascarados** (`***.456.789-**`, também os CPFs
+  a impressão digital, a `situacao` de cada usuário e **CPFs mascarados** (`***.456.789-**`, também os CPFs
   duplicados na lista). Nunca gravam nome, e-mail nem CPF completo.
 
 ### 2.6 Erros
@@ -259,7 +259,7 @@ As rotas antigas `/api/inativacao/buscar`, `/api/process_inativacao` e
 |---|---|---|
 | Ação | Substitui/remove aprovadores em estruturas existentes | Inativa usuários (ficha DELETE) e atualiza as estruturas de aprovação em cascata |
 | Entrada | Base de estruturas + base de usuários + CPF(s) | Base de cadastro + base de estruturas + lista |
-| Chave de match | `AprovacaoId` / CPF do aprovador | CPF → Nome → Email (nessa prioridade) |
+| Chave de match | `AprovacaoId` / CPF do aprovador | CPF do cadastro (a busca aceita CPF, e-mail ou nome; tudo é resolvido para o CPF do cadastro) |
 | Valida dígito verificador de CPF | Sim | Não (só comprimento) |
 | Saída | Base de estruturas atualizada (`Operacao=UPDATE` nas linhas alteradas) | ZIP: ficha DELETE + estruturas atualizadas |
 | Efeito colateral automático no outro módulo | Nenhum | Atualiza estruturas (exclui a do viajante e compacta aprovadores) |
