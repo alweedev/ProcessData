@@ -63,10 +63,13 @@ export interface AnalysisSummary {
 export class ApiRejection extends Error {
   /** `{nome do arquivo: motivo}`, quando o servidor separa o problema por arquivo. */
   readonly fileErrors?: Record<string, string>;
+  /** Código estável do erro de negócio (`code`), quando o servidor o envia: a tela decide por ele, não pelo texto. */
+  readonly code?: string;
 
-  constructor(message: string, fileErrors?: Record<string, string>) {
+  constructor(message: string, fileErrors?: Record<string, string>, code?: string) {
     super(message);
     this.fileErrors = fileErrors;
+    this.code = code;
   }
 }
 
@@ -131,7 +134,13 @@ export function postFormForBlob(url: string, formData: FormData, onProgress?: (p
       reader.onload = () => {
         try {
           const obj = JSON.parse(String(reader.result || "{}"));
-          reject(new ApiRejection(obj.error || `Erro ${xhr.status}`, asFileErrors(obj.errors)));
+          reject(
+            new ApiRejection(
+              obj.error || `Erro ${xhr.status}`,
+              asFileErrors(obj.errors),
+              typeof obj.code === "string" ? obj.code : undefined,
+            ),
+          );
         } catch {
           reject(new Error(String(reader.result || `Erro ${xhr.status}`)));
         }
