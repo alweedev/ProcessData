@@ -44,7 +44,9 @@ class ExportService:
 
                 for idx, col in enumerate(df.columns, 1):
                     series = df[col].astype(str).fillna("")
-                    max_len = max(series.map(len).max(), len(str(col))) + 2
+                    lengths = series.map(len)
+                    # DataFrame vazio: `.max()` é NaN e a largura NaN corrompe o xlsx (`<col width="">`).
+                    max_len = max(int(lengths.max()) if len(lengths) else 0, len(str(col))) + 2
                     max_len = min(max_len, 60)
                     ws.column_dimensions[get_column_letter(idx)].width = max_len
 

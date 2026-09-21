@@ -128,3 +128,22 @@ def test_erro_interno_vira_500_sem_vazar_detalhe(client, monkeypatch):
     assert resp.status_code == 500
     assert resp.get_json()["code"] == "ERRO_INTERNO"
     assert "segredo" not in resp.get_data(as_text=True)
+
+
+def test_lista_ilegivel_vira_400_arquivo_invalido_e_limpa_temporarios(client):
+    data = {
+        "cadastro": xlsx_upload(_bases()[0], "cadastro.xlsx"),
+        "estruturas": xlsx_upload(_bases()[1], "estruturas.xlsx"),
+        "lista": (io.BytesIO(b"CPF\n123\n"), "lista.xls"),
+    }
+    resp = client.post(ROTA, data=data, content_type="multipart/form-data")
+    assert resp.status_code == 400, resp.get_data(as_text=True)
+    assert resp.get_json()["code"] == "ARQUIVO_INVALIDO"
+    assert os.listdir(settings.UPLOAD_FOLDER) == []
+
+
+def test_teto_da_rota_acima_dos_16_mb_globais(client):
+    grande = io.BytesIO(b"0" * (17 * 1024 * 1024))
+    resp = client.post(ROTA, data={"lixo": (grande, "lixo.bin")}, content_type="multipart/form-data")
+    assert resp.status_code == 400
+    assert resp.get_json()["code"] == "BASE_AUSENTE"

@@ -91,6 +91,12 @@ Ordem (importa quando dois usuários da lista se relacionam):
    da lista removidos, ficou sem nenhum aprovador. Estrutura excluída nunca
    conta como órfã.
 
+Guarda: `delete_structures` leva todas as linhas do `AprovacaoId`; se algum id
+a excluir tiver linha que não seja VIAJANTE de um CPF executável (outro
+viajante, CCEMPRESA ou CPF em branco), a análise é recusada com
+`ESTRUTURA_COMPARTILHADA` (400), sem exclusão parcial. Várias linhas do mesmo
+viajante sob um id são permitidas.
+
 Situações por usuário:
 
 | Situação | Comportamento |
@@ -99,6 +105,7 @@ Situações por usuário:
 | Encontrado sem CPF (vazio/ausente) | **Não executável.** Alerta exato: `Não foi possível mapear a Estrutura de Aprovação: Usuário encontrado no cadastro, mas não possui CPF registrado.` Corrigir o cadastro e refazer |
 | Já INATIVO | Listado como `JA_INATIVO`, não executável (a ficha só considera ATIVO) |
 | Não localizado | Listado como `NAO_LOCALIZADO` |
+| Item que não é CPF (11 dígitos), e-mail nem nome completo | `NAO_LOCALIZADO` com alerta próprio; nunca entra na cascata |
 | Nome com mais de um resultado | `candidatos` com CPF e e-mail; só entra na cascata depois de escolhido |
 | CPF em duplicidade na lista | Uma vez só; reportado em `duplicados` |
 
@@ -175,6 +182,7 @@ a mensagem é em português e não vaza detalhe interno.
 | 400 | `BASE_AUSENTE` / `ARQUIVO_INVALIDO` / `BASE_SEM_COLUNA` | falta arquivo, arquivo ilegível (extensão ou conteúdo), ou coluna ausente (CPF do viajante, `AprovacaoId`, `AprovacaoPor`, `LoginAprovador_*`, CPF no cadastro) |
 | 400 | `LISTA_VAZIA` / `LISTA_GRANDE` | lista vazia ou acima de 500 itens |
 | 400 | `NADA_A_EXECUTAR` | nenhum CPF executável |
+| 400 | `ESTRUTURA_COMPARTILHADA` | um `AprovacaoId` a excluir reúne linhas de outros viajantes ou de outro tipo |
 | 400 | `ORFAS_SEM_CONFIRMACAO` | há estruturas órfãs e `ignore_orphan_warning` não veio |
 | 409 | `ANALISE_DIVERGENTE` | impressão digital diferente da recalculada |
 | 413 | `ARQUIVO_GRANDE` | acima do teto das rotas |

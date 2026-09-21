@@ -186,7 +186,7 @@ etapas: **análise** (`/api/inativacao/analisar`, sem efeito colateral) e
 | `EXECUTAVEL` | encontrado, com CPF e ATIVO (ver abaixo) |
 | `SEM_CPF` | encontrado sem CPF: **não executável**. Alerta: "Não foi possível mapear a Estrutura de Aprovação: Usuário encontrado no cadastro, mas não possui CPF registrado." |
 | `JA_INATIVO` | cadastro com coluna de status e status diferente de ATIVO. Alerta: "Usuário não está ATIVO no cadastro (Status: '...')." |
-| `NAO_LOCALIZADO` | nenhum registro casou |
+| `NAO_LOCALIZADO` | nenhum registro casou, ou o item digitado não é CPF (11 dígitos), e-mail nem nome completo (alerta próprio; nunca entra na cascata) |
 | `PENDENTE_SELECAO` | nome digitado que consta em mais de um registro do cadastro: o operador escolhe quem inativar |
 
 - **Status**: com coluna de status no cadastro, só `Status == "ATIVO"` é
@@ -213,6 +213,12 @@ do cadastro é a chave para as estruturas (com o zero à esquerda restaurado).
 [3] Órfã: estrutura que, depois de remover TODOS os CPFs da lista, fica sem
     nenhum aprovador. Estrutura excluída nunca conta como órfã.
 ```
+
+Guarda da exclusão: `ApprovalService.delete_structures` leva **todas** as linhas de
+um `AprovacaoId`. Por isso, se algum id a excluir tiver uma linha que não seja
+VIAJANTE de um CPF executável (outro viajante, CCEMPRESA ou CPF em branco), a
+análise é recusada com `ESTRUTURA_COMPARTILHADA`, sem exclusão parcial. Várias
+linhas do mesmo viajante sob um id continuam permitidas.
 
 Impacto por estrutura: `COMPACTACAO` (sobram aprovadores) ou `ORFA` (nenhum).
 Estrutura órfã bloqueia a execução até o operador confirmar (`ignore_orphan_warning`).
@@ -243,6 +249,7 @@ Estrutura órfã bloqueia a execução até o operador confirmar (`ignore_orphan
 | 400 | `BASE_AUSENTE` / `ARQUIVO_INVALIDO` / `BASE_SEM_COLUNA` | falta arquivo, arquivo ilegível ou coluna obrigatória ausente |
 | 400 | `LISTA_VAZIA` / `LISTA_GRANDE` | lista vazia ou acima de 500 itens |
 | 400 | `NADA_A_EXECUTAR` | nenhum CPF executável |
+| 400 | `ESTRUTURA_COMPARTILHADA` | um `AprovacaoId` a excluir reúne linhas de outros viajantes ou de outro tipo: corrigir a base e analisar de novo |
 | 400 | `ORFAS_SEM_CONFIRMACAO` | há estruturas órfãs e a confirmação não veio |
 | 409 | `ANALISE_DIVERGENTE` | a análise mudou desde a conferência |
 | 413 | `ARQUIVO_GRANDE` | acima do teto de upload da rota (32 MB) |

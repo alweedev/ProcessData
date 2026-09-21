@@ -141,7 +141,7 @@ Upload de arquivo é limitado a 16 MB (`MAX_CONTENT_LENGTH`, fixo); as rotas de 
 Com o ambiente virtual ativo, a partir da raiz do repositório:
 
 ```bash
-python -m pytest -q                              # suíte completa (backend/tests/), 365/365
+python -m pytest -q                              # suíte completa (backend/tests/), 379/379
 python -m pytest backend/tests/test_cadastro_api.py -q
 python -m pytest backend/tests/test_inativacao_analisar_api.py backend/tests/test_inativacao_executar_api.py -q
 python -m pytest backend/tests/test_aprovacao.py backend/tests/test_aprovacao_substituir.py -q

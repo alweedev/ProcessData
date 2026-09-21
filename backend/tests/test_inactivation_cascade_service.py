@@ -191,3 +191,58 @@ def test_cadastro_sem_coluna_de_status_continua_executavel():
     a = _analisar(cadastro, est(viajante("S1", A, B)), [A])
     assert _usuario(a)["situacao"] == "EXECUTAVEL"
     assert a.cpfs == {A}
+
+
+def _linha_ccempresa(aid, *aprovadores):
+    linha = {"AprovacaoId": aid, "AprovacaoPor": "CCEMPRESA", "CPF": "", "NomeViajante": ""}
+    for i, login in enumerate(aprovadores, 1):
+        linha[f"LoginAprovador_{i}"] = login
+    return linha
+
+
+def test_id_reaproveitado_por_outro_viajante_e_recusado():
+    estruturas = est(viajante("S1", A, B), viajante("S1", C, B))
+    with pytest.raises(InativacaoError) as erro:
+        _analisar(cad(USR_A), estruturas, [A])
+    assert erro.value.code == "ESTRUTURA_COMPARTILHADA"
+    assert erro.value.status == 400
+    assert "S1" in erro.value.message
+
+
+def test_id_que_mistura_linha_ccempresa_e_recusado():
+    estruturas = est(viajante("S1", A, B), _linha_ccempresa("S1", B))
+    with pytest.raises(InativacaoError) as erro:
+        _analisar(cad(USR_A), estruturas, [A])
+    assert erro.value.code == "ESTRUTURA_COMPARTILHADA"
+
+
+def test_id_com_linha_de_viajante_sem_cpf_e_recusado_e_lista_os_ids_ordenados():
+    estruturas = est(viajante("S2", A, B), viajante("S2", "", B), viajante("S1", A, B), viajante("S1", C, B))
+    with pytest.raises(InativacaoError) as erro:
+        _analisar(cad(USR_A), estruturas, [A])
+    assert "S1, S2" in erro.value.message
+
+
+def test_id_com_varias_linhas_do_mesmo_viajante_e_permitido():
+    estruturas = est(viajante("S1", A, B), viajante("S1", A, C), viajante("S2", C, B))
+    a = _analisar(cad(USR_A), estruturas, [A])
+    assert a.excluidas == {"S1"}
+
+
+def test_id_compartilhado_so_importa_quando_o_dono_esta_no_conjunto_executavel():
+    estruturas = est(viajante("S1", A, B), viajante("S1", C, B))
+    assert _analisar(cad(USR_A, USR_C), estruturas, [A, C]).excluidas == {"S1"}
+    assert _analisar(cad(USR_A), est(viajante("S1", C, B), viajante("S1", C, D)), [A]).excluidas == frozenset()
+
+
+def test_itens_que_nao_sao_cpf_email_nem_nome_completo_viram_nao_localizado():
+    a = _analisar(cad(USR_A), est(viajante("S1", A, B)), ["1234567890", "Maria", A])
+    usuarios = a.payload["usuarios"]
+    assert [u["situacao"] for u in usuarios] == ["EXECUTAVEL", "NAO_LOCALIZADO", "NAO_LOCALIZADO"]
+    ignorados = usuarios[1:]
+    assert [u["nome"] for u in ignorados] == ["1234567890", "Maria"]
+    for u in ignorados:
+        assert u["cpf"] is None
+        assert u["cpfMascarado"] == ""
+        assert u["alerta"] == "Item não reconhecido como CPF (11 dígitos), e-mail ou nome completo."
+    assert a.cpfs == {A}

@@ -6,10 +6,12 @@ import zipfile
 import pandas as pd
 from _cascade_fixtures import USR_A, A, B, C, cad, est, viajante
 from _helpers import xlsx_upload
+from openpyxl import load_workbook
 
 from backend.core.config import settings
 from backend.services.audit_service import AuditService
 from backend.services.inactivation_cascade_service import InactivationCascadeService
+from backend.shared.cpf_mask import mascarar_cpf
 
 ROTA = "/api/inativacao/executar"
 
@@ -110,3 +112,39 @@ def test_rotas_antigas_foram_removidas(client):
     for rota in ("/api/process_inativacao", "/api/preview_inativacao", "/api/inativacao/buscar"):
         # Rota removida: 404 (sem regra) ou 405 (só o curinga do SPA aceita GET); nunca 200/400/500.
         assert client.post(rota, data={}, content_type="multipart/form-data").status_code in (404, 405)
+
+
+def test_usuario_sem_estruturas_gera_planilha_de_estruturas_valida_so_com_cabecalho(client):
+    resp = _post(client, cad(USR_A), est(viajante("S1", C, B)), [A])
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    with zipfile.ZipFile(io.BytesIO(resp.data)) as zf:
+        wb = load_workbook(io.BytesIO(zf.read("estruturas_atualizadas.xlsx")))
+    linhas = list(wb["Aprovacao"].iter_rows(values_only=True))
+    assert len(linhas) == 1
+    assert linhas[0][:2] == ("Operacao", "AprovacaoId")
+
+
+def test_estrutura_compartilhada_vira_400_com_codigo_proprio(client):
+    estruturas = est(viajante("S1", A, B), viajante("S1", C, B))
+    data = {
+        "cadastro": xlsx_upload(cad(USR_A), "cadastro.xlsx"),
+        "estruturas": xlsx_upload(estruturas, "estruturas.xlsx"),
+        "cpfs": json.dumps([A]),
+        "impressaoDigital": "x",
+    }
+    resp = client.post(ROTA, data=data, content_type="multipart/form-data")
+    assert resp.status_code == 400
+    assert resp.get_json()["code"] == "ESTRUTURA_COMPARTILHADA"
+
+
+def test_auditoria_lista_so_os_cpfs_executados_e_nao_os_enviados_pelo_cliente(client, monkeypatch):
+    cadastro, estruturas = cad(USR_A), est(viajante("S1", A, B))
+    real = InactivationCascadeService.executar
+
+    def executa_so_o_cpf_valido(df_cadastro, df_estruturas, cpfs, digital, ignorar=False):
+        return real(df_cadastro, df_estruturas, [A], _digital(df_cadastro, df_estruturas, [A]), ignorar)
+
+    monkeypatch.setattr(InactivationCascadeService, "executar", staticmethod(executa_so_o_cpf_valido))
+    assert _post(client, cadastro, estruturas, [A, C], digital="x").status_code == 200
+    evento = next(e for e in AuditService.list_events() if e["event_type"] == "inativacao_execucao")
+    assert evento["details"]["cpfs"] == [mascarar_cpf(A)]

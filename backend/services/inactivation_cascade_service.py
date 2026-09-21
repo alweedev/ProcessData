@@ -18,6 +18,7 @@ from backend.shared.cpf_utils import clean_cpf
 from backend.shared.fingerprint import impressao_digital
 from backend.shared.text_utils import upper_no_accents
 
+ALERTA_ITEM_NAO_RECONHECIDO = "Item não reconhecido como CPF (11 dígitos), e-mail ou nome completo."
 ALERTA_SEM_CPF = (
     "Não foi possível mapear a Estrutura de Aprovação: Usuário encontrado no cadastro, mas não possui CPF registrado."
 )
@@ -52,6 +53,7 @@ class Execucao:
     ficha: pd.DataFrame  # ficha de inativação (Operacao=DELETE)
     estruturas: pd.DataFrame  # estruturas afetadas: DELETE nas excluídas, UPDATE nas alteradas
     resumo: dict[str, Any]
+    cpfs: frozenset[str]  # CPFs efetivamente inativados: a auditoria registra estes, não os enviados pelo cliente
 
 
 def _validar_cadastro(df: pd.DataFrame) -> None:
@@ -74,11 +76,12 @@ def _validar_estruturas(cols: dict[str, Any]) -> None:
         raise InativacaoError("BASE_SEM_COLUNA", "A base de estruturas não contém: " + ", ".join(faltando) + ".")
 
 
-def _classificar(itens: list[str]) -> tuple[set[str], set[str], dict[str, str]]:
-    """(CPFs, e-mails em minúsculas, {nome normalizado: nome digitado}) digitados — espelha `search_matches`."""
+def _classificar(itens: list[str]) -> tuple[set[str], set[str], dict[str, str], list[str]]:
+    """(CPFs, e-mails em minúsculas, {nome normalizado: nome digitado}, itens sem categoria) — espelha `search_matches`."""
     cpfs: set[str] = set()
     emails: set[str] = set()
     nomes: dict[str, str] = {}
+    sem_categoria: list[str] = []
     for item in itens:
         digits = re.sub(r"\D", "", item)
         if _EMAIL.match(item):
@@ -89,7 +92,9 @@ def _classificar(itens: list[str]) -> tuple[set[str], set[str], dict[str, str]]:
             norm = upper_no_accents(item).strip()
             if len(norm.split()) >= 2:
                 nomes[norm] = item
-    return cpfs, emails, nomes
+            else:
+                sem_categoria.append(item)
+    return cpfs, emails, nomes, sem_categoria
 
 
 def _usuario(registro: dict[str, Any], situacao: str, alerta: str | None = None) -> dict[str, Any]:
@@ -124,7 +129,7 @@ def _resolver_usuarios(
     busca: dict[str, Any], itens: list[str], escolhidos: set[str], df_cadastro: pd.DataFrame
 ) -> tuple[list[dict[str, Any]], set[str]]:
     """Transforma o resultado de `search_matches` em usuários com situação; devolve também os CPFs executáveis."""
-    digitados_cpf, digitados_email, digitados_nome = _classificar(itens)
+    digitados_cpf, digitados_email, digitados_nome, sem_categoria = _classificar(itens)
     homonimos = _nomes_homonimos(df_cadastro, set(digitados_nome))
     # Espelha o motor da ficha: com coluna de status, só quem está exatamente ATIVO é inativado.
     tem_status = InactivationService._detect_base_cols(df_cadastro)[3] is not None
@@ -185,6 +190,10 @@ def _resolver_usuarios(
         usuarios.append(pendente)
     for r in (r for r in busca["items"] if not r.get("found")):
         usuarios.append(_usuario(r, "NAO_LOCALIZADO"))
+    # `search_matches` ignora o que não é CPF, e-mail nem nome completo (ex.: CPF sem o zero à esquerda,
+    # nome de uma palavra só): o operador tem de ver essas linhas, nunca vê-las sumir.
+    for item in sem_categoria:
+        usuarios.append(_usuario({"nome": item}, "NAO_LOCALIZADO", ALERTA_ITEM_NAO_RECONHECIDO))
     return usuarios, cpfs
 
 
@@ -215,6 +224,13 @@ class InactivationCascadeService:
 
         viajante = ApprovalService.find_traveler_structures(df_est, cpfs, cols)
         excluidas: set[str] = set().union(*viajante.values())
+        compartilhadas = ApprovalService.structures_with_foreign_rows(df_est, excluidas, cpfs, cols)
+        if compartilhadas:
+            raise InativacaoError(
+                "ESTRUTURA_COMPARTILHADA",
+                f"A estrutura {', '.join(sorted(compartilhadas))} reúne linhas de outros viajantes ou de outro "
+                "tipo e não pode ser excluída automaticamente. Corrija a base de estruturas e analise de novo.",
+            )
         como_aprovador = ApprovalService.find_approver_structures(df_est, cpfs, cols)
         alvo = {aid for mapa in como_aprovador.values() for aid in mapa} - excluidas
         orfas_info = ApprovalService.structures_left_without_approvers(df_est, cpfs, cols, alvo, True)
@@ -333,4 +349,4 @@ class InactivationCascadeService:
             "estruturasOrfas": len(analise.orfas),
             "linhasEstruturas": len(estruturas),
         }
-        return Execucao(ficha=ficha, estruturas=estruturas, resumo=resumo)
+        return Execucao(ficha=ficha, estruturas=estruturas, resumo=resumo, cpfs=analise.cpfs)

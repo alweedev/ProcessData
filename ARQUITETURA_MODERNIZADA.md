@@ -79,7 +79,7 @@ Removidos: `POST /api/inativacao/buscar`, `/api/preview_inativacao` e `/api/proc
 
 ## Testes
 
-`python -m pytest -q --cov` (suíte em `backend/tests/`, 365/365, cobertura
+`python -m pytest -q --cov` (suíte em `backend/tests/`, 379/379, cobertura
 medida mas sem gate de threshold ainda). `npm --prefix frontend-react run
 test` (Vitest, funções puras dos hooks). Fluxos críticos ponta-a-ponta em
 `tests/e2e/` (Playwright, 19 specs).
@@ -87,7 +87,7 @@ test` (Vitest, funções puras dos hooks). Fluxos críticos ponta-a-ponta em
 ## Próxima fase
 
 - Sem migração de framework planejada no curto prazo: a stack atual (Flask +
-  services) está estável, testada (365/365 pytest, Vitest e Playwright
+  services) está estável, testada (379/379 pytest, Vitest e Playwright
   verdes) e sem sinal de dor de crescimento no código. Avaliar FastAPI +
   Pydantic v2 + SQLAlchemy 2 + Alembic + PostgreSQL fica registrado, mas
   parado até existir um driver concreto (ex: multi-tenant, autenticação,

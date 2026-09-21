@@ -84,7 +84,11 @@ def _extrair_itens(paths: list[str]) -> list[str]:
             paths.append(path)
         if err:
             raise InativacaoError("ARQUIVO_INVALIDO", err)
-        df = InactivationService.normalize_lista_columns(pd.read_excel(path, dtype=str).fillna(""))
+        try:
+            df_lista = pd.read_excel(path, dtype=str).fillna("")
+        except Exception:
+            raise InativacaoError("ARQUIVO_INVALIDO", "lista: não foi possível ler a planilha.") from None
+        df = InactivationService.normalize_lista_columns(df_lista)
         itens: list[str] = []
         for _idx, row in df.iterrows():
             valores = (str(row.get(col, "")).strip() for col in ("CPF", "Email", "NomeCompleto"))
@@ -150,7 +154,7 @@ def api_inativacao_executar():
         AuditService.record(
             event_type="inativacao_execucao",
             status="success",
-            details={"resumo": execucao.resumo, "cpfs": [mascarar_cpf(c) for c in cpfs]},
+            details={"resumo": execucao.resumo, "cpfs": sorted(mascarar_cpf(c) for c in execucao.cpfs)},
         )
         return send_file(pacote, download_name="inativacao.zip", as_attachment=True, mimetype="application/zip")
     except InativacaoError as exc:

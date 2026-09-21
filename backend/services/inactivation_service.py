@@ -14,8 +14,8 @@ class InactivationService:
     @staticmethod
     def build_lista_from_text(lista_text: str) -> pd.DataFrame:
         """Constrói o DataFrame de 'lista' a partir de texto colado (uma linha
-        por CPF/nome/e-mail). Usado por /process_inativacao e /preview_inativacao
-        para que os dois fluxos classifiquem cada linha da mesma forma."""
+        por CPF/nome/e-mail). Monta a lista da inativação a partir do texto colado,
+        classificando cada linha como CPF, e-mail ou nome completo."""
         lista_items = [item.strip() for item in (lista_text or "").split("\n") if item.strip()]
         email_pat = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", re.IGNORECASE)
         rows = []

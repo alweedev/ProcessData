@@ -3,6 +3,7 @@ import zipfile
 
 import pytest
 from _cascade_fixtures import USR_A, A, B, C, D, cad, est, viajante
+from openpyxl import load_workbook
 
 from backend.services.export_service import ExportService
 from backend.services.inactivation_cascade_service import InactivationCascadeService, InativacaoError
@@ -126,3 +127,17 @@ def test_ficha_que_nao_cobre_todos_os_usuarios_e_erro_interno(monkeypatch):
         _executar(cadastro, estruturas, [A, B])
     assert erro.value.code == "ERRO_INTERNO"
     assert erro.value.status == 500
+
+
+def test_execucao_traz_os_cpfs_executados():
+    cadastro = cad(USR_A, (B, "Bruno Lima", "bruno@x.com", "INATIVO"))
+    r = _executar(cadastro, est(viajante("S1", A, C)), [A])
+    assert r.cpfs == frozenset({A})
+
+
+def test_estruturas_vazias_gera_planilha_que_abre_no_openpyxl():
+    r = _executar(cad(USR_A), est(viajante("S1", C, B)), [A])
+    assert r.estruturas.empty
+    wb = load_workbook(ExportService.to_excel_bytes(r.estruturas, sheet_name="Aprovacao"))
+    cabecalho = [c.value for c in wb["Aprovacao"][1]]
+    assert cabecalho[:2] == ["Operacao", "AprovacaoId"]

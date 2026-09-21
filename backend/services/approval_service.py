@@ -662,6 +662,27 @@ class ApprovalService:
         return found
 
     @staticmethod
+    def structures_with_foreign_rows(
+        df_base: pd.DataFrame, ids: set[str], cpfs: set[str], cols: dict[str, Any]
+    ) -> set[str]:
+        """Dos `ids`, os que têm ao menos uma linha que NÃO é VIAJANTE de um dos `cpfs`.
+
+        `delete_structures` leva todas as linhas de um AprovacaoId; se o id reúne linhas de outro viajante,
+        de CCEMPRESA ou sem CPF, excluir a estrutura inteira apagaria o que ninguém escolheu.
+        """
+        aprov_id_col = cols.get("aprovacao_id")
+        por_col = cols.get("aprovacao_por")
+        cpf_col = cols.get("traveler_cpf_col")
+        if not ids or not aprov_id_col or not por_col or not cpf_col:
+            return set()
+        row_ids = df_base[aprov_id_col].astype(str).str.strip()
+        in_ids = row_ids.isin(ids)
+        is_traveler = df_base[por_col].astype(str).str.strip().str.upper() == "VIAJANTE"
+        digits = _digits_matrix(df_base, [cpf_col])[cpf_col]
+        own = is_traveler & digits.isin(list(cpfs))
+        return set(row_ids[in_ids & ~own])
+
+    @staticmethod
     def find_approver_structures(
         df_base: pd.DataFrame, cpfs: set[str], cols: dict[str, Any]
     ) -> dict[str, dict[str, dict[str, Any]]]:
