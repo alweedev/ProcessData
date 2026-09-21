@@ -1,17 +1,11 @@
 import { useMemo, useState } from "react";
-import { postFormForBlob, postFormJson } from "../../lib/api";
 import { triggerAnchorDownload } from "../../lib/downloadFile";
+import type { GenerationFailure } from "../../lib/failure";
+import { InativacaoApiError, postAnalisar, postExecutar, type AnaliseInativacao } from "../../lib/inativacaoApi";
 import { addRun } from "../../runs/runsStore";
 import { pushToast } from "../../toast/toastStore";
 
-export interface InativacaoResult {
-  id: string | null;
-  nome: string;
-  cpf: string;
-  email: string;
-  status_atual: string;
-  found: boolean;
-}
+export const ARQUIVO_ZIP = "inativacao.zip";
 
 export interface Classification {
   validCpfs: string[];
@@ -65,94 +59,133 @@ export function formatCpf(c: string): string {
   return c && c.length === 11 ? `${c.slice(0, 3)}.${c.slice(3, 6)}.${c.slice(6, 9)}-${c.slice(9)}` : c || "";
 }
 
+function comoFalha(err: unknown): GenerationFailure {
+  return { message: err instanceof Error ? err.message : String(err) };
+}
+
 export function useInativacao() {
-  const [listText, setListText] = useState("");
-  const [baseFile, setBaseFile] = useState<File | null>(null);
-  const [results, setResults] = useState<InativacaoResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [listText, setListTextRaw] = useState("");
+  const [cadastro, setCadastroRaw] = useState<File | null>(null);
+  const [estruturas, setEstruturasRaw] = useState<File | null>(null);
+  const [analise, setAnalise] = useState<AnaliseInativacao | null>(null);
+  const [escolhidos, setEscolhidos] = useState<string[]>([]);
+  const [analisando, setAnalisando] = useState(false);
+  const [executando, setExecutando] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [debugMsg, setDebugMsg] = useState("");
+  const [failure, setFailure] = useState<GenerationFailure | null>(null);
+  const [concluido, setConcluido] = useState(false);
 
   const classification = useMemo(() => classifyList(listText), [listText]);
-  const canSearch = Boolean(baseFile) && classification.totalValid > 0;
+  const itens = useMemo(
+    () => [...classification.validCpfs, ...classification.validNames, ...classification.validEmails],
+    [classification],
+  );
+  const podeAnalisar = Boolean(cadastro) && Boolean(estruturas) && itens.length > 0 && !analisando;
 
-  async function search() {
-    if (!baseFile) {
-      pushToast("Envie a base.", "danger");
-      return;
-    }
-    if (!classification.totalValid) {
-      pushToast("Nenhum CPF, Nome ou E-mail válido para buscar.", "danger");
-      return;
-    }
-    setSearching(true);
-    setDebugMsg("");
+  /** Mexer nas entradas invalida a análise: o que o operador viu deixa de valer. */
+  function invalidar() {
+    setAnalise(null);
+    setEscolhidos([]);
+    setFailure(null);
+  }
+
+  function setListText(value: string) {
+    setListTextRaw(value);
+    invalidar();
+  }
+
+  function setCadastro(file: File | null) {
+    setCadastroRaw(file);
+    invalidar();
+  }
+
+  function setEstruturas(file: File | null) {
+    setEstruturasRaw(file);
+    invalidar();
+  }
+
+  function escolher(cpf: string, marcado: boolean) {
+    setEscolhidos((atuais) => (marcado ? [...new Set([...atuais, cpf])] : atuais.filter((c) => c !== cpf)));
+  }
+
+  async function analisar(): Promise<boolean> {
+    if (!cadastro || !estruturas) return false;
+    setAnalisando(true);
+    setFailure(null);
     try {
-      const fd = new FormData();
-      fd.append("base", baseFile);
-      fd.append(
-        "itens",
-        JSON.stringify([...classification.validCpfs, ...classification.validNames, ...classification.validEmails]),
-      );
-      const data = await postFormJson<{ items?: InativacaoResult[] }>("/api/inativacao/buscar", fd);
-      const items = Array.isArray(data.items) ? data.items : [];
-      setResults(items);
-      pushToast(`Busca concluída: ${items.length} itens.`, "success");
+      setAnalise(await postAnalisar(cadastro, estruturas, itens, escolhidos));
+      return true;
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setDebugMsg("Erro: " + message);
-      pushToast("Erro na busca: " + message, "danger");
+      setAnalise(null);
+      setFailure(comoFalha(err));
+      return false;
     } finally {
-      setSearching(false);
+      setAnalisando(false);
     }
   }
 
-  async function generate(onDone?: () => void) {
-    if (!baseFile) {
-      pushToast("Envie a base para gerar a inativação.", "danger");
-      return;
-    }
-    const finalListText = listText || [...classification.validCpfs, ...classification.validNames].join("\n");
-    setGenerating(true);
+  async function executar(ignorarOrfas: boolean): Promise<boolean> {
+    if (!cadastro || !estruturas || !analise) return false;
+    const cpfs = analise.usuarios
+      .filter((u) => u.situacao === "EXECUTAVEL" && u.cpf)
+      .map((u) => u.cpf as string);
+    setExecutando(true);
     setProgress(0);
+    setFailure(null);
     try {
-      const fd = new FormData();
-      fd.append("base", baseFile);
-      fd.append("lista_text", finalListText);
-      const blob = await postFormForBlob("/api/process_inativacao", fd, setProgress);
+      const blob = await postExecutar(cadastro, estruturas, cpfs, analise.impressaoDigital, ignorarOrfas, setProgress);
       const url = URL.createObjectURL(blob);
-      triggerAnchorDownload(url, "saida_inativacao.xlsx");
+      triggerAnchorDownload(url, ARQUIVO_ZIP);
       addRun({
         operation: "inativacao",
-        inputSummary: [baseFile.name, `${classification.totalValid} item(ns) na lista`],
-        outputFilename: "saida_inativacao.xlsx",
+        inputSummary: [cadastro.name, estruturas.name, `${cpfs.length} usuário(s)`],
+        outputFilename: ARQUIVO_ZIP,
         blobUrl: url,
       });
-      pushToast("Inativação processada.", "success");
-      onDone?.();
+      pushToast("Inativação executada.", "success");
+      setConcluido(true);
+      return true;
     } catch (err) {
-      pushToast(err instanceof Error ? err.message : String(err), "danger");
+      // A análise que o operador viu não vale mais: volta a exigir uma nova.
+      if (err instanceof InativacaoApiError && err.code === "ANALISE_DIVERGENTE") setAnalise(null);
+      setFailure(comoFalha(err));
+      return false;
     } finally {
-      setGenerating(false);
+      setExecutando(false);
       setProgress(0);
     }
+  }
+
+  function reset() {
+    setListTextRaw("");
+    setCadastroRaw(null);
+    setEstruturasRaw(null);
+    setAnalise(null);
+    setEscolhidos([]);
+    setFailure(null);
+    setConcluido(false);
   }
 
   return {
     listText,
     setListText,
-    baseFile,
-    setBaseFile,
+    cadastro,
+    setCadastro,
+    estruturas,
+    setEstruturas,
     classification,
-    canSearch,
-    results,
-    setResults,
-    searching,
-    generating,
+    itens,
+    podeAnalisar,
+    analise,
+    escolhidos,
+    escolher,
+    analisando,
+    executando,
     progress,
-    debugMsg,
-    search,
-    generate,
+    failure,
+    concluido,
+    analisar,
+    executar,
+    reset,
   };
 }
