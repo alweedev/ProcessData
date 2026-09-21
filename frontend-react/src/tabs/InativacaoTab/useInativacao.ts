@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { triggerAnchorDownload } from "../../lib/downloadFile";
 import type { GenerationFailure } from "../../lib/failure";
 import { InativacaoApiError, postAnalisar, postExecutar, type AnaliseInativacao } from "../../lib/inativacaoApi";
@@ -74,6 +74,11 @@ export function useInativacao() {
   const [progress, setProgress] = useState(0);
   const [failure, setFailure] = useState<GenerationFailure | null>(null);
   const [concluido, setConcluido] = useState(false);
+  // Geração da entrada: sobe a cada invalidar()/reset(). Resposta de requisição de geração antiga é descartada.
+  const geracao = useRef(0);
+  // Refs (não estado) para a trava de reentrada valer mesmo em dois cliques antes de re-renderizar.
+  const analisandoRef = useRef(false);
+  const executandoRef = useRef(false);
 
   const classification = useMemo(() => classifyList(listText), [listText]);
   const itens = useMemo(
@@ -84,6 +89,9 @@ export function useInativacao() {
 
   /** Mexer nas entradas invalida a análise: o que o operador viu deixa de valer. */
   function invalidar() {
+    geracao.current += 1;
+    analisandoRef.current = false;
+    setAnalisando(false);
     setAnalise(null);
     setEscolhidos([]);
     setFailure(null);
@@ -109,23 +117,35 @@ export function useInativacao() {
   }
 
   async function analisar(): Promise<boolean> {
-    if (!cadastro || !estruturas) return false;
+    if (!cadastro || !estruturas || analisandoRef.current) return false;
+    const minha = geracao.current;
+    analisandoRef.current = true;
     setAnalisando(true);
     setFailure(null);
     try {
-      setAnalise(await postAnalisar(cadastro, estruturas, itens, escolhidos));
+      const resultado = await postAnalisar(cadastro, estruturas, itens, escolhidos);
+      // As entradas mudaram durante a requisição: o resultado é de outra lista e não vale.
+      if (minha !== geracao.current) return false;
+      setAnalise(resultado);
       return true;
     } catch (err) {
+      if (minha !== geracao.current) return false;
       setAnalise(null);
       setFailure(comoFalha(err));
       return false;
     } finally {
-      setAnalisando(false);
+      // Só quem ainda é a última chamada limpa a flag (invalidar()/reset() já a limparam para as antigas).
+      if (minha === geracao.current) {
+        analisandoRef.current = false;
+        setAnalisando(false);
+      }
     }
   }
 
   async function executar(ignorarOrfas: boolean): Promise<boolean> {
-    if (!cadastro || !estruturas || !analise) return false;
+    if (!cadastro || !estruturas || !analise || executandoRef.current) return false;
+    const minha = geracao.current;
+    executandoRef.current = true;
     const cpfs = analise.usuarios
       .filter((u) => u.situacao === "EXECUTAVEL" && u.cpf)
       .map((u) => u.cpf as string);
@@ -146,17 +166,23 @@ export function useInativacao() {
       setConcluido(true);
       return true;
     } catch (err) {
+      // Entradas mudaram durante a execução: a falha é de um estado que o operador já descartou.
+      if (minha !== geracao.current) return false;
       // A análise que o operador viu não vale mais: volta a exigir uma nova.
       if (err instanceof InativacaoApiError && err.code === "ANALISE_DIVERGENTE") setAnalise(null);
       setFailure(comoFalha(err));
       return false;
     } finally {
+      executandoRef.current = false;
       setExecutando(false);
       setProgress(0);
     }
   }
 
   function reset() {
+    geracao.current += 1;
+    analisandoRef.current = false;
+    setAnalisando(false);
     setListTextRaw("");
     setCadastroRaw(null);
     setEstruturasRaw(null);

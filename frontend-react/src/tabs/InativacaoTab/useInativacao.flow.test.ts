@@ -169,3 +169,217 @@ describe("useInativacao", () => {
     expect(result.current.listText).toBe("");
   });
 });
+
+function adiado<T>() {
+  let resolve!: (valor: T) => void;
+  let reject!: (erro: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+describe("useInativacao - respostas antigas e reentrada", () => {
+  it("resposta da análise que chega depois de editar a lista é descartada", async () => {
+    const pendente = adiado<AnaliseInativacao>();
+    vi.mocked(api.postAnalisar).mockReturnValue(pendente.promise);
+    const { result } = preparado();
+
+    let emVoo: Promise<boolean> = Promise.resolve(true);
+    act(() => {
+      emVoo = result.current.analisar();
+    });
+    expect(result.current.analisando).toBe(true);
+
+    act(() => result.current.setListText(CPF));
+    expect(result.current.analisando).toBe(false);
+
+    let ok = true;
+    await act(async () => {
+      pendente.resolve(ANALISE);
+      ok = await emVoo;
+    });
+
+    expect(ok).toBe(false);
+    expect(result.current.analise).toBeNull();
+    expect(result.current.analisando).toBe(false);
+    expect(result.current.failure).toBeNull();
+  });
+
+  it("erro da análise que chega depois de editar a lista também é descartado", async () => {
+    const pendente = adiado<AnaliseInativacao>();
+    vi.mocked(api.postAnalisar).mockReturnValue(pendente.promise);
+    const { result } = preparado();
+
+    let emVoo: Promise<boolean> = Promise.resolve(true);
+    act(() => {
+      emVoo = result.current.analisar();
+    });
+    act(() => result.current.setListText(CPF));
+    await act(async () => {
+      pendente.reject(new api.InativacaoApiError("Falhou.", "ERRO_INTERNO"));
+      await emVoo;
+    });
+
+    expect(result.current.failure).toBeNull();
+    expect(result.current.analisando).toBe(false);
+  });
+
+  it("resposta da análise que chega depois do reset é descartada", async () => {
+    const pendente = adiado<AnaliseInativacao>();
+    vi.mocked(api.postAnalisar).mockReturnValue(pendente.promise);
+    const { result } = preparado();
+
+    let emVoo: Promise<boolean> = Promise.resolve(true);
+    act(() => {
+      emVoo = result.current.analisar();
+    });
+    act(() => result.current.reset());
+
+    await act(async () => {
+      pendente.resolve(ANALISE);
+      await emVoo;
+    });
+
+    expect(result.current.analise).toBeNull();
+    expect(result.current.analisando).toBe(false);
+  });
+
+  it("uma análise antiga não apaga a flag de uma análise nova em andamento", async () => {
+    const antiga = adiado<AnaliseInativacao>();
+    const nova = adiado<AnaliseInativacao>();
+    vi.mocked(api.postAnalisar).mockReturnValueOnce(antiga.promise).mockReturnValueOnce(nova.promise);
+    const { result } = preparado();
+
+    let p1: Promise<boolean> = Promise.resolve(true);
+    let p2: Promise<boolean> = Promise.resolve(true);
+    act(() => {
+      p1 = result.current.analisar();
+    });
+    act(() => result.current.setListText(CPF));
+    act(() => {
+      p2 = result.current.analisar();
+    });
+    await act(async () => {
+      antiga.resolve(ANALISE);
+      await p1;
+    });
+    expect(result.current.analisando).toBe(true);
+    expect(result.current.analise).toBeNull();
+
+    await act(async () => {
+      nova.resolve(ANALISE);
+      await p2;
+    });
+    expect(result.current.analisando).toBe(false);
+    expect(result.current.analise).toEqual(ANALISE);
+  });
+
+  it("analisar chamada duas vezes seguidas só envia uma requisição", async () => {
+    const pendente = adiado<AnaliseInativacao>();
+    vi.mocked(api.postAnalisar).mockReturnValue(pendente.promise);
+    const { result } = preparado();
+
+    let p1: Promise<boolean> = Promise.resolve(false);
+    let segunda = true;
+    await act(async () => {
+      p1 = result.current.analisar();
+      segunda = await result.current.analisar();
+      pendente.resolve(ANALISE);
+      await p1;
+    });
+
+    expect(segunda).toBe(false);
+    expect(api.postAnalisar).toHaveBeenCalledTimes(1);
+  });
+
+  it("executar chamado duas vezes seguidas só dispara uma execução", async () => {
+    vi.mocked(api.postAnalisar).mockResolvedValue(ANALISE);
+    const pendente = adiado<Blob>();
+    vi.mocked(api.postExecutar).mockReturnValue(pendente.promise);
+    const { result } = preparado();
+    await act(async () => {
+      await result.current.analisar();
+    });
+
+    let p1: Promise<boolean> = Promise.resolve(false);
+    let segunda = true;
+    await act(async () => {
+      p1 = result.current.executar(true);
+      segunda = await result.current.executar(true);
+      pendente.resolve(new Blob(["zip"]));
+      await p1;
+    });
+
+    expect(segunda).toBe(false);
+    expect(api.postExecutar).toHaveBeenCalledTimes(1);
+    expect(result.current.concluido).toBe(true);
+    expect(result.current.executando).toBe(false);
+  });
+
+  it("execução concluída depois de uma edição ainda baixa o ZIP e marca concluído", async () => {
+    vi.mocked(api.postAnalisar).mockResolvedValue(ANALISE);
+    const pendente = adiado<Blob>();
+    vi.mocked(api.postExecutar).mockReturnValue(pendente.promise);
+    const { result } = preparado();
+    await act(async () => {
+      await result.current.analisar();
+    });
+
+    let emVoo: Promise<boolean> = Promise.resolve(false);
+    act(() => {
+      emVoo = result.current.executar(true);
+    });
+    act(() => result.current.setListText(CPF));
+    await act(async () => {
+      pendente.resolve(new Blob(["zip"]));
+      await emVoo;
+    });
+
+    expect(result.current.concluido).toBe(true);
+    expect(result.current.executando).toBe(false);
+  });
+
+  it("falha de execução que chega depois de uma edição é ignorada", async () => {
+    vi.mocked(api.postAnalisar).mockResolvedValue(ANALISE);
+    const pendente = adiado<Blob>();
+    vi.mocked(api.postExecutar).mockReturnValue(pendente.promise);
+    const { result } = preparado();
+    await act(async () => {
+      await result.current.analisar();
+    });
+
+    let emVoo: Promise<boolean> = Promise.resolve(true);
+    act(() => {
+      emVoo = result.current.executar(false);
+    });
+    act(() => result.current.setListText(CPF));
+    await act(async () => {
+      pendente.reject(new api.InativacaoApiError("A análise mudou.", "ANALISE_DIVERGENTE"));
+      await emVoo;
+    });
+
+    expect(result.current.failure).toBeNull();
+    expect(result.current.executando).toBe(false);
+  });
+
+  it.each([
+    ["setCadastro", (h: ReturnType<typeof useInativacao>) => h.setCadastro(new File(["outro"], "outro.xlsx"))],
+    ["setEstruturas", (h: ReturnType<typeof useInativacao>) => h.setEstruturas(new File(["outro"], "outro.xlsx"))],
+  ])("%s descarta a análise existente e as escolhas", async (_nome, mudar) => {
+    vi.mocked(api.postAnalisar).mockResolvedValue(ANALISE);
+    const { result } = preparado();
+    act(() => result.current.escolher(CPF, true));
+    await act(async () => {
+      await result.current.analisar();
+    });
+    expect(result.current.analise).not.toBeNull();
+
+    act(() => mudar(result.current));
+
+    expect(result.current.analise).toBeNull();
+    expect(result.current.escolhidos).toEqual([]);
+    expect(result.current.failure).toBeNull();
+  });
+});
