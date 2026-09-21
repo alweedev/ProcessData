@@ -9,7 +9,7 @@ Nasceu de uma necessidade real do dia a dia profissional: preparar fichas para c
 ## 🚀 Funcionalidades
 
 - **Cadastro em massa**: normaliza uma planilha de entrada (com nomes de coluna variados) para a ficha padrão de carga, com validação linha a linha e geral.
-- **Inativação**: busca usuários numa base do cliente por CPF, e-mail ou nome e gera a ficha de desligamento (`Operacao=DELETE`).
+- **Inativação em cascata**: analisa o impacto (estrutura do viajante, aprovadores a compactar, estruturas que ficariam órfãs) e, confirmado, gera a ficha de desligamento (`Operacao=DELETE`) e as estruturas atualizadas num ZIP.
 - **Estruturas de aprovação**: substitui ou remove aprovadores em cadeias de aprovação existentes, com preview de impacto (estruturas afetadas, duplicidade, estrutura que ficaria sem aprovador) antes de exportar.
 - Interface web em React, com abas de Início, Cadastro, Inativação, Estruturas e Histórico.
 - Trilha de auditoria (JSONL, rotacionada) de toda exportação/ação sensível.
@@ -99,7 +99,7 @@ npm run build:react:watch    # rebuild automático a cada mudança
 | `CORS_ORIGINS` | *(vazio = mesma origem)* | lista separada por vírgula de origens permitidas em `/api/*` |
 | `HOST` / `PORT` / `DEBUG` | `0.0.0.0` / `5000` / `false` | servidor Flask |
 
-Upload de arquivo é limitado a 16 MB (`MAX_CONTENT_LENGTH`, fixo).
+Upload de arquivo é limitado a 16 MB (`MAX_CONTENT_LENGTH`, fixo); as rotas de inativação, que recebem duas planilhas na mesma requisição, aceitam até 32 MB (`INATIVACAO_MAX_CONTENT_LENGTH`).
 
 ---
 
@@ -114,10 +114,9 @@ Upload de arquivo é limitado a 16 MB (`MAX_CONTENT_LENGTH`, fixo).
 
 ### Inativação de usuários
 
-1. Aba **Inativação** → upload da base de usuários do cliente + lista de
-   desligados (CPF, nome completo ou e-mail, colados ou em planilha).
-2. O sistema casa por CPF → nome → e-mail (nessa prioridade) e gera a ficha
-   de inativação (`Operacao=DELETE`).
+1. Aba **Inativação** → envie a base de cadastro, a base de estruturas de aprovação e a lista (CPF, nome ou e-mail).
+2. Confira o impacto por usuário; escolha quem inativar em caso de nomes repetidos. Nada é alterado nesta etapa.
+3. Confirme (com ciência extra se houver estrutura órfã) e baixe o `inativacao.zip`.
 
 ### Estruturas de aprovação
 
@@ -142,9 +141,9 @@ Upload de arquivo é limitado a 16 MB (`MAX_CONTENT_LENGTH`, fixo).
 Com o ambiente virtual ativo, a partir da raiz do repositório:
 
 ```bash
-python -m pytest -q                              # suíte completa (backend/tests/), 123/123
+python -m pytest -q                              # suíte completa (backend/tests/), 365/365
 python -m pytest backend/tests/test_cadastro_api.py -q
-python -m pytest backend/tests/test_inativacao_api.py backend/tests/test_inativacao_buscar_api.py -q
+python -m pytest backend/tests/test_inativacao_analisar_api.py backend/tests/test_inativacao_executar_api.py -q
 python -m pytest backend/tests/test_aprovacao.py backend/tests/test_aprovacao_substituir.py -q
 python -m pytest --cov --cov-report=term-missing  # cobertura (também roda no CI)
 
