@@ -102,6 +102,16 @@ describe("InativacaoTab", () => {
     expect(document.getElementById("inativacao_execute_btn")).toBeNull();
   });
 
+  it("avisa, sem bloquear, das linhas que não são CPF, e-mail nem nome completo", async () => {
+    const user = userEvent.setup();
+    render(<InativacaoTab />);
+    expect(document.getElementById("lista_invalid_warning")).toBeNull();
+    await user.type(document.getElementById("lista_text") as HTMLTextAreaElement, "1234567890{Enter}Maria{Enter}12345678909");
+    const aviso = document.getElementById("lista_invalid_warning") as HTMLElement;
+    expect(aviso).toHaveTextContent(/2 linhas ignoradas \(não são CPF de 11 dígitos, e-mail nem nome completo\): 1234567890, Maria/);
+    expect(document.getElementById("lista_text")).toHaveAttribute("aria-describedby", expect.stringContaining("lista_invalid_warning"));
+  });
+
   it("mostra a falha da análise na própria tela", async () => {
     vi.mocked(api.postAnalisar).mockRejectedValue(new api.InativacaoApiError("Base inválida", "ERRO_INTERNO"));
     const user = userEvent.setup();

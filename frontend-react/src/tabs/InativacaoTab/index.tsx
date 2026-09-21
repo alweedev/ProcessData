@@ -252,7 +252,7 @@ export function InativacaoTab() {
                     id="lista_text"
                     rows={4}
                     placeholder={"Ex: João Silva\n12345678901\nusuario@example.com"}
-                    aria-describedby="lista_valid_summary lista_duplicates_warning"
+                    aria-describedby="lista_valid_summary lista_invalid_warning lista_duplicates_warning"
                     value={inativacao.listText}
                     disabled={travado}
                     onChange={(e) => inativacao.setListText(e.target.value)}
@@ -264,6 +264,12 @@ export function InativacaoTab() {
                   </span>{" "}
                   itens válidos (CPF, Nome Completo ou E-mail)
                 </div>
+                {inativacao.classification.invalid.length > 0 && (
+                  <div id="lista_invalid_warning" className="mt-1 text-sm text-warning">
+                    {plural(inativacao.classification.invalid.length, "linha ignorada", "linhas ignoradas")} (não são CPF de
+                    11 dígitos, e-mail nem nome completo): {inativacao.classification.invalid.join(", ")}
+                  </div>
+                )}
                 {inativacao.classification.duplicates.length > 0 && (
                   <div id="lista_duplicates_warning" className="mt-1 text-sm text-warning">
                     CPFs duplicados: {inativacao.classification.duplicates.join(", ")}

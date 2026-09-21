@@ -77,6 +77,7 @@ export async function postAnalisar(
   if (!res.ok) {
     throw new InativacaoApiError(data?.error || `Falha na requisição (${res.status})`, data?.code || "ERRO_INTERNO");
   }
+  if (!Array.isArray(data?.usuarios)) throw new InativacaoApiError("Resposta inesperada do servidor.", "ERRO_INTERNO");
   return data as AnaliseInativacao;
 }
 

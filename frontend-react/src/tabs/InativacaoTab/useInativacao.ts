@@ -12,6 +12,8 @@ export interface Classification {
   validNames: string[];
   validEmails: string[];
   duplicates: string[];
+  /** Linhas que não são CPF (11 dígitos), e-mail nem nome completo: o servidor as ignora, a tela avisa. */
+  invalid: string[];
   totalValid: number;
 }
 
@@ -52,7 +54,8 @@ export function classifyList(text: string): Classification {
   }
 
   const validNames = nameRaw.filter(isValidFullName);
-  return { validCpfs, validNames, validEmails: emailRaw, duplicates, totalValid: validCpfs.length + validNames.length + emailRaw.length };
+  const invalid = nameRaw.filter((l) => !isValidFullName(l));
+  return { validCpfs, validNames, validEmails: emailRaw, duplicates, invalid, totalValid: validCpfs.length + validNames.length + emailRaw.length };
 }
 
 export function formatCpf(c: string): string {

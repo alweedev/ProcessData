@@ -55,8 +55,20 @@ describe("classifyList", () => {
       validNames: [],
       validEmails: [],
       duplicates: [],
+      invalid: [],
       totalValid: 0,
     });
+  });
+
+  it("devolve em `invalid` as linhas que não são CPF de 11 dígitos, e-mail nem nome completo", () => {
+    const result = classifyList("1234567890\nMaria\nJoão Silva\n  \n12345678900");
+    expect(result.invalid).toEqual(["1234567890", "Maria"]);
+    expect(result.validNames).toEqual(["João Silva"]);
+    expect(result.totalValid).toBe(2);
+  });
+
+  it("`invalid` fica vazio quando toda linha é reconhecida", () => {
+    expect(classifyList("12345678900\nJoão Silva\nfulano@empresa.com").invalid).toEqual([]);
   });
 });
 

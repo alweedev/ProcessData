@@ -44,6 +44,25 @@ afterEach(() => {
 });
 
 describe("postAnalisar", () => {
+  it("recusa um 200 que não tem o formato da análise", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ html: "<b>" }) }));
+    await expect(postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], [])).rejects.toMatchObject({
+      name: "InativacaoApiError",
+      message: "Resposta inesperada do servidor.",
+      code: "ERRO_INTERNO",
+    });
+  });
+
+  it("recusa um 200 cujo corpo não é JSON", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => Promise.reject(new SyntaxError("x")) }),
+    );
+    await expect(postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], [])).rejects.toBeInstanceOf(
+      InativacaoApiError,
+    );
+  });
+
   it("envia as bases, a lista e as escolhas, e devolve a análise", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ANALISE });
     vi.stubGlobal("fetch", fetchMock);
