@@ -1,4 +1,5 @@
 import io
+import zipfile
 
 import pandas as pd
 
@@ -61,4 +62,14 @@ class ExportService:
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
                 _neutralize_worksheet(writer.sheets[sheet_name])
             output.seek(0)
+        return output
+
+    @staticmethod
+    def to_zip_bytes(files: dict[str, io.BytesIO]) -> io.BytesIO:
+        """Empacota arquivos já gerados (nome -> bytes) num ZIP em memória."""
+        output = io.BytesIO()
+        with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zf:
+            for name, data in files.items():
+                zf.writestr(name, data.getvalue())
+        output.seek(0)
         return output

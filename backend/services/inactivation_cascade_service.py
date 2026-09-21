@@ -47,6 +47,13 @@ class Analise:
     cols: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class Execucao:
+    ficha: pd.DataFrame  # ficha de inativação (Operacao=DELETE)
+    estruturas: pd.DataFrame  # estruturas afetadas: DELETE nas excluídas, UPDATE nas alteradas
+    resumo: dict[str, Any]
+
+
 def _validar_cadastro(df: pd.DataFrame) -> None:
     cpf_col = InactivationService._detect_base_cols(df)[0]
     if not cpf_col:
@@ -253,3 +260,67 @@ class InactivationCascadeService:
             df_estruturas=df_est,
             cols=cols,
         )
+
+    @staticmethod
+    def executar(
+        df_cadastro: pd.DataFrame,
+        df_estruturas: pd.DataFrame,
+        cpfs: list[str],
+        impressao_recebida: str,
+        ignore_orphan_warning: bool = False,
+    ) -> Execucao:
+        """Recalcula a análise e, se ela bate com a que o operador viu, gera a ficha e as estruturas.
+
+        Nunca confia no diagnóstico enviado pelo navegador: só na impressão digital dele.
+        """
+        lista = sorted({c for c in (clean_cpf(x) for x in (cpfs or [])) if c})
+        if not lista:
+            raise InativacaoError("NADA_A_EXECUTAR", "Nenhum usuário foi informado para inativar.")
+        analise = InactivationCascadeService.analisar(df_cadastro, df_estruturas, lista, selecionados=lista)
+        if not analise.cpfs:
+            raise InativacaoError(
+                "NADA_A_EXECUTAR",
+                "Nenhum dos usuários informados pode ser inativado (não localizado, sem CPF ou já inativo).",
+            )
+        if analise.payload["impressaoDigital"] != impressao_recebida:
+            raise InativacaoError(
+                "ANALISE_DIVERGENTE",
+                "A análise mudou desde a última conferência. Analise novamente antes de executar.",
+                status=409,
+            )
+        if analise.orfas and not ignore_orphan_warning:
+            raise InativacaoError(
+                "ORFAS_SEM_CONFIRMACAO",
+                f"{len(analise.orfas)} estrutura(s) ficará(ão) sem nenhum aprovador. Confirme para continuar.",
+                extra={"estruturasOrfas": sorted(analise.orfas)},
+            )
+
+        ficha, _stats = InactivationService.process_from_dataframes(
+            df_cadastro, pd.DataFrame({"CPF": sorted(analise.cpfs)})
+        )
+        if ficha.empty:
+            raise InativacaoError(
+                "NADA_A_EXECUTAR", "A ficha de inativação saiu vazia: nenhum usuário ATIVO correspondeu."
+            )
+
+        df_est, cols = analise.df_estruturas, analise.cols
+        atualizado, stats = ApprovalService.remove_cpfs_and_compact(
+            df_est, set(analise.cpfs), cols, set(analise.alvo_compactacao), True
+        )
+        id_col = cols["aprovacao_id"]
+        compactadas = atualizado[atualizado[id_col].astype(str).str.strip().isin(analise.alvo_compactacao)].copy()
+        compactadas["Operacao"] = ""
+        compactadas.loc[compactadas.index.isin(stats["changed_indices"]), "Operacao"] = "UPDATE"
+        excluidas = ApprovalService.delete_structures(df_est, set(analise.excluidas), cols)
+        partes = [parte for parte in (excluidas, compactadas) if not parte.empty]
+        estruturas = pd.concat(partes, ignore_index=True) if partes else compactadas
+        estruturas = estruturas[["Operacao", *[c for c in estruturas.columns if c != "Operacao"]]]
+
+        resumo = {
+            "usuariosInativados": len(ficha),
+            "estruturasExcluidas": len(analise.excluidas),
+            "estruturasCompactadas": len(analise.alvo_compactacao - analise.orfas),
+            "estruturasOrfas": len(analise.orfas),
+            "linhasEstruturas": len(estruturas),
+        }
+        return Execucao(ficha=ficha, estruturas=estruturas, resumo=resumo)
