@@ -60,8 +60,12 @@ test("estrutura órfã exige uma segunda confirmação", async ({ page }) => {
   await expect(page.locator("#inativacao_impacto li").first()).toContainText("Estrutura órfã");
 
   await page.locator("#inativacao_next_btn").click();
+  await page.locator("#inativacao_confirm_orfas").check();
+  await expect(page.locator("#inativacao_execute_btn")).toBeDisabled(); // ciência da órfã sozinha não basta
   await page.locator("#inativacao_confirm_impacto").check();
-  await expect(page.locator("#inativacao_execute_btn")).toBeDisabled(); // ainda falta a ciência da órfã
+  await expect(page.locator("#inativacao_execute_btn")).toBeEnabled();
+  await page.locator("#inativacao_confirm_orfas").uncheck();
+  await expect(page.locator("#inativacao_execute_btn")).toBeDisabled(); // impacto sozinho não basta
   await page.locator("#inativacao_confirm_orfas").check();
   await expect(page.locator("#inativacao_execute_btn")).toBeEnabled();
 });
@@ -77,10 +81,23 @@ test("usuário sem CPF no cadastro não pode ser inativado", async ({ page }) =>
   await expect(page.locator("#inativacao_next_btn")).toBeDisabled();
 });
 
-test("mexer na lista depois de analisar volta para a primeira etapa", async ({ page }) => {
+test("editar a lista descarta a análise já feita", async ({ page }) => {
+  const etapas = page.locator('ol[aria-label="Etapas da inativação"]');
   await analisar(page, estruturas(), validCpf(1));
+  await expect(etapas).toContainText("1 a inativar");
+
+  // só voltar de etapa não descarta a análise
   await page.locator("#inativacao_back_btn").click();
+  await expect(etapas).toContainText("1 a inativar");
+
+  // editar a lista descarta a análise
   await page.fill("#lista_text", validCpf(2));
-  await expect(page.locator("#inativacao_btn")).toBeEnabled();
-  await expect(page.locator("#inativacao_impacto")).toHaveCount(0);
+  await expect(etapas).toContainText("Conferir o impacto");
+  await expect(etapas).not.toContainText("1 a inativar");
+
+  // e uma nova análise reflete a lista nova
+  await page.locator("#inativacao_btn").click();
+  const card = page.locator("#inativacao_impacto li").first();
+  await expect(card).toContainText("Joao Pereira");
+  await expect(card).not.toContainText("Maria Silva");
 });
