@@ -4,6 +4,7 @@ import pandas as pd
 
 from backend.core.logging import get_logger
 from backend.processor import processar_inativacao_from_paths
+from backend.shared.cpf_utils import clean_cpf
 from backend.shared.text_utils import upper_no_accents
 
 logger = get_logger()
@@ -116,7 +117,7 @@ class InactivationService:
         cpf_col, nome_col, email_col, status_col, userid_col = InactivationService._detect_base_cols(df_base)
 
         frame = df_base.copy()
-        frame["CPFdigits"] = frame[cpf_col].apply(lambda v: re.sub(r"\D", "", str(v))) if cpf_col else ""
+        frame["CPFdigits"] = frame[cpf_col].apply(clean_cpf) if cpf_col else ""
         frame["NomeNorm"] = frame[nome_col].apply(lambda v: upper_no_accents(str(v)).strip()) if nome_col else ""
 
         results = []

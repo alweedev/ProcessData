@@ -51,3 +51,14 @@ def test_duplicate_cpf_in_input_is_reported_once():
     assert result["duplicates"] == ["12345678900"]
     # o CPF duplicado só deve gerar 1 resultado "found", não 2
     assert sum(1 for item in result["items"] if item["found"]) == 1
+
+
+def test_busca_por_cpf_restaura_zero_a_esquerda_da_base():
+    import pandas as pd
+
+    from backend.services.inactivation_service import InactivationService
+
+    base = pd.DataFrame([{"CPF": "1234567890", "NomeCompleto": "Ana Souza", "Email": "a@x.com", "Status": "ATIVO"}])
+    achados = InactivationService.search_matches(base, ["01234567890"])
+    assert [i["found"] for i in achados["items"]] == [True]
+    assert achados["items"][0]["cpf"] == "01234567890"
