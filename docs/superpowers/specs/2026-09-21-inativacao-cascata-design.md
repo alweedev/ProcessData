@@ -122,7 +122,7 @@ Saída `200`:
     "nome": "João Silva", "email": "joao@empresa.com",
     "situacao": "EXECUTAVEL",   // | SEM_CPF | JA_INATIVO | NAO_LOCALIZADO | PENDENTE_SELECAO
     "alerta": null,             // texto exato acima quando SEM_CPF
-    "estruturaViajante": { "aprovacaoId": "APR001" },   // ou null
+    "estruturasViajante": ["APR001"],   // lista (um viajante pode ter mais de uma); [] se nenhuma
     "comoAprovador": [
       { "aprovacaoId": "APR010", "posicoes": [2], "acao": "COMPACTACAO" },
       { "aprovacaoId": "APR011", "posicoes": [1], "acao": "ORFA" }
@@ -159,7 +159,8 @@ de outro jeito não invalida; trocar por outra que mude o impacto, sim.
 ### Saída do ZIP
 
 - `saida_inativacao.xlsx`: ficha `DELETE` pelo motor atual, com a lista de CPFs.
-- `estruturas_atualizadas.xlsx`: **todas** as linhas das estruturas afetadas,
+- `estruturas_atualizadas.xlsx` (sempre presente; só o cabeçalho quando nenhuma
+  estrutura é afetada): **todas** as linhas das estruturas afetadas,
   no mesmo formato do export de `/api/aprovacao/remover/export`;
   `Operacao=DELETE` nas excluídas, `UPDATE` nas compactadas. Estrutura que é
   excluída não recebe compactação.
@@ -171,7 +172,7 @@ a mensagem é em português e não vaza detalhe interno.
 
 | HTTP | code | Quando |
 |---|---|---|
-| 400 | `BASE_AUSENTE` / `BASE_SEM_COLUNA` | falta arquivo, ou coluna (CPF do viajante, `AprovacaoId`, `LoginAprovador_*`, CPF/nome no cadastro) |
+| 400 | `BASE_AUSENTE` / `ARQUIVO_INVALIDO` / `BASE_SEM_COLUNA` | falta arquivo, arquivo ilegível (extensão ou conteúdo), ou coluna ausente (CPF do viajante, `AprovacaoId`, `AprovacaoPor`, `LoginAprovador_*`, CPF no cadastro) |
 | 400 | `LISTA_VAZIA` / `LISTA_GRANDE` | lista vazia ou acima de 500 itens |
 | 400 | `NADA_A_EXECUTAR` | nenhum CPF executável |
 | 400 | `ORFAS_SEM_CONFIRMACAO` | há estruturas órfãs e `ignore_orphan_warning` não veio |
@@ -189,7 +190,9 @@ A aba vira um assistente de 3 etapas, no mesmo padrão do Cadastro
 2. **Impacto** — um cartão por usuário: quem será inativado, a estrutura direta
    a excluir e o impacto como aprovador (âmbar = compactação, vermelho =
    estrutura órfã). `SEM_CPF`, `JA_INATIVO` e `NAO_LOCALIZADO` aparecem com o
-   motivo, fora da cascata. Homônimos são uma lista de escolha.
+   motivo, fora da cascata. Homônimos são uma lista de escolha ("Aplicar
+   seleção" refaz a análise) e **Continuar fica bloqueado enquanto houver nome
+   repetido sem escolha**; para deixá-lo de fora, o operador o tira da lista.
 3. **Confirmar** — confirmação consciente; com órfãs, uma segunda confirmação
    explícita. **Executar inativação** só habilita depois delas.
 
