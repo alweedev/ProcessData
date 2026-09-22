@@ -27,6 +27,7 @@ function analise(usuarios: UsuarioAnalise[], orfas = 0): AnaliseInativacao {
       duplicados: [],
     },
     impressaoDigital: "d",
+    avisos: [],
   };
 }
 

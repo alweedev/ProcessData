@@ -72,6 +72,8 @@ export function useInativacao() {
   const [estruturas, setEstruturasRaw] = useState<File | null>(null);
   const [analise, setAnalise] = useState<AnaliseInativacao | null>(null);
   const [escolhidos, setEscolhidos] = useState<string[]>([]);
+  // Nome da coluna que o servidor detectou como candidata a CPF do viajante (ex.: "Valor"), pendente de confirmação.
+  const [cpfViajanteCandidato, setCpfViajanteCandidato] = useState<string | null>(null);
   const [analisando, setAnalisando] = useState(false);
   const [executando, setExecutando] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -82,6 +84,8 @@ export function useInativacao() {
   // Refs (não estado) para a trava de reentrada valer mesmo em dois cliques antes de re-renderizar.
   const analisandoRef = useRef(false);
   const executandoRef = useRef(false);
+  // Confirmação de CPF do viajante usada na última análise bem-sucedida: `executar()` reenvia o mesmo valor.
+  const confirmarCpfViajanteRef = useRef(false);
 
   const classification = useMemo(() => classifyList(listText), [listText]);
   const itens = useMemo(
@@ -98,6 +102,7 @@ export function useInativacao() {
     setAnalise(null);
     setEscolhidos([]);
     setFailure(null);
+    setCpfViajanteCandidato(null);
   }
 
   function setListText(value: string) {
@@ -119,21 +124,27 @@ export function useInativacao() {
     setEscolhidos((atuais) => (marcado ? [...new Set([...atuais, cpf])] : atuais.filter((c) => c !== cpf)));
   }
 
-  async function analisar(): Promise<boolean> {
+  async function analisar(confirmarCpfViajante = false): Promise<boolean> {
     if (!cadastro || !estruturas || analisandoRef.current) return false;
     const minha = geracao.current;
     analisandoRef.current = true;
     setAnalisando(true);
     setFailure(null);
     try {
-      const resultado = await postAnalisar(cadastro, estruturas, itens, escolhidos);
+      const resultado = await postAnalisar(cadastro, estruturas, itens, escolhidos, confirmarCpfViajante);
       // As entradas mudaram durante a requisição: o resultado é de outra lista e não vale.
       if (minha !== geracao.current) return false;
       setAnalise(resultado);
+      setCpfViajanteCandidato(null);
+      confirmarCpfViajanteRef.current = confirmarCpfViajante;
       return true;
     } catch (err) {
       if (minha !== geracao.current) return false;
       setAnalise(null);
+      if (err instanceof InativacaoApiError && err.code === "CPF_VIAJANTE_A_CONFIRMAR") {
+        setCpfViajanteCandidato((err.extra?.colunaCandidata as string) || "Valor");
+        return false;
+      }
       setFailure(comoFalha(err));
       return false;
     } finally {
@@ -143,6 +154,11 @@ export function useInativacao() {
         setAnalisando(false);
       }
     }
+  }
+
+  /** Reanalisa autorizando o uso da coluna candidata (ex.: "Valor") como CPF do viajante. */
+  async function confirmarCpfViajanteEAnalisar(): Promise<boolean> {
+    return analisar(true);
   }
 
   async function executar(ignorarOrfas: boolean): Promise<boolean> {
@@ -156,7 +172,15 @@ export function useInativacao() {
     setProgress(0);
     setFailure(null);
     try {
-      const blob = await postExecutar(cadastro, estruturas, cpfs, analise.impressaoDigital, ignorarOrfas, setProgress);
+      const blob = await postExecutar(
+        cadastro,
+        estruturas,
+        cpfs,
+        analise.impressaoDigital,
+        ignorarOrfas,
+        confirmarCpfViajanteRef.current,
+        setProgress,
+      );
       const url = URL.createObjectURL(blob);
       triggerAnchorDownload(url, ARQUIVO_ZIP);
       addRun({
@@ -193,6 +217,8 @@ export function useInativacao() {
     setEscolhidos([]);
     setFailure(null);
     setConcluido(false);
+    setCpfViajanteCandidato(null);
+    confirmarCpfViajanteRef.current = false;
   }
 
   return {
@@ -213,7 +239,9 @@ export function useInativacao() {
     progress,
     failure,
     concluido,
+    cpfViajanteCandidato,
     analisar,
+    confirmarCpfViajanteEAnalisar,
     executar,
     reset,
   };

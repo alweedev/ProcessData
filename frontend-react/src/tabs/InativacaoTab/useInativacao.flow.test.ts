@@ -41,6 +41,7 @@ const ANALISE: AnaliseInativacao = {
   ],
   resumo: { executaveis: 1, estruturasExcluidas: 0, estruturasCompactadas: 0, estruturasOrfas: 0, duplicados: [] },
   impressaoDigital: "digital-1",
+  avisos: [],
 };
 
 const cadastro = new File(["c"], "cadastro.xlsx");
@@ -84,8 +85,30 @@ describe("useInativacao", () => {
     });
 
     expect(ok).toBe(true);
-    expect(api.postAnalisar).toHaveBeenCalledWith(cadastro, estruturas, [CPF, "Ana Souza"], []);
+    expect(api.postAnalisar).toHaveBeenCalledWith(cadastro, estruturas, [CPF, "Ana Souza"], [], false);
     expect(result.current.analise).toEqual(ANALISE);
+  });
+
+  it("expõe cpfViajanteCandidato quando o servidor pede confirmação e reanalisa ao confirmar", async () => {
+    const erro = new api.InativacaoApiError("Confirme para usar Valor.", "CPF_VIAJANTE_A_CONFIRMAR", {
+      colunaCandidata: "Valor",
+    });
+    vi.mocked(api.postAnalisar).mockRejectedValueOnce(erro).mockResolvedValueOnce(ANALISE);
+    const { result } = preparado();
+
+    await act(async () => {
+      await result.current.analisar();
+    });
+    expect(result.current.cpfViajanteCandidato).toBe("Valor");
+    expect(result.current.analise).toBeNull();
+    expect(result.current.failure).toBeNull();
+
+    await act(async () => {
+      await result.current.confirmarCpfViajanteEAnalisar();
+    });
+    expect(result.current.cpfViajanteCandidato).toBeNull();
+    expect(result.current.analise).toEqual(ANALISE);
+    expect(api.postAnalisar).toHaveBeenLastCalledWith(cadastro, estruturas, [CPF, "Ana Souza"], [], true);
   });
 
   it("guarda a falha da análise com a mensagem do servidor", async () => {
@@ -128,7 +151,7 @@ describe("useInativacao", () => {
     });
 
     expect(ok).toBe(true);
-    expect(api.postExecutar).toHaveBeenCalledWith(cadastro, estruturas, [CPF], "digital-1", true, expect.any(Function));
+    expect(api.postExecutar).toHaveBeenCalledWith(cadastro, estruturas, [CPF], "digital-1", true, false, expect.any(Function));
     expect(result.current.concluido).toBe(true);
   });
 

@@ -40,6 +40,7 @@ const ANALISE: AnaliseInativacao = {
   ],
   resumo: { executaveis: 1, estruturasExcluidas: 1, estruturasCompactadas: 0, estruturasOrfas: 1, duplicados: [] },
   impressaoDigital: "digital-1",
+  avisos: [],
 };
 
 const cadastro = new File(["c"], "cadastro.xlsx");
