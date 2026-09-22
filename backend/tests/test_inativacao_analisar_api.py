@@ -30,7 +30,7 @@ def test_analisa_por_itens_json(client):
     resp = _post(client, *_bases(), itens=json.dumps([A]))
     assert resp.status_code == 200, resp.get_data(as_text=True)
     corpo = resp.get_json()
-    assert set(corpo) == {"usuarios", "resumo", "impressaoDigital"}
+    assert set(corpo) == {"usuarios", "resumo", "impressaoDigital", "avisos"}
     assert corpo["usuarios"][0]["situacao"] == "EXECUTAVEL"
     assert corpo["usuarios"][0]["estruturasViajante"] == ["S1"]
     assert corpo["resumo"]["estruturasCompactadas"] == 1

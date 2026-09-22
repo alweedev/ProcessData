@@ -103,6 +103,7 @@ def _detalhes_analise(analise: Analise) -> dict:
     resumo["duplicados"] = [mascarar_cpf(c) for c in resumo.get("duplicados", [])]  # CPFs digitados em dobro
     return {
         "resumo": resumo,
+        "avisos": analise.payload.get("avisos", []),
         "impressaoDigital": analise.payload["impressaoDigital"],
         "usuarios": [{"cpf": u["cpfMascarado"], "situacao": u["situacao"]} for u in analise.payload["usuarios"]],
     }

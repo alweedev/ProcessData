@@ -103,6 +103,16 @@ def test_cpf_repetido_na_lista_entra_uma_vez():
     assert a.payload["resumo"]["duplicados"] == [A]
 
 
+def test_avisos_sinalizam_linhas_viajante_sem_cpf_reconhecivel():
+    df_cad = cad(USR_A)
+    df_est = est(
+        viajante("X1", A),
+        {"AprovacaoId": "X2", "AprovacaoPor": "VIAJANTE", "CPF": "", "LoginAprovador_1": "999.999.999-99"},
+    )
+    analise = InactivationCascadeService.analisar(df_cad, df_est, [A])
+    assert any("sem CPF" in a for a in analise.payload["avisos"])
+
+
 def test_nao_altera_as_entradas():
     cadastro, estruturas = cad(USR_A), est(viajante("S1", A, B), viajante("S2", C, A))
     antes_c, antes_e = cadastro.copy(), estruturas.copy()

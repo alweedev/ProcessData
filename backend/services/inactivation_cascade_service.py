@@ -275,6 +275,18 @@ class InactivationCascadeService:
             if aid not in excluidas
         ]
         digital = impressao_digital({"cpfs": cpfs, "excluidas": excluidas, "compactadas": compactadas, "orfas": orfas})
+
+        avisos: list[str] = []
+        if cols.get("traveler_cpf_col"):
+            por_col = cols["aprovacao_por"]
+            is_traveler = df_est[por_col].astype(str).str.strip().str.upper() == "VIAJANTE"
+            cpf_col = cols["traveler_cpf_col"]
+            sem_cpf = int((is_traveler & (df_est[cpf_col].apply(clean_cpf).str.len() != 11)).sum())
+            if sem_cpf:
+                avisos.append(f"{sem_cpf} estrutura(s) VIAJANTE sem CPF reconhecível na base (ficam fora da análise).")
+        if busca.get("duplicates"):
+            avisos.append(f"{len(busca['duplicates'])} CPF(s) duplicado(s) na lista informada.")
+
         payload = {
             "usuarios": usuarios,
             "resumo": {
@@ -285,6 +297,7 @@ class InactivationCascadeService:
                 "duplicados": list(busca.get("duplicates", [])),
             },
             "impressaoDigital": digital,
+            "avisos": avisos,
         }
         return Analise(
             payload=payload,
