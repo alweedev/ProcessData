@@ -38,7 +38,7 @@ def test_find_traveler_structures_so_conta_viajante_e_aceita_pontuacao():
 
 
 def test_find_traveler_structures_sem_coluna_cpf_levanta_erro():
-    df = _df(_linha("S1", A)).drop(columns=["CPF"])
+    df = _df(_linha("S1", A, por="VIAJANTE", cpf=A)).drop(columns=["CPF"])
     with pytest.raises(ValueError, match="CPF do viajante"):
         ApprovalService.find_traveler_structures(df, {A}, _cols(df))
 

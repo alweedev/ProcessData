@@ -146,6 +146,14 @@ def test_base_de_cadastro_sem_coluna_cpf():
     assert erro.value.code == "BASE_SEM_COLUNA"
 
 
+def test_base_sem_linha_viajante_nao_exige_cpf_do_viajante():
+    df_cad = cad(USR_A)
+    df_est = est({"AprovacaoId": "X1", "AprovacaoPor": "CCEMPRESA", "LoginAprovador_1": "999.999.999-99"})
+    # Não deve levantar InativacaoError("BASE_SEM_COLUNA", ...): a base não usa estrutura por viajante.
+    analise = InactivationCascadeService.analisar(df_cad, df_est, [A])
+    assert analise.payload["usuarios"][0]["situacao"] == "EXECUTAVEL"
+
+
 def test_usuario_fora_da_lista_nao_e_tocado():
     a = _analisar(cad(USR_A, USR_C), est(viajante("S1", D, A, C)), [A])
     assert a.cpfs == {A}

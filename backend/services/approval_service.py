@@ -645,15 +645,17 @@ class ApprovalService:
     @staticmethod
     def find_traveler_structures(df_base: pd.DataFrame, cpfs: set[str], cols: dict[str, Any]) -> dict[str, set[str]]:
         """`{cpf: {AprovacaoId}}` das estruturas AprovacaoPor=VIAJANTE cujo CPF do viajante é o do usuário."""
-        cpf_col = cols.get("traveler_cpf_col")
-        if not cpf_col:
-            raise ValueError("Base de estruturas não contém a coluna CPF do viajante.")
         found: dict[str, set[str]] = {cpf: set() for cpf in cpfs}
         aprov_id_col = cols.get("aprovacao_id")
         por_col = cols.get("aprovacao_por")
         if not aprov_id_col or not por_col or not cpfs:
             return found
         is_traveler = df_base[por_col].astype(str).str.strip().str.upper() == "VIAJANTE"
+        if not is_traveler.any():
+            return found
+        cpf_col = cols.get("traveler_cpf_col")
+        if not cpf_col:
+            raise ValueError("Base de estruturas não contém a coluna CPF do viajante.")
         digits = _digits_matrix(df_base, [cpf_col])[cpf_col]
         ids = df_base[aprov_id_col].astype(str).str.strip()
         hit = is_traveler & digits.isin(list(cpfs)) & (ids != "")

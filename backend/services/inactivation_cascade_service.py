@@ -62,7 +62,7 @@ def _validar_cadastro(df: pd.DataFrame) -> None:
         raise InativacaoError("BASE_SEM_COLUNA", "A base de cadastro não contém a coluna CPF.")
 
 
-def _validar_estruturas(cols: dict[str, Any]) -> None:
+def _validar_estruturas(df_est: pd.DataFrame, cols: dict[str, Any]) -> None:
     faltando = []
     if not cols.get("aprovacao_id"):
         faltando.append("AprovacaoId")
@@ -70,10 +70,13 @@ def _validar_estruturas(cols: dict[str, Any]) -> None:
         faltando.append("AprovacaoPor")
     if not cols.get("approver_cols"):
         faltando.append("LoginAprovador_1")
-    if not cols.get("traveler_cpf_col"):
-        faltando.append("CPF (do viajante)")
     if faltando:
         raise InativacaoError("BASE_SEM_COLUNA", "A base de estruturas não contém: " + ", ".join(faltando) + ".")
+
+    por_col = cols["aprovacao_por"]
+    tem_viajante = (df_est[por_col].astype(str).str.strip().str.upper() == "VIAJANTE").any()
+    if tem_viajante and not cols.get("traveler_cpf_col"):
+        raise InativacaoError("BASE_SEM_COLUNA", "A base de estruturas não contém: CPF (do viajante).")
 
 
 def _classificar(itens: list[str]) -> tuple[set[str], set[str], dict[str, str], list[str]]:
@@ -216,7 +219,7 @@ class InactivationCascadeService:
         _validar_cadastro(df_cadastro)
         df_est = df_estruturas.copy().reset_index(drop=True)
         cols = ApprovalService.detect_approval_columns(df_est)
-        _validar_estruturas(cols)
+        _validar_estruturas(df_est, cols)
 
         escolhidos = {c for c in (clean_cpf(x) for x in (selecionados or [])) if c}
         busca = InactivationService.search_matches(df_cadastro, lista)
