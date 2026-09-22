@@ -12,6 +12,7 @@ import pandas as pd
 
 from backend.core.config import settings
 from backend.services.approval_service import ApprovalService
+from backend.services.argo_schema_validator import ArgoSchemaValidator
 from backend.services.inactivation_service import InactivationService
 from backend.shared.cpf_mask import mascarar_cpf
 from backend.shared.cpf_utils import clean_cpf
@@ -359,6 +360,16 @@ class InactivationCascadeService:
         partes = [parte for parte in (excluidas, compactadas) if not parte.empty]
         estruturas = pd.concat(partes, ignore_index=True) if partes else compactadas
         estruturas = estruturas[["Operacao", *[c for c in estruturas.columns if c != "Operacao"]]]
+        estruturas = estruturas[estruturas["Operacao"].astype(str).str.strip() != ""].reset_index(drop=True)
+
+        erros_schema = ArgoSchemaValidator.validar(estruturas)
+        if erros_schema:
+            raise InativacaoError(
+                "SCHEMA_ARGO_INVALIDO",
+                "A exportação ficou fora do formato aceito pela Argo: " + "; ".join(erros_schema),
+                status=500,
+                extra={"erros": erros_schema},
+            )
 
         resumo = {
             "usuariosInativados": len(analise.cpfs),

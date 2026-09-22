@@ -141,3 +141,11 @@ def test_estruturas_vazias_gera_planilha_que_abre_no_openpyxl():
     wb = load_workbook(ExportService.to_excel_bytes(r.estruturas, sheet_name="Aprovacao"))
     cabecalho = [c.value for c in wb["Aprovacao"][1]]
     assert cabecalho[:2] == ["Operacao", "AprovacaoId"]
+
+
+def test_executar_nunca_inclui_linha_de_estrutura_sem_operacao():
+    df_cad = cad(USR_A)
+    df_est = est(viajante("X1", A, B))  # A é o viajante, B aprovador em outra estrutura não entra aqui
+    analise = InactivationCascadeService.analisar(df_cad, df_est, [A])
+    execucao = InactivationCascadeService.executar(df_cad, df_est, [A], analise.payload["impressaoDigital"])
+    assert (execucao.estruturas["Operacao"].astype(str).str.strip() != "").all()
