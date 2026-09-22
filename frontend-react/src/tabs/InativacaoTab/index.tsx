@@ -275,6 +275,27 @@ export function InativacaoTab() {
                     CPFs duplicados: {inativacao.classification.duplicates.join(", ")}
                   </div>
                 )}
+                {inativacao.cpfViajanteCandidato && (
+                  <div
+                    id="inativacao_cpf_viajante_confirm"
+                    className="mt-3 rounded-control border border-warning/40 bg-warning-soft px-4 py-3 text-sm"
+                  >
+                    <p className="text-text">
+                      Não encontramos uma coluna de CPF do viajante dedicada na base de estruturas, mas a coluna{" "}
+                      <strong>{inativacao.cpfViajanteCandidato}</strong> parece conter o CPF nas linhas VIAJANTE.
+                    </p>
+                    <Button
+                      id="inativacao_confirm_cpf_viajante_btn"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      loading={inativacao.analisando}
+                      onClick={() => void inativacao.confirmarCpfViajanteEAnalisar()}
+                    >
+                      Usar {inativacao.cpfViajanteCandidato} como CPF do viajante e analisar
+                    </Button>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -289,6 +310,13 @@ export function InativacaoTab() {
                   {plural(orfas, "estrutura órfã", "estruturas órfãs")}
                 </span>
               </p>
+              {analise.avisos.length > 0 && (
+                <ul id="inativacao_avisos" className="mb-3 space-y-1 text-sm text-warning">
+                  {analise.avisos.map((aviso, i) => (
+                    <li key={i}>⚠ {aviso}</li>
+                  ))}
+                </ul>
+              )}
               <ul id="inativacao_impacto" className="max-h-[28rem] space-y-3 overflow-y-auto pr-1">
                 {analise.usuarios.map((u, i) => (
                   <ImpactoCard

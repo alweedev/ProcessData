@@ -124,4 +124,40 @@ describe("InativacaoTab", () => {
     await waitFor(() => expect(document.getElementById("inativacao_debug")).not.toBeNull());
     expect(document.getElementById("inativacao_debug")).toHaveTextContent(/Base inválida/);
   });
+
+  it("mostra o banner de confirmação do CPF do viajante e reanalisa ao confirmar", async () => {
+    vi.mocked(api.postAnalisar)
+      .mockRejectedValueOnce(
+        new api.InativacaoApiError("CPF do viajante precisa de confirmação", "CPF_VIAJANTE_A_CONFIRMAR", {
+          colunaCandidata: "Valor",
+        }),
+      )
+      .mockResolvedValueOnce(ANALISE);
+    const user = userEvent.setup();
+    render(<InativacaoTab />);
+    await user.upload(document.getElementById("inativacao_cadastro") as HTMLInputElement, cadastro);
+    await user.upload(document.getElementById("inativacao_estruturas") as HTMLInputElement, estruturas);
+    await user.type(document.getElementById("lista_text") as HTMLTextAreaElement, "12345678909");
+    await user.click(document.getElementById("inativacao_btn") as HTMLElement);
+
+    await waitFor(() => expect(document.getElementById("inativacao_cpf_viajante_confirm")).not.toBeNull());
+    expect(document.getElementById("inativacao_cpf_viajante_confirm")).toHaveTextContent(/Valor/);
+    const confirmBtn = document.getElementById("inativacao_confirm_cpf_viajante_btn") as HTMLElement;
+    expect(confirmBtn).not.toBeNull();
+
+    await user.click(confirmBtn);
+    await waitFor(() => expect(document.getElementById("inativacao_cpf_viajante_confirm")).toBeNull());
+    expect(api.postAnalisar).toHaveBeenLastCalledWith(cadastro, estruturas, ["12345678909"], [], true);
+  });
+
+  it("mostra os avisos de qualidade na etapa de impacto quando existem", async () => {
+    vi.mocked(api.postAnalisar).mockResolvedValue({
+      ...ANALISE,
+      avisos: ["2 estruturas VIAJANTE sem CPF reconhecível na base"],
+    });
+    await ateAnalise();
+    const lista = document.getElementById("inativacao_avisos") as HTMLElement;
+    expect(lista).not.toBeNull();
+    expect(lista).toHaveTextContent("2 estruturas VIAJANTE sem CPF reconhecível na base");
+  });
 });
