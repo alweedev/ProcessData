@@ -15,7 +15,7 @@ from backend.services.approval_service import ApprovalService
 from backend.services.argo_schema_validator import ArgoSchemaValidator
 from backend.services.inactivation_service import InactivationService
 from backend.shared.cpf_mask import mascarar_cpf
-from backend.shared.cpf_utils import clean_cpf
+from backend.shared.cpf_utils import clean_cpf, raw_cpf_digits
 from backend.shared.fingerprint import impressao_digital
 from backend.shared.text_utils import upper_no_accents
 
@@ -281,7 +281,8 @@ class InactivationCascadeService:
             por_col = cols["aprovacao_por"]
             is_traveler = df_est[por_col].astype(str).str.strip().str.upper() == "VIAJANTE"
             cpf_col = cols["traveler_cpf_col"]
-            sem_cpf = int((is_traveler & (df_est[cpf_col].apply(clean_cpf).str.len() != 11)).sum())
+            raw_len = df_est[cpf_col].apply(lambda v: len(raw_cpf_digits(v)))
+            sem_cpf = int((is_traveler & ~raw_len.isin([10, 11])).sum())
             if sem_cpf:
                 avisos.append(f"{sem_cpf} estrutura(s) VIAJANTE sem CPF reconhecível na base (ficam fora da análise).")
         if busca.get("duplicates"):
@@ -375,12 +376,18 @@ class InactivationCascadeService:
         estruturas = estruturas[["Operacao", *[c for c in estruturas.columns if c != "Operacao"]]]
         estruturas = estruturas[estruturas["Operacao"].astype(str).str.strip() != ""].reset_index(drop=True)
 
+        # `Status` é campo que esta ferramenta já controla por completo na exportação (como já faz com
+        # `Operacao` em toda linha exportada): zera antes de validar para não bloquear o download por um
+        # valor que veio preenchido na base de origem do cliente e nunca é usado na carga.
+        if "Status" in estruturas.columns:
+            estruturas["Status"] = ""
+
         erros_schema = ArgoSchemaValidator.validar(estruturas)
         if erros_schema:
             raise InativacaoError(
                 "SCHEMA_ARGO_INVALIDO",
                 "A exportação ficou fora do formato aceito pela Argo: " + "; ".join(erros_schema),
-                status=500,
+                status=400,
                 extra={"erros": erros_schema},
             )
 

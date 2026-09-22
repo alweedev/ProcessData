@@ -6,7 +6,7 @@ from typing import Any
 
 import pandas as pd
 
-from backend.shared.cpf_utils import format_cpf_for_output, is_valid_cpf, limpar_cpf_raw
+from backend.shared.cpf_utils import format_cpf_for_output, is_valid_cpf, limpar_cpf_raw, raw_cpf_digits
 from backend.shared.text_utils import upper_no_accents
 
 
@@ -41,9 +41,10 @@ def _valor_parece_cpf_viajante(df: pd.DataFrame, cols: dict[str, Any]) -> bool:
     is_traveler = df[por_col].astype(str).str.strip().str.upper() == "VIAJANTE"
     if not is_traveler.any():
         return False
-    digits = _digits_matrix(df, [valor_col])[valor_col][is_traveler]
-    validos = int((digits.str.len() == 11).sum())
-    return validos > 0 and validos / len(digits) >= 0.8
+    valores = df[valor_col].astype(str).str.strip()[is_traveler]
+    raw_lens = valores.apply(lambda v: len(raw_cpf_digits(v)))
+    validos = int(raw_lens.isin([10, 11]).sum())
+    return validos > 0 and validos / len(raw_lens) >= 0.8
 
 
 def _orphan_rows_mask(

@@ -103,6 +103,7 @@ export function useInativacao() {
     setEscolhidos([]);
     setFailure(null);
     setCpfViajanteCandidato(null);
+    confirmarCpfViajanteRef.current = false;
   }
 
   function setListText(value: string) {
@@ -124,7 +125,7 @@ export function useInativacao() {
     setEscolhidos((atuais) => (marcado ? [...new Set([...atuais, cpf])] : atuais.filter((c) => c !== cpf)));
   }
 
-  async function analisar(confirmarCpfViajante = false): Promise<boolean> {
+  async function analisar(confirmarCpfViajante = confirmarCpfViajanteRef.current): Promise<boolean> {
     if (!cadastro || !estruturas || analisandoRef.current) return false;
     const minha = geracao.current;
     analisandoRef.current = true;

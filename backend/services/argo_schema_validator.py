@@ -1,8 +1,11 @@
 """Valida a base de estruturas exportada contra o schema oficial da carga de aprovação da Argo.
 
 Regras de `Formulario Requisitos - Carga Aprovacao.pdf`: campos obrigatórios, valores aceitos e
-tamanhos máximos. Roda só antes do download (nunca bloqueia a análise) — se falhar aqui é sinal de
-bug na geração, não de dado ruim do cliente.
+tamanhos máximos. Roda só antes do download (nunca bloqueia a análise). Uma falha aqui pode ser um
+bug de geração desta ferramenta OU um problema genuíno nos dados de origem do cliente (ex.: login em
+formato pontuado com mais de 12 caracteres) que a Argo rejeitaria de qualquer forma no upload real —
+nos dois casos é melhor barrar aqui, antes do download, do que deixar o operador descobrir isso só ao
+tentar carregar o arquivo na Argo.
 """
 
 import re

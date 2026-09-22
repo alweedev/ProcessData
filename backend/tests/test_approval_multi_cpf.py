@@ -111,3 +111,22 @@ def test_nao_altera_a_entrada():
     antes = df.copy()
     ApprovalService.remove_cpfs_and_compact(df, {A}, _cols(df), {"S1", "S2"}, True)
     assert df.equals(antes)
+
+
+def test_valor_parece_cpf_viajante_true_quando_maioria_bate():
+    df = _df(
+        {"AprovacaoId": "S1", "AprovacaoPor": "VIAJANTE", "Valor": A, "LoginAprovador_1": B},
+        {"AprovacaoId": "S2", "AprovacaoPor": "VIAJANTE", "Valor": B, "LoginAprovador_1": C},
+    )
+    assert ApprovalService.valor_parece_cpf_viajante(df, _cols(df)) is True
+
+
+def test_valor_parece_cpf_viajante_ignora_junk_numerico_curto():
+    """Regressão: `_digits_matrix` usa `clean_cpf`, que faz zfill e faria '88' e '1234567' virarem
+    strings de 11 dígitos (falso positivo). A checagem tem de usar o comprimento bruto
+    (`raw_cpf_digits`, sem padding) para não confundir junk curto com CPF de verdade."""
+    df = _df(
+        {"AprovacaoId": "S1", "AprovacaoPor": "VIAJANTE", "Valor": "88", "LoginAprovador_1": B},
+        {"AprovacaoId": "S2", "AprovacaoPor": "VIAJANTE", "Valor": "1234567", "LoginAprovador_1": C},
+    )
+    assert ApprovalService.valor_parece_cpf_viajante(df, _cols(df)) is False
