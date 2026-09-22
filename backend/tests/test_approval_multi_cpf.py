@@ -113,20 +113,19 @@ def test_nao_altera_a_entrada():
     assert df.equals(antes)
 
 
-def test_valor_parece_cpf_viajante_true_quando_maioria_bate():
+def test_valor_bate_com_cadastro_true_quando_maioria_bate_com_cpf_real():
     df = _df(
         {"AprovacaoId": "S1", "AprovacaoPor": "VIAJANTE", "Valor": A, "LoginAprovador_1": B},
         {"AprovacaoId": "S2", "AprovacaoPor": "VIAJANTE", "Valor": B, "LoginAprovador_1": C},
     )
-    assert ApprovalService.valor_parece_cpf_viajante(df, _cols(df)) is True
+    assert ApprovalService.valor_bate_com_cadastro(df, _cols(df), {A, B, C}) is True
 
 
-def test_valor_parece_cpf_viajante_ignora_junk_numerico_curto():
-    """Regressão: `_digits_matrix` usa `clean_cpf`, que faz zfill e faria '88' e '1234567' virarem
-    strings de 11 dígitos (falso positivo). A checagem tem de usar o comprimento bruto
-    (`raw_cpf_digits`, sem padding) para não confundir junk curto com CPF de verdade."""
+def test_valor_bate_com_cadastro_ignora_valor_que_nao_e_cpf_de_ninguem():
+    """`Valor` pode ter dígitos suficientes pra "parecer" CPF sem ser o CPF de ninguém real —
+    só cruzar com o cadastro (não contar dígitos) evita esse falso positivo."""
     df = _df(
         {"AprovacaoId": "S1", "AprovacaoPor": "VIAJANTE", "Valor": "88", "LoginAprovador_1": B},
-        {"AprovacaoId": "S2", "AprovacaoPor": "VIAJANTE", "Valor": "1234567", "LoginAprovador_1": C},
+        {"AprovacaoId": "S2", "AprovacaoPor": "VIAJANTE", "Valor": "12345678900", "LoginAprovador_1": C},
     )
-    assert ApprovalService.valor_parece_cpf_viajante(df, _cols(df)) is False
+    assert ApprovalService.valor_bate_com_cadastro(df, _cols(df), {A, B, C}) is False

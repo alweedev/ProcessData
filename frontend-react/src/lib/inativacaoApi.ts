@@ -46,14 +46,11 @@ export interface AnaliseInativacao {
 /** Erro de negócio da inativação: a tela decide pelo `code` estável do servidor, não pelo texto. */
 export class InativacaoApiError extends Error {
   readonly code: string;
-  /** Campos extras que o servidor manda junto do erro (ex.: `colunaCandidata` em CPF_VIAJANTE_A_CONFIRMAR). */
-  extra?: Record<string, unknown>;
 
-  constructor(message: string, code: string, extra?: Record<string, unknown>) {
+  constructor(message: string, code: string) {
     super(message);
     this.name = "InativacaoApiError";
     this.code = code;
-    this.extra = extra;
   }
 }
 
@@ -72,18 +69,14 @@ export async function postAnalisar(
   estruturas: File,
   itens: string[],
   selecionados: string[],
-  confirmarCpfViajante: boolean,
 ): Promise<AnaliseInativacao> {
   const fd = basesForm(cadastro, estruturas);
   fd.append("itens", JSON.stringify(itens));
   fd.append("selecionados", JSON.stringify(selecionados));
-  fd.append("confirmarCpfViajante", confirmarCpfViajante ? "true" : "false");
   const res = await fetch("/api/inativacao/analisar", { method: "POST", body: fd });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new InativacaoApiError(data?.error || `Falha na requisição (${res.status})`, data?.code || "ERRO_INTERNO", {
-      colunaCandidata: data?.colunaCandidata,
-    });
+    throw new InativacaoApiError(data?.error || `Falha na requisição (${res.status})`, data?.code || "ERRO_INTERNO");
   }
   if (!Array.isArray(data?.usuarios)) throw new InativacaoApiError("Resposta inesperada do servidor.", "ERRO_INTERNO");
   return { ...data, avisos: Array.isArray(data?.avisos) ? data.avisos : [] } as AnaliseInativacao;
@@ -96,14 +89,12 @@ export async function postExecutar(
   cpfs: string[],
   impressaoDigital: string,
   ignorarOrfas: boolean,
-  confirmarCpfViajante: boolean,
   onProgress?: (pct: number) => void,
 ): Promise<Blob> {
   const fd = basesForm(cadastro, estruturas);
   fd.append("cpfs", JSON.stringify(cpfs));
   fd.append("impressaoDigital", impressaoDigital);
   fd.append("ignore_orphan_warning", ignorarOrfas ? "true" : "false");
-  fd.append("confirmarCpfViajante", confirmarCpfViajante ? "true" : "false");
   try {
     return await postFormForBlob("/api/inativacao/executar", fd, onProgress);
   } catch (err) {

@@ -47,7 +47,7 @@ afterEach(() => {
 describe("postAnalisar", () => {
   it("recusa um 200 que não tem o formato da análise", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ html: "<b>" }) }));
-    await expect(postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], [], false)).rejects.toMatchObject({
+    await expect(postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], [])).rejects.toMatchObject({
       name: "InativacaoApiError",
       message: "Resposta inesperada do servidor.",
       code: "ERRO_INTERNO",
@@ -59,16 +59,16 @@ describe("postAnalisar", () => {
       "fetch",
       vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => Promise.reject(new SyntaxError("x")) }),
     );
-    await expect(postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], [], false)).rejects.toBeInstanceOf(
+    await expect(postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], [])).rejects.toBeInstanceOf(
       InativacaoApiError,
     );
   });
 
-  it("envia as bases, a lista, as escolhas e a confirmação de CPF do viajante, e devolve a análise", async () => {
+  it("envia as bases, a lista e as escolhas, e devolve a análise", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ANALISE });
     vi.stubGlobal("fetch", fetchMock);
 
-    const out = await postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["123"], ["456"], true);
+    const out = await postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["123"], ["456"]);
 
     expect(out).toEqual(ANALISE);
     const [url, init] = fetchMock.mock.calls[0];
@@ -76,7 +76,6 @@ describe("postAnalisar", () => {
     const fd = init.body as FormData;
     expect(fd.get("itens")).toBe(JSON.stringify(["123"]));
     expect(fd.get("selecionados")).toBe(JSON.stringify(["456"]));
-    expect(fd.get("confirmarCpfViajante")).toBe("true");
     expect((fd.get("cadastro") as File).name).toBe("c.xlsx");
     expect((fd.get("estruturas") as File).name).toBe("e.xlsx");
   });
@@ -85,7 +84,7 @@ describe("postAnalisar", () => {
     const { avisos: _avisos, ...semAvisos } = ANALISE;
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => semAvisos }));
 
-    const out = await postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], [], false);
+    const out = await postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], []);
 
     expect(out.avisos).toEqual([]);
   });
@@ -94,7 +93,7 @@ describe("postAnalisar", () => {
     const recusa = { ok: false, status: 400, json: async () => ({ error: "Envie a base de estruturas.", code: "BASE_AUSENTE" }) };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(recusa));
 
-    const erro = await postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], [], false).catch((e: unknown) => e);
+    const erro = await postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], []).catch((e: unknown) => e);
 
     expect(erro).toBeInstanceOf(InativacaoApiError);
     expect(erro).toMatchObject({ code: "BASE_AUSENTE", message: "Envie a base de estruturas." });
@@ -102,22 +101,8 @@ describe("postAnalisar", () => {
 
   it("sem corpo JSON usa ERRO_INTERNO e o status na mensagem", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 502, json: async () => Promise.reject(new Error("html")) }));
-    const erro = await postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], [], false).catch((e: unknown) => e);
+    const erro = await postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], []).catch((e: unknown) => e);
     expect(erro).toMatchObject({ code: "ERRO_INTERNO", message: "Falha na requisição (502)" });
-  });
-
-  it("captura colunaCandidata do erro CPF_VIAJANTE_A_CONFIRMAR em extra", async () => {
-    const recusa = {
-      ok: false,
-      status: 409,
-      json: async () => ({ error: "Confirme para usar Valor.", code: "CPF_VIAJANTE_A_CONFIRMAR", colunaCandidata: "Valor" }),
-    };
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(recusa));
-
-    const erro = await postAnalisar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], [], false).catch((e: unknown) => e);
-
-    expect(erro).toBeInstanceOf(InativacaoApiError);
-    expect(erro).toMatchObject({ code: "CPF_VIAJANTE_A_CONFIRMAR", extra: { colunaCandidata: "Valor" } });
   });
 });
 
@@ -126,21 +111,20 @@ describe("postExecutar", () => {
     vi.stubGlobal("XMLHttpRequest", FakeXhr);
     FakeXhr.respostas.push({ status: 200, corpo: "conteudo-do-zip" });
 
-    const blob = await postExecutar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["111", "222"], "digital", true, true);
+    const blob = await postExecutar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["111", "222"], "digital", true);
 
     expect(blob.size).toBeGreaterThan(0);
     const fd = FakeXhr.enviados[0];
     expect(fd.get("cpfs")).toBe(JSON.stringify(["111", "222"]));
     expect(fd.get("impressaoDigital")).toBe("digital");
     expect(fd.get("ignore_orphan_warning")).toBe("true");
-    expect(fd.get("confirmarCpfViajante")).toBe("true");
   });
 
   it("repassa o code do servidor (ex.: análise divergente)", async () => {
     vi.stubGlobal("XMLHttpRequest", FakeXhr);
     FakeXhr.respostas.push({ status: 409, corpo: { error: "A análise mudou.", code: "ANALISE_DIVERGENTE" } });
 
-    const erro = await postExecutar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], "d", false, false).catch((e: unknown) => e);
+    const erro = await postExecutar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], "d", false).catch((e: unknown) => e);
 
     expect(erro).toBeInstanceOf(InativacaoApiError);
     expect(erro).toMatchObject({ code: "ANALISE_DIVERGENTE", message: "A análise mudou." });
@@ -150,7 +134,7 @@ describe("postExecutar", () => {
     vi.stubGlobal("XMLHttpRequest", FakeXhr);
     FakeXhr.respostas.push({ status: 502, corpo: "<html><body>Bad Gateway</body></html>" });
 
-    const erro = await postExecutar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], "d", false, false).catch((e: unknown) => e);
+    const erro = await postExecutar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], "d", false).catch((e: unknown) => e);
 
     expect(erro).toBeInstanceOf(InativacaoApiError);
     expect(erro).toMatchObject({ code: "ERRO_INTERNO" });
@@ -162,7 +146,7 @@ describe("postExecutar", () => {
     vi.stubGlobal("XMLHttpRequest", FakeXhr);
     FakeXhr.falhaDeRede = true;
 
-    const erro = await postExecutar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], "d", false, false).catch((e: unknown) => e);
+    const erro = await postExecutar(arquivo("c.xlsx"), arquivo("e.xlsx"), ["1"], "d", false).catch((e: unknown) => e);
 
     expect(erro).toBeInstanceOf(InativacaoApiError);
     expect(erro).toMatchObject({

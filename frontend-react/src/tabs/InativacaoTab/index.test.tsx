@@ -147,52 +147,15 @@ describe("InativacaoTab", () => {
     expect(document.getElementById("inativacao_debug")).toHaveTextContent(/Base inválida/);
   });
 
-  it("mostra o banner de confirmação do CPF do viajante e reanalisa ao confirmar", async () => {
-    vi.mocked(api.postAnalisar)
-      .mockRejectedValueOnce(
-        new api.InativacaoApiError("CPF do viajante precisa de confirmação", "CPF_VIAJANTE_A_CONFIRMAR", {
-          colunaCandidata: "Valor",
-        }),
-      )
-      .mockResolvedValueOnce(ANALISE);
-    const user = userEvent.setup();
-    render(<InativacaoTab />);
-    await user.upload(document.getElementById("inativacao_cadastro") as HTMLInputElement, cadastro);
-    await user.upload(document.getElementById("inativacao_estruturas") as HTMLInputElement, estruturas);
-    await user.type(document.getElementById("lista_text") as HTMLTextAreaElement, "12345678909");
-    await user.click(document.getElementById("inativacao_btn") as HTMLElement);
-
-    await waitFor(() => expect(document.getElementById("inativacao_cpf_viajante_confirm")).not.toBeNull());
-    expect(document.getElementById("inativacao_cpf_viajante_confirm")).toHaveTextContent(/Valor/);
-    const confirmBtn = document.getElementById("inativacao_confirm_cpf_viajante_btn") as HTMLElement;
-    expect(confirmBtn).not.toBeNull();
-
-    await user.click(confirmBtn);
-    await screen.findByText("Conferir o impacto", { selector: "h3" });
-    expect(document.getElementById("inativacao_cpf_viajante_confirm")).toBeNull();
-    expect(api.postAnalisar).toHaveBeenLastCalledWith(cadastro, estruturas, ["12345678909"], [], true);
-  });
-
-  it("'Aplicar seleção' reenvia a confirmação do CPF do viajante já concedida (não bounce para a etapa 0)", async () => {
-    vi.mocked(api.postAnalisar)
-      .mockRejectedValueOnce(
-        new api.InativacaoApiError("CPF do viajante precisa de confirmação", "CPF_VIAJANTE_A_CONFIRMAR", {
-          colunaCandidata: "Valor",
-        }),
-      )
-      .mockResolvedValueOnce(ANALISE_PENDENTE) // confirmação explícita (banner)
-      .mockResolvedValueOnce(ANALISE); // "Aplicar seleção": analisar() sem argumento
+  it("'Aplicar seleção' reanalisa com o candidato de homônimo escolhido", async () => {
+    vi.mocked(api.postAnalisar).mockResolvedValueOnce(ANALISE_PENDENTE).mockResolvedValueOnce(ANALISE);
     const user = userEvent.setup();
     render(<InativacaoTab />);
     await user.upload(document.getElementById("inativacao_cadastro") as HTMLInputElement, cadastro);
     await user.upload(document.getElementById("inativacao_estruturas") as HTMLInputElement, estruturas);
     await user.type(document.getElementById("lista_text") as HTMLTextAreaElement, "Joao Silva");
     await user.click(document.getElementById("inativacao_btn") as HTMLElement);
-
-    await waitFor(() => expect(document.getElementById("inativacao_cpf_viajante_confirm")).not.toBeNull());
-    await user.click(document.getElementById("inativacao_confirm_cpf_viajante_btn") as HTMLElement);
     await screen.findByText("Conferir o impacto", { selector: "h3" });
-    expect(api.postAnalisar).toHaveBeenLastCalledWith(cadastro, estruturas, ["Joao Silva"], [], true);
 
     const checkbox = document.querySelector('input[type="checkbox"]') as HTMLInputElement;
     await user.click(checkbox);
@@ -200,11 +163,8 @@ describe("InativacaoTab", () => {
     expect(applyBtn).not.toBeDisabled();
     await user.click(applyBtn);
 
-    await waitFor(() => expect(api.postAnalisar).toHaveBeenCalledTimes(3));
-    // O bug corrigido: sem isso a chamada abaixo iria com confirmarCpfViajante=false, o servidor
-    // rejeitaria com CPF_VIAJANTE_A_CONFIRMAR de novo e o wizard voltaria para a etapa 0.
-    expect(api.postAnalisar).toHaveBeenLastCalledWith(cadastro, estruturas, ["Joao Silva"], ["12345678909"], true);
-    expect(document.getElementById("inativacao_cpf_viajante_confirm")).toBeNull();
+    await waitFor(() => expect(api.postAnalisar).toHaveBeenCalledTimes(2));
+    expect(api.postAnalisar).toHaveBeenLastCalledWith(cadastro, estruturas, ["Joao Silva"], ["12345678909"]);
   });
 
   it("mostra os avisos de qualidade na etapa de impacto quando existem", async () => {

@@ -121,7 +121,9 @@ def test_nao_altera_as_entradas():
     assert estruturas.equals(antes_e)
 
 
-def test_valor_com_cpf_em_linhas_viajante_exige_confirmacao_explicita():
+def test_valor_com_cpf_do_cadastro_e_usado_automaticamente_sem_confirmacao():
+    """`Valor` (login do viajante nas linhas VIAJANTE) bate com o CPF do próprio usuário no
+    cadastro: usado direto como fonte do CPF do viajante, sem pedir nada ao operador."""
     df_cad = cad(USR_A)
     df_est = est(
         {
@@ -131,20 +133,13 @@ def test_valor_com_cpf_em_linhas_viajante_exige_confirmacao_explicita():
             "LoginAprovador_1": "999.999.999-99",
         }
     )
-    with pytest.raises(InativacaoError) as exc:
-        InactivationCascadeService.analisar(df_cad, df_est, [A])
-    assert exc.value.code == "CPF_VIAJANTE_A_CONFIRMAR"
-    assert exc.value.extra["colunaCandidata"] == "Valor"
-
-    # Com confirmação explícita, passa a funcionar normalmente.
-    analise = InactivationCascadeService.analisar(df_cad, df_est, [A], confirmar_cpf_viajante=True)
+    analise = InactivationCascadeService.analisar(df_cad, df_est, [A])
     assert analise.payload["usuarios"][0]["estruturasViajante"] == ["X1"]
 
 
-def test_valor_com_junk_numerico_curto_em_linhas_viajante_nao_ativa_confirmacao():
-    """Regressão do zfill: '88' e '1234567' viram 11 dígitos ao preencher com zero à esquerda, mas
-    não são CPF de verdade. Sem CPF válido detectável em `Valor`, o erro correto é BASE_SEM_COLUNA
-    (não CPF_VIAJANTE_A_CONFIRMAR, que sugeriria ao operador confirmar uma coluna que não é CPF)."""
+def test_valor_que_nao_bate_com_ninguem_do_cadastro_e_erro():
+    """`Valor` sem coluna de CPF dedicada, e nenhum valor bate com um CPF real do cadastro
+    (junk numérico, não o CPF de ninguém cadastrado): não dá pra determinar o CPF do viajante."""
     df_cad = cad(USR_A)
     df_est = est(
         {"AprovacaoId": "X1", "AprovacaoPor": "VIAJANTE", "Valor": "88", "LoginAprovador_1": "999.999.999-99"},
@@ -155,10 +150,12 @@ def test_valor_com_junk_numerico_curto_em_linhas_viajante_nao_ativa_confirmacao(
     assert exc.value.code == "BASE_SEM_COLUNA"
 
 
-def test_avisos_sinalizam_valor_com_junk_curto_apos_confirmacao():
+def test_avisos_sinalizam_valor_que_nao_bate_com_cadastro():
     """Sibling de `test_avisos_sinalizam_linhas_viajante_sem_cpf_reconhecivel`: mesma checagem, mas
-    usando `Valor` (após confirmação) como fonte do CPF do viajante em vez de uma coluna CPF dedicada."""
-    df_cad = cad(USR_A)
+    usando `Valor` como fonte do CPF do viajante (cruzado com o cadastro) em vez de uma coluna CPF
+    dedicada. 4 de 5 linhas batem com o cadastro (80%, no limite do cruzamento agregado); a 5ª
+    (junk) fica de fora e gera o aviso."""
+    df_cad = cad(USR_A, USR_B, USR_C, (D, "Diego Melo", "diego@x.com", "ATIVO"))
     linhas = [
         {"AprovacaoId": f"X{i}", "AprovacaoPor": "VIAJANTE", "Valor": v, "LoginAprovador_1": "999.999.999-99"}
         for i, v in enumerate([A, B, C, D], start=1)
@@ -167,7 +164,7 @@ def test_avisos_sinalizam_valor_com_junk_curto_apos_confirmacao():
         {"AprovacaoId": "X5", "AprovacaoPor": "VIAJANTE", "Valor": "88", "LoginAprovador_1": "999.999.999-99"}
     )
     df_est = est(*linhas)
-    analise = InactivationCascadeService.analisar(df_cad, df_est, [A], confirmar_cpf_viajante=True)
+    analise = InactivationCascadeService.analisar(df_cad, df_est, [A])
     assert any("sem CPF" in a for a in analise.payload["avisos"])
 
 

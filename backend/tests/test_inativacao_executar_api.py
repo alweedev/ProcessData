@@ -141,8 +141,8 @@ def test_auditoria_lista_so_os_cpfs_executados_e_nao_os_enviados_pelo_cliente(cl
     cadastro, estruturas = cad(USR_A), est(viajante("S1", A, B))
     real = InactivationCascadeService.executar
 
-    def executa_so_o_cpf_valido(df_cadastro, df_estruturas, cpfs, digital, ignorar=False, confirmar=False):
-        return real(df_cadastro, df_estruturas, [A], _digital(df_cadastro, df_estruturas, [A]), ignorar, confirmar)
+    def executa_so_o_cpf_valido(df_cadastro, df_estruturas, cpfs, digital, ignorar=False):
+        return real(df_cadastro, df_estruturas, [A], _digital(df_cadastro, df_estruturas, [A]), ignorar)
 
     monkeypatch.setattr(InactivationCascadeService, "executar", staticmethod(executa_so_o_cpf_valido))
     assert _post(client, cadastro, estruturas, [A, C], digital="x").status_code == 200

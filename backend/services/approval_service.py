@@ -6,7 +6,7 @@ from typing import Any
 
 import pandas as pd
 
-from backend.shared.cpf_utils import format_cpf_for_output, is_valid_cpf, limpar_cpf_raw, raw_cpf_digits
+from backend.shared.cpf_utils import format_cpf_for_output, is_valid_cpf, limpar_cpf_raw
 from backend.shared.text_utils import upper_no_accents
 
 
@@ -27,24 +27,26 @@ def _digits_matrix(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     return pd.DataFrame(out, index=df.index)
 
 
-def _valor_parece_cpf_viajante(df: pd.DataFrame, cols: dict[str, Any]) -> bool:
-    """True se, nas linhas AprovacaoPor=VIAJANTE, a maioria dos valores de `Valor` tiver 11 dígitos.
+def _valor_bate_com_cadastro(df: pd.DataFrame, cols: dict[str, Any], cpfs_cadastro: set[str]) -> bool:
+    """True se, nas linhas AprovacaoPor=VIAJANTE, a maioria dos valores de `Valor` bater com um CPF
+    real da base de cadastro (coluna CPF da base de usuários, sempre preenchida no perfil de cada
+    viajante).
 
-    Detecta o padrão documentado pela Argo (Valor(VIAJANTE) = LOGIN, que neste sistema é o CPF
-    formatado `XXXXXXXXX-XX`) quando não há coluna de CPF dedicada. Nunca usado sem confirmação
-    explícita do operador — só sinaliza que dá para propor a confirmação.
+    A Argo documenta que `Valor` (VIAJANTE) é o login do viajante, e o login neste sistema é o CPF
+    formatado `XXXXXXXXX-XX`. Em vez de só checar se `Valor` "parece" CPF (contagem de dígitos), este
+    cruzamento confirma contra CPFs que sabemos existir de verdade — vieram da base de cadastro.
     """
     valor_col = cols.get("valor")
     por_col = cols.get("aprovacao_por")
-    if not valor_col or not por_col:
+    if not valor_col or not por_col or not cpfs_cadastro:
         return False
     is_traveler = df[por_col].astype(str).str.strip().str.upper() == "VIAJANTE"
     if not is_traveler.any():
         return False
     valores = df[valor_col].astype(str).str.strip()[is_traveler]
-    raw_lens = valores.apply(lambda v: len(raw_cpf_digits(v)))
-    validos = int(raw_lens.isin([10, 11]).sum())
-    return validos > 0 and validos / len(raw_lens) >= 0.8
+    candidatos = valores.apply(limpar_cpf_raw)
+    batem = int(candidatos.isin(cpfs_cadastro).sum())
+    return batem > 0 and batem / len(candidatos) >= 0.8
 
 
 def _orphan_rows_mask(
@@ -385,8 +387,8 @@ class ApprovalService:
         return df_users, nome_completo
 
     @staticmethod
-    def valor_parece_cpf_viajante(df: pd.DataFrame, cols: dict[str, Any]) -> bool:
-        return _valor_parece_cpf_viajante(df, cols)
+    def valor_bate_com_cadastro(df: pd.DataFrame, cols: dict[str, Any], cpfs_cadastro: set[str]) -> bool:
+        return _valor_bate_com_cadastro(df, cols, cpfs_cadastro)
 
     @staticmethod
     def detect_approval_columns(df: pd.DataFrame) -> dict[str, Any]:

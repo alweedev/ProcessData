@@ -103,11 +103,8 @@ export function InativacaoTab() {
     setConfirmacao({ ...confirmada, digital, [campo]: valor });
   }
 
-  // Compartilhado pelo botão normal e pelo de confirmação do CPF do viajante: os dois avançam a etapa do
-  // mesmo jeito quando a análise dá certo.
-  async function handleAnalisar(confirmarCpfViajante = false) {
-    const ok = confirmarCpfViajante ? await inativacao.confirmarCpfViajanteEAnalisar() : await inativacao.analisar();
-    if (ok) setEtapa(1);
+  async function handleAnalisar() {
+    if (await inativacao.analisar()) setEtapa(1);
   }
 
   async function handleExecutar() {
@@ -276,27 +273,6 @@ export function InativacaoTab() {
                 {inativacao.classification.duplicates.length > 0 && (
                   <div id="lista_duplicates_warning" className="mt-1 text-sm text-warning">
                     CPFs duplicados: {inativacao.classification.duplicates.join(", ")}
-                  </div>
-                )}
-                {inativacao.cpfViajanteCandidato && (
-                  <div
-                    id="inativacao_cpf_viajante_confirm"
-                    className="mt-3 rounded-control border border-warning/40 bg-warning-soft px-4 py-3 text-sm"
-                  >
-                    <p className="text-text">
-                      Não encontramos uma coluna de CPF do viajante dedicada na base de estruturas, mas a coluna{" "}
-                      <strong>{inativacao.cpfViajanteCandidato}</strong> parece conter o CPF nas linhas VIAJANTE.
-                    </p>
-                    <Button
-                      id="inativacao_confirm_cpf_viajante_btn"
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      loading={inativacao.analisando}
-                      onClick={() => void handleAnalisar(true)}
-                    >
-                      Usar {inativacao.cpfViajanteCandidato} como CPF do viajante e analisar
-                    </Button>
                   </div>
                 )}
               </div>
