@@ -149,3 +149,29 @@ def test_executar_nunca_inclui_linha_de_estrutura_sem_operacao():
     analise = InactivationCascadeService.analisar(df_cad, df_est, [A])
     execucao = InactivationCascadeService.executar(df_cad, df_est, [A], analise.payload["impressaoDigital"])
     assert (execucao.estruturas["Operacao"].astype(str).str.strip() != "").all()
+
+
+def test_compactacao_nao_vaza_linha_intocada_do_mesmo_aprovacao_id():
+    """`S2` tem duas linhas (dois viajantes diferentes, C e D) sob o mesmo AprovacaoId. A só é aprovador
+    na linha de C; a linha de D (aprovador B) nunca toca no CPF removido, então `changed_indices` nunca
+    inclui o índice dela — mas a filtragem de `compactadas` é por AprovacaoId, não por linha. Sem o filtro
+    de Operacao vazio, a linha de D vazaria no export com Operacao="".
+
+    A linha de C fica sem aprovador quando A sai dela (é a única checada linha a linha, não por
+    AprovacaoId), por isso o aviso de órfã dispara e precisa ser confirmado — não é o que este teste
+    verifica, então só ignora.
+    """
+    df_cad = cad(USR_A)
+    df_est = est(viajante("S2", C, A), viajante("S2", D, B))
+    analise = InactivationCascadeService.analisar(df_cad, df_est, [A])
+    execucao = InactivationCascadeService.executar(
+        df_cad, df_est, [A], analise.payload["impressaoDigital"], ignore_orphan_warning=True
+    )
+
+    s2 = execucao.estruturas[execucao.estruturas["AprovacaoId"] == "S2"]
+    assert not s2.empty
+    assert (s2["Operacao"].astype(str).str.strip() != "").all()
+    # A linha intocada (viajante D, aprovador B) não sobra no export: só a que de fato mudou.
+    assert len(s2) == 1
+    assert s2.iloc[0]["Operacao"] == "UPDATE"
+    assert s2.iloc[0]["LoginAprovador_1"] == ""
