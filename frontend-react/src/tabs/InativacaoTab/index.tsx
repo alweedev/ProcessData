@@ -103,8 +103,11 @@ export function InativacaoTab() {
     setConfirmacao({ ...confirmada, digital, [campo]: valor });
   }
 
-  async function handleAnalisar() {
-    if (await inativacao.analisar()) setEtapa(1);
+  // Compartilhado pelo botão normal e pelo de confirmação do CPF do viajante: os dois avançam a etapa do
+  // mesmo jeito quando a análise dá certo.
+  async function handleAnalisar(confirmarCpfViajante = false) {
+    const ok = confirmarCpfViajante ? await inativacao.confirmarCpfViajanteEAnalisar() : await inativacao.analisar();
+    if (ok) setEtapa(1);
   }
 
   async function handleExecutar() {
@@ -290,7 +293,7 @@ export function InativacaoTab() {
                       size="sm"
                       className="mt-2"
                       loading={inativacao.analisando}
-                      onClick={() => void inativacao.confirmarCpfViajanteEAnalisar()}
+                      onClick={() => void handleAnalisar(true)}
                     >
                       Usar {inativacao.cpfViajanteCandidato} como CPF do viajante e analisar
                     </Button>
@@ -450,7 +453,7 @@ export function InativacaoTab() {
                 aria-label="Analisar impacto da inativação"
                 disabled={!inativacao.podeAnalisar || travado}
                 loading={analisando}
-                onClick={handleAnalisar}
+                onClick={() => void handleAnalisar()}
               >
                 {analisando ? "Analisando..." : "Analisar impacto"}
               </Button>

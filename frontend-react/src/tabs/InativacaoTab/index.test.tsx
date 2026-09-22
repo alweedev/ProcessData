@@ -146,7 +146,8 @@ describe("InativacaoTab", () => {
     expect(confirmBtn).not.toBeNull();
 
     await user.click(confirmBtn);
-    await waitFor(() => expect(document.getElementById("inativacao_cpf_viajante_confirm")).toBeNull());
+    await screen.findByText("Conferir o impacto", { selector: "h3" });
+    expect(document.getElementById("inativacao_cpf_viajante_confirm")).toBeNull();
     expect(api.postAnalisar).toHaveBeenLastCalledWith(cadastro, estruturas, ["12345678909"], [], true);
   });
 
