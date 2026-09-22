@@ -30,4 +30,6 @@ diretório temporário do SO. Para rodar contra um servidor já no ar, exporte
 
 Fixtures são geradas em memória por `fixtures.mjs` (SheetJS) — não há `.xlsx`
 versionado. Os seletores seguem os IDs de `frontend/index.html`; ajuste se a UI
-mudar.
+mudar. Todas as abas ficam montadas (as inativas só ficam escondidas por CSS) e
+algumas telas repetem componentes (por exemplo, o Stepper): escope os locators ao
+painel da aba (`page.locator("#cadastro").getByTestId(...)`), nunca à página inteira.
