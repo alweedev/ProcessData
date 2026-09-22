@@ -111,6 +111,26 @@ def test_nao_altera_as_entradas():
     assert estruturas.equals(antes_e)
 
 
+def test_valor_com_cpf_em_linhas_viajante_exige_confirmacao_explicita():
+    df_cad = cad(USR_A)
+    df_est = est(
+        {
+            "AprovacaoId": "X1",
+            "AprovacaoPor": "VIAJANTE",
+            "Valor": A,
+            "LoginAprovador_1": "999.999.999-99",
+        }
+    )
+    with pytest.raises(InativacaoError) as exc:
+        InactivationCascadeService.analisar(df_cad, df_est, [A])
+    assert exc.value.code == "CPF_VIAJANTE_A_CONFIRMAR"
+    assert exc.value.extra["colunaCandidata"] == "Valor"
+
+    # Com confirmação explícita, passa a funcionar normalmente.
+    analise = InactivationCascadeService.analisar(df_cad, df_est, [A], confirmar_cpf_viajante=True)
+    assert analise.payload["usuarios"][0]["estruturasViajante"] == ["X1"]
+
+
 def test_impressao_digital_estavel_e_sensivel_ao_impacto():
     cadastro = cad(USR_A)
     base = est(viajante("S1", C, A, B))

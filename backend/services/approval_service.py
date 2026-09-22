@@ -27,6 +27,25 @@ def _digits_matrix(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     return pd.DataFrame(out, index=df.index)
 
 
+def _valor_parece_cpf_viajante(df: pd.DataFrame, cols: dict[str, Any]) -> bool:
+    """True se, nas linhas AprovacaoPor=VIAJANTE, a maioria dos valores de `Valor` tiver 11 dígitos.
+
+    Detecta o padrão documentado pela Argo (Valor(VIAJANTE) = LOGIN, que neste sistema é o CPF
+    formatado `XXXXXXXXX-XX`) quando não há coluna de CPF dedicada. Nunca usado sem confirmação
+    explícita do operador — só sinaliza que dá para propor a confirmação.
+    """
+    valor_col = cols.get("valor")
+    por_col = cols.get("aprovacao_por")
+    if not valor_col or not por_col:
+        return False
+    is_traveler = df[por_col].astype(str).str.strip().str.upper() == "VIAJANTE"
+    if not is_traveler.any():
+        return False
+    digits = _digits_matrix(df, [valor_col])[valor_col][is_traveler]
+    validos = int((digits.str.len() == 11).sum())
+    return validos > 0 and validos / len(digits) >= 0.8
+
+
 def _orphan_rows_mask(
     df_base: pd.DataFrame,
     cpfs: set[str],
@@ -363,6 +382,10 @@ class ApprovalService:
             nome_completo = f"{primeiro} {sobrenome}".strip()
 
         return df_users, nome_completo
+
+    @staticmethod
+    def valor_parece_cpf_viajante(df: pd.DataFrame, cols: dict[str, Any]) -> bool:
+        return _valor_parece_cpf_viajante(df, cols)
 
     @staticmethod
     def detect_approval_columns(df: pd.DataFrame) -> dict[str, Any]:

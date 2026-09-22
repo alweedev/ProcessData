@@ -62,7 +62,7 @@ def _validar_cadastro(df: pd.DataFrame) -> None:
         raise InativacaoError("BASE_SEM_COLUNA", "A base de cadastro não contém a coluna CPF.")
 
 
-def _validar_estruturas(df_est: pd.DataFrame, cols: dict[str, Any]) -> None:
+def _validar_estruturas(df_est: pd.DataFrame, cols: dict[str, Any], confirmar_cpf_viajante: bool) -> None:
     faltando = []
     if not cols.get("aprovacao_id"):
         faltando.append("AprovacaoId")
@@ -75,8 +75,17 @@ def _validar_estruturas(df_est: pd.DataFrame, cols: dict[str, Any]) -> None:
 
     por_col = cols["aprovacao_por"]
     tem_viajante = (df_est[por_col].astype(str).str.strip().str.upper() == "VIAJANTE").any()
-    if tem_viajante and not cols.get("traveler_cpf_col"):
+    if not tem_viajante or cols.get("traveler_cpf_col"):
+        return
+    if not ApprovalService.valor_parece_cpf_viajante(df_est, cols):
         raise InativacaoError("BASE_SEM_COLUNA", "A base de estruturas não contém: CPF (do viajante).")
+    if not confirmar_cpf_viajante:
+        raise InativacaoError(
+            "CPF_VIAJANTE_A_CONFIRMAR",
+            "Não há coluna de CPF do viajante na base, mas a coluna 'Valor' parece conter o CPF nas linhas "
+            "VIAJANTE. Confirme para usá-la nesta análise.",
+            extra={"colunaCandidata": cols.get("valor")},
+        )
 
 
 def _classificar(itens: list[str]) -> tuple[set[str], set[str], dict[str, str], list[str]]:
@@ -207,6 +216,7 @@ class InactivationCascadeService:
         df_estruturas: pd.DataFrame,
         itens: list[str],
         selecionados: list[str] | None = None,
+        confirmar_cpf_viajante: bool = False,
     ) -> Analise:
         """Diagnóstico de impacto. Puro: não altera as entradas nem grava nada."""
         lista = [str(i).strip() for i in (itens or []) if str(i).strip()]
@@ -219,7 +229,9 @@ class InactivationCascadeService:
         _validar_cadastro(df_cadastro)
         df_est = df_estruturas.copy().reset_index(drop=True)
         cols = ApprovalService.detect_approval_columns(df_est)
-        _validar_estruturas(df_est, cols)
+        _validar_estruturas(df_est, cols, confirmar_cpf_viajante)
+        if confirmar_cpf_viajante and not cols.get("traveler_cpf_col"):
+            cols["traveler_cpf_col"] = cols.get("valor")
 
         escolhidos = {c for c in (clean_cpf(x) for x in (selecionados or [])) if c}
         busca = InactivationService.search_matches(df_cadastro, lista)
@@ -290,6 +302,7 @@ class InactivationCascadeService:
         cpfs: list[str],
         impressao_recebida: str,
         ignore_orphan_warning: bool = False,
+        confirmar_cpf_viajante: bool = False,
     ) -> Execucao:
         """Recalcula a análise e, se ela bate com a que o operador viu, gera a ficha e as estruturas.
 
@@ -298,7 +311,9 @@ class InactivationCascadeService:
         lista = sorted({c for c in (clean_cpf(x) for x in (cpfs or [])) if c})
         if not lista:
             raise InativacaoError("NADA_A_EXECUTAR", "Nenhum usuário foi informado para inativar.")
-        analise = InactivationCascadeService.analisar(df_cadastro, df_estruturas, lista, selecionados=lista)
+        analise = InactivationCascadeService.analisar(
+            df_cadastro, df_estruturas, lista, selecionados=lista, confirmar_cpf_viajante=confirmar_cpf_viajante
+        )
         if not analise.cpfs:
             raise InativacaoError(
                 "NADA_A_EXECUTAR",

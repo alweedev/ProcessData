@@ -121,7 +121,10 @@ def api_inativacao_analisar():
         df_cadastro = _ler_planilha("cadastro", "base de cadastro", paths)
         df_estruturas = _ler_planilha("estruturas", "base de estruturas", paths)
         itens = _extrair_itens(paths)
-        analise = InactivationCascadeService.analisar(df_cadastro, df_estruturas, itens, _json_lista("selecionados"))
+        confirmar_cpf_viajante = request.form.get("confirmarCpfViajante", "").lower() in _VERDADEIRO
+        analise = InactivationCascadeService.analisar(
+            df_cadastro, df_estruturas, itens, _json_lista("selecionados"), confirmar_cpf_viajante
+        )
         AuditService.record(event_type="inativacao_analise", status="success", details=_detalhes_analise(analise))
         return jsonify(analise.payload), 200
     except InativacaoError as exc:
@@ -143,8 +146,14 @@ def api_inativacao_executar():
         df_estruturas = _ler_planilha("estruturas", "base de estruturas", paths)
         cpfs = _json_lista("cpfs")
         ignorar_orfas = request.form.get("ignore_orphan_warning", "").lower() in _VERDADEIRO
+        confirmar_cpf_viajante = request.form.get("confirmarCpfViajante", "").lower() in _VERDADEIRO
         execucao = InactivationCascadeService.executar(
-            df_cadastro, df_estruturas, cpfs, request.form.get("impressaoDigital", ""), ignorar_orfas
+            df_cadastro,
+            df_estruturas,
+            cpfs,
+            request.form.get("impressaoDigital", ""),
+            ignorar_orfas,
+            confirmar_cpf_viajante,
         )
         arquivos = {
             "saida_inativacao.xlsx": ExportService.to_excel_bytes(execucao.ficha, sheet_name="Inativacao"),
