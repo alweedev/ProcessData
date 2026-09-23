@@ -23,6 +23,10 @@ const cadastroRows = (n) =>
 
 const planilha = (n = 1) => xlsxFile("cadastro.xlsx", cadastroRows(n));
 
+/** Todas as abas ficam montadas (a inativa só recebe a classe `hidden`) e a de Inativação também tem um
+ *  Stepper: locators por data-testid precisam nascer do painel do Cadastro, senão resolvem 2 elementos. */
+const noCadastro = (page) => page.locator("#cadastro");
+
 /** Botões da linha do tempo (só os pontos ao alcance viram botões). */
 const pontosClicaveis = (page) => page.getByRole("list", { name: "Etapas do cadastro" }).getByRole("button");
 const centroX = async (locator) => {
@@ -114,15 +118,15 @@ test("clicar num ponto concluído volta à etapa; ao reescolher, vai direto ao f
 });
 
 test("o anel da linha do tempo pula para a etapa atual", async ({ page }) => {
-  const anel = page.getByTestId("stepper-marker");
-  await expect.poll(async () => Math.abs((await centroX(anel)) - (await centroX(page.getByTestId("stepper-dot-0"))))).toBeLessThan(1);
+  const anel = noCadastro(page).getByTestId("stepper-marker");
+  await expect.poll(async () => Math.abs((await centroX(anel)) - (await centroX(noCadastro(page).getByTestId("stepper-dot-0"))))).toBeLessThan(1);
   await expect(anel.locator("span")).toHaveCSS("animation-name", "none"); // abrir a tela não anima
 
   await page.setInputFiles("#cadastro_files", planilha());
   await page.locator("#cadastro_next_btn").click();
 
   await expect(anel.locator("span")).toHaveCSS("animation-name", "pd-hop"); // o pulo
-  await expect.poll(async () => Math.abs((await centroX(anel)) - (await centroX(page.getByTestId("stepper-dot-1"))))).toBeLessThan(1);
+  await expect.poll(async () => Math.abs((await centroX(anel)) - (await centroX(noCadastro(page).getByTestId("stepper-dot-1"))))).toBeLessThan(1);
 });
 
 test("as escolhas não ficam salvas: ao fechar e reabrir é preciso escolher de novo", async ({ page }) => {
@@ -198,17 +202,17 @@ test("ao voltar, as etapas seguintes já preenchidas ficam tracejadas (guardadas
 }) => {
   await page.setInputFiles("#cadastro_files", planilha());
   await avancarAteGerar(page, "CPF", "SELF");
-  await expect(page.getByTestId("stepper-dot-1")).not.toHaveClass(/border-dashed/); // concluídas: preenchimento verde
+  await expect(noCadastro(page).getByTestId("stepper-dot-1")).not.toHaveClass(/border-dashed/); // concluídas: preenchimento verde
 
   await pontosClicaveis(page).filter({ hasText: "Fichas" }).click();
 
-  await expect(page.getByTestId("stepper-dot-1")).toHaveClass(/border-dashed/);
-  await expect(page.getByTestId("stepper-dot-2")).toHaveClass(/border-dashed/);
-  await expect(page.getByTestId("stepper-dot-3")).not.toHaveClass(/border-dashed/); // "Gerar" não tem valor a guardar
+  await expect(noCadastro(page).getByTestId("stepper-dot-1")).toHaveClass(/border-dashed/);
+  await expect(noCadastro(page).getByTestId("stepper-dot-2")).toHaveClass(/border-dashed/);
+  await expect(noCadastro(page).getByTestId("stepper-dot-3")).not.toHaveClass(/border-dashed/); // "Gerar" não tem valor a guardar
 
   // Sem fichas nada do que vem depois vale: os pontos voltam a pendentes e deixam de ser clicáveis.
   await page.locator("#cadastro_clear_btn").click();
-  await expect(page.getByTestId("stepper-dot-1")).not.toHaveClass(/border-dashed/);
+  await expect(noCadastro(page).getByTestId("stepper-dot-1")).not.toHaveClass(/border-dashed/);
   await expect(pontosClicaveis(page)).toHaveCount(0);
 });
 

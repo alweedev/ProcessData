@@ -10,6 +10,69 @@ from backend.shared.cpf_utils import format_cpf_for_output, is_valid_cpf, limpar
 from backend.shared.text_utils import upper_no_accents
 
 
+def _digits_matrix(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """CPF (11 dígitos) de cada célula das colunas dadas; "" onde a célula está vazia.
+
+    Cada valor distinto é normalizado uma única vez: as bases repetem muito o mesmo login e
+    `limpar_cpf_raw` (regex) é o custo dominante.
+    """
+    cache: dict[str, str] = {}
+    out: dict[str, pd.Series] = {}
+    for col in columns:
+        raw = df[col].astype(str).str.strip()
+        for value in raw.unique():
+            if value and value not in cache:
+                cache[value] = limpar_cpf_raw(value)
+        out[col] = raw.map(cache).fillna("")
+    return pd.DataFrame(out, index=df.index)
+
+
+def _valor_bate_com_cadastro(df: pd.DataFrame, cols: dict[str, Any], cpfs_cadastro: set[str]) -> bool:
+    """True se, nas linhas AprovacaoPor=VIAJANTE, a maioria dos valores de `Valor` bater com um CPF
+    real da base de cadastro (coluna CPF da base de usuários, sempre preenchida no perfil de cada
+    viajante).
+
+    A Argo documenta que `Valor` (VIAJANTE) é o login do viajante, e o login neste sistema é o CPF
+    formatado `XXXXXXXXX-XX`. Em vez de só checar se `Valor` "parece" CPF (contagem de dígitos), este
+    cruzamento confirma contra CPFs que sabemos existir de verdade — vieram da base de cadastro.
+    """
+    valor_col = cols.get("valor")
+    por_col = cols.get("aprovacao_por")
+    if not valor_col or not por_col or not cpfs_cadastro:
+        return False
+    is_traveler = df[por_col].astype(str).str.strip().str.upper() == "VIAJANTE"
+    if not is_traveler.any():
+        return False
+    valores = df[valor_col].astype(str).str.strip()[is_traveler]
+    candidatos = valores.apply(limpar_cpf_raw)
+    batem = int(candidatos.isin(cpfs_cadastro).sum())
+    return batem > 0 and batem / len(candidatos) >= 0.8
+
+
+def _orphan_rows_mask(
+    df_base: pd.DataFrame,
+    cpfs: set[str],
+    cols: dict[str, Any],
+    target_ids: set[str],
+    remove_second_level: bool,
+) -> pd.Series:
+    """Linhas das estruturas-alvo que terminam SEM nenhum aprovador (vetorizado)."""
+    approver_cols: list[str] = cols["approver_cols"]
+    login_segundo_col = cols.get("login_segundo")
+    wanted = list(cpfs)
+    in_target = df_base[cols["aprovacao_id"]].astype(str).str.strip().isin(target_ids)
+    raw = df_base[approver_cols].astype(str).apply(lambda col: col.str.strip())
+    remaining = ((raw != "") & ~_digits_matrix(df_base, approver_cols).isin(wanted)).any(axis=1)
+    has_second = pd.Series(False, index=df_base.index)
+    if login_segundo_col and login_segundo_col in df_base.columns:
+        second_raw = df_base[login_segundo_col].astype(str).str.strip()
+        removed = pd.Series(False, index=df_base.index)
+        if remove_second_level:
+            removed = _digits_matrix(df_base, [login_segundo_col])[login_segundo_col].isin(wanted)
+        has_second = (second_raw != "") & ~removed
+    return in_target & ~remaining & ~has_second
+
+
 def _get_or_create_structure(
     store: dict[str, dict[str, Any]],
     row: pd.Series,
@@ -79,12 +142,12 @@ def _get_or_create_structure(
 
 def _check_structures_without_approvers(
     df_base: pd.DataFrame,
-    cpf_digits: str,
+    cpfs: set[str],
     cols: dict[str, Any],
     target_ids: set[str],
     remove_second_level: bool,
 ) -> list[dict[str, Any]]:
-    """Verifica quais estruturas ficarão sem aprovadores após a remoção do CPF.
+    """Verifica quais estruturas ficarão sem aprovadores após a remoção dos CPFs.
 
     Retorna lista de estruturas que ficarão vazias (sem nenhum aprovador).
     """
@@ -97,7 +160,9 @@ def _check_structures_without_approvers(
 
     structures_without_approvers: list[dict[str, Any]] = []
 
-    for _idx, row in df_base.iterrows():
+    # O laço só monta o registro das linhas que de fato ficam vazias (o filtro é vetorizado).
+    orphan_mask = _orphan_rows_mask(df_base, cpfs, cols, target_ids, remove_second_level)
+    for _idx, row in df_base[orphan_mask].iterrows():
         aprov_id = str(row.get(aprov_id_col, "")).strip()
         if not aprov_id or aprov_id not in target_ids:
             continue
@@ -109,7 +174,7 @@ def _check_structures_without_approvers(
             if not raw_login:
                 continue
             # Se for o CPF que será removido, não conta
-            if limpar_cpf_raw(raw_login) == cpf_digits:
+            if limpar_cpf_raw(raw_login) in cpfs:
                 continue
             remaining_approvers.append(raw_login)
 
@@ -119,7 +184,7 @@ def _check_structures_without_approvers(
             raw_second = str(row.get(login_segundo_col, "")).strip()
             if raw_second:
                 # Se remove_second_level=True e o segundo nível é o CPF, não conta
-                if remove_second_level and limpar_cpf_raw(raw_second) == cpf_digits:
+                if remove_second_level and limpar_cpf_raw(raw_second) in cpfs:
                     has_second_level = False
                 else:
                     has_second_level = True
@@ -322,6 +387,10 @@ class ApprovalService:
         return df_users, nome_completo
 
     @staticmethod
+    def valor_bate_com_cadastro(df: pd.DataFrame, cols: dict[str, Any], cpfs_cadastro: set[str]) -> bool:
+        return _valor_bate_com_cadastro(df, cols, cpfs_cadastro)
+
+    @staticmethod
     def detect_approval_columns(df: pd.DataFrame) -> dict[str, Any]:
         """Detecta colunas relevantes da base de carga de aprovação.
 
@@ -351,6 +420,7 @@ class ApprovalService:
         login_segundo = pick("LoginAprovador_SEGUNDO_NIVEL", "LoginAprovadorSegundoNivel")
         segundo_master = pick("SegundoNivelMaster")
         traveler_name_col = pick("NomeViajante", "NomeCompletoViajante", "NomeCompleto")
+        traveler_cpf_col = pick("CPFViajante", "CPFDoViajante", "CPF")
 
         approver_cols: list[str] = []
         for col in df.columns:
@@ -375,6 +445,7 @@ class ApprovalService:
             "login_segundo": login_segundo,
             "segundo_master": segundo_master,
             "traveler_name_col": traveler_name_col,
+            "traveler_cpf_col": traveler_cpf_col,
             "approver_cols": approver_cols,
         }
 
@@ -465,7 +536,7 @@ class ApprovalService:
         if check_empty and affected_ids:
             structures_without_approvers = _check_structures_without_approvers(
                 df_base=df_base,
-                cpf_digits=cpf_digits,
+                cpfs={cpf_digits},
                 cols=cols,
                 target_ids=affected_ids,
                 remove_second_level=remove_second_level,
@@ -489,9 +560,24 @@ class ApprovalService:
     ) -> tuple[pd.DataFrame, dict[str, Any]]:
         """Remove todas as ocorrências do CPF e compacta aprovadores 1..100."""
 
+        return ApprovalService.remove_cpfs_and_compact(df_base, {cpf_digits}, cols, target_ids, remove_second_level)
+
+    @staticmethod
+    def remove_cpfs_and_compact(
+        df_base: pd.DataFrame,
+        cpfs: set[str],
+        cols: dict[str, Any],
+        target_ids: set[str],
+        remove_second_level: bool,
+    ) -> tuple[pd.DataFrame, dict[str, Any]]:
+        """Remove TODOS os `cpfs` de LoginAprovador_1..100 (e, se pedido, do 2º nível) e compacta.
+
+        Uma passada só: só as linhas das estruturas-alvo em que algum CPF aparece passam pelo laço.
+        Não altera `df_base`.
+        """
         approver_cols: list[str] = cols.get("approver_cols") or []
         aprov_id_col = cols.get("aprovacao_id")
-        if not aprov_id_col or not approver_cols:
+        if not aprov_id_col or not approver_cols or not cpfs:
             return df_base, {
                 "structures_updated": 0,
                 "occurrences_removed": 0,
@@ -503,65 +589,53 @@ class ApprovalService:
         login_segundo_col = cols.get("login_segundo")
         has_segundo = bool(login_segundo_col and login_segundo_col in df_out.columns)
         segundo_master_col = cols.get("segundo_master")
+        wanted = list(cpfs)
+
+        in_target = df_out[aprov_id_col].astype(str).str.strip().isin(target_ids)
+        has_main = _digits_matrix(df_out, approver_cols).isin(wanted).any(axis=1)
+        if has_segundo:
+            second_col = str(login_segundo_col)
+            has_second = _digits_matrix(df_out, [second_col])[second_col].isin(wanted)
+        else:
+            has_second = pd.Series(False, index=df_out.index)
+        candidates = df_out.index[(in_target & (has_main | has_second)).to_numpy()]
 
         structures_updated: set[str] = set()
         changed_indices: set[Any] = set()
         occurrences_removed = 0
         promotions = 0
 
-        for idx, row in df_out.iterrows():
+        for idx in candidates:
+            row = df_out.loc[idx]
             aprov_id = str(row.get(aprov_id_col, "")).strip()
-            if not aprov_id or aprov_id not in target_ids:
-                continue
-
-            # Verificar se o CPF aparece nesta linha (main ou segundo nível)
-            has_cpf_main = False
-            for col in approver_cols:
-                raw_login = str(row.get(col, "")).strip()
-                if raw_login and limpar_cpf_raw(raw_login) == cpf_digits:
-                    has_cpf_main = True
-                    break
-
-            raw_second = str(row.get(login_segundo_col, "")).strip() if has_segundo else ""
-            has_cpf_second = bool(raw_second and limpar_cpf_raw(raw_second) == cpf_digits)
-
-            if not has_cpf_main and not has_cpf_second:
-                continue
-
             changed = False
 
-            # Remover CPF de LoginAprovador_1..100 e compactar
-            if has_cpf_main:
-                original_vals: list[str] = [str(row.get(col, "")) for col in approver_cols]
+            if bool(has_main.at[idx]):
                 kept: list[str] = []
-                for v in original_vals:
-                    digits = limpar_cpf_raw(v)
-                    if digits == cpf_digits and digits:
+                for col in approver_cols:
+                    value = str(row.get(col, ""))
+                    digits = limpar_cpf_raw(value)
+                    if digits and digits in cpfs:
                         occurrences_removed += 1
                         changed = True
                         continue
-                    if str(v).strip():
-                        kept.append(str(v))
-
+                    if value.strip():
+                        kept.append(value)
                 for pos, col in enumerate(approver_cols):
-                    new_val = kept[pos] if pos < len(kept) else ""
-                    df_out.at[idx, col] = new_val
+                    df_out.at[idx, col] = kept[pos] if pos < len(kept) else ""
 
-            # Opcionalmente remover do SEGUNDO_NIVEL
-            if remove_second_level and has_cpf_second and has_segundo:
+            if remove_second_level and has_segundo and bool(has_second.at[idx]):
                 df_out.at[idx, login_segundo_col] = ""
                 occurrences_removed += 1
                 changed = True
 
-            # Promoção de nível: se o 1º nível ficou vazio e ainda há um aprovador
-            # de segundo nível (que não seja o CPF removido), ele sobe para o 1º nível.
-            # REGRAS_APROVACAO_INATIVACAO.md §2.4 Fase 3.
+            # Se o 1º nível esvaziou e sobrou um 2º nível que NÃO está sendo removido, ele sobe.
             if has_segundo:
                 remaining_main = [
                     str(df_out.at[idx, col]).strip() for col in approver_cols if str(df_out.at[idx, col]).strip()
                 ]
                 current_second = str(df_out.at[idx, login_segundo_col]).strip()
-                if not remaining_main and current_second and limpar_cpf_raw(current_second) != cpf_digits:
+                if not remaining_main and current_second and limpar_cpf_raw(current_second) not in cpfs:
                     df_out.at[idx, approver_cols[0]] = current_second
                     df_out.at[idx, login_segundo_col] = ""
                     promotions += 1
@@ -571,17 +645,115 @@ class ApprovalService:
                 structures_updated.add(aprov_id)
                 changed_indices.add(idx)
 
-        # Garantir que SegundoNivelMaster permaneça vazio
         if segundo_master_col and segundo_master_col in df_out.columns:
             df_out[segundo_master_col] = df_out[segundo_master_col].astype(str).fillna("")
 
-        stats = {
+        return df_out, {
             "structures_updated": len(structures_updated),
             "occurrences_removed": int(occurrences_removed),
             "promotions": int(promotions),
             "changed_indices": changed_indices,
         }
-        return df_out, stats
+
+    @staticmethod
+    def structures_left_without_approvers(
+        df_base: pd.DataFrame,
+        cpfs: set[str],
+        cols: dict[str, Any],
+        target_ids: set[str],
+        remove_second_level: bool,
+    ) -> list[dict[str, Any]]:
+        """Estruturas de `target_ids` que ficam SEM nenhum aprovador depois de remover todos os `cpfs`."""
+        if not cpfs or not target_ids:
+            return []
+        return _check_structures_without_approvers(df_base, set(cpfs), cols, set(target_ids), remove_second_level)
+
+    @staticmethod
+    def find_traveler_structures(df_base: pd.DataFrame, cpfs: set[str], cols: dict[str, Any]) -> dict[str, set[str]]:
+        """`{cpf: {AprovacaoId}}` das estruturas AprovacaoPor=VIAJANTE cujo CPF do viajante é o do usuário."""
+        found: dict[str, set[str]] = {cpf: set() for cpf in cpfs}
+        aprov_id_col = cols.get("aprovacao_id")
+        por_col = cols.get("aprovacao_por")
+        if not aprov_id_col or not por_col or not cpfs:
+            return found
+        is_traveler = df_base[por_col].astype(str).str.strip().str.upper() == "VIAJANTE"
+        if not is_traveler.any():
+            return found
+        cpf_col = cols.get("traveler_cpf_col")
+        if not cpf_col:
+            raise ValueError("Base de estruturas não contém a coluna CPF do viajante.")
+        digits = _digits_matrix(df_base, [cpf_col])[cpf_col]
+        ids = df_base[aprov_id_col].astype(str).str.strip()
+        hit = is_traveler & digits.isin(list(cpfs)) & (ids != "")
+        for idx in df_base.index[hit.to_numpy()]:
+            found[digits.at[idx]].add(ids.at[idx])
+        return found
+
+    @staticmethod
+    def structures_with_foreign_rows(
+        df_base: pd.DataFrame, ids: set[str], cpfs: set[str], cols: dict[str, Any]
+    ) -> set[str]:
+        """Dos `ids`, os que têm ao menos uma linha que NÃO é VIAJANTE de um dos `cpfs`.
+
+        `delete_structures` leva todas as linhas de um AprovacaoId; se o id reúne linhas de outro viajante,
+        de CCEMPRESA ou sem CPF, excluir a estrutura inteira apagaria o que ninguém escolheu.
+        """
+        aprov_id_col = cols.get("aprovacao_id")
+        por_col = cols.get("aprovacao_por")
+        cpf_col = cols.get("traveler_cpf_col")
+        if not ids or not aprov_id_col or not por_col or not cpf_col:
+            return set()
+        row_ids = df_base[aprov_id_col].astype(str).str.strip()
+        in_ids = row_ids.isin(ids)
+        is_traveler = df_base[por_col].astype(str).str.strip().str.upper() == "VIAJANTE"
+        digits = _digits_matrix(df_base, [cpf_col])[cpf_col]
+        own = is_traveler & digits.isin(list(cpfs))
+        return set(row_ids[in_ids & ~own])
+
+    @staticmethod
+    def find_approver_structures(
+        df_base: pd.DataFrame, cpfs: set[str], cols: dict[str, Any]
+    ) -> dict[str, dict[str, dict[str, Any]]]:
+        """`{cpf: {aprovacaoId: {"posicoes": [1, 3], "segundoNivel": False}}}` — onde cada CPF é aprovador."""
+        result: dict[str, dict[str, dict[str, Any]]] = {cpf: {} for cpf in cpfs}
+        approver_cols: list[str] = cols.get("approver_cols") or []
+        aprov_id_col = cols.get("aprovacao_id")
+        if not aprov_id_col or not approver_cols or not cpfs:
+            return result
+        wanted = list(cpfs)
+        ids = df_base[aprov_id_col].astype(str).str.strip()
+        digits = _digits_matrix(df_base, approver_cols)
+        for col in approver_cols:
+            hit = digits[col].isin(wanted) & (ids != "")
+            if not hit.any():
+                continue
+            match = re.search(r"(\d+)$", str(col))
+            pos = int(match.group(1)) if match else 0
+            for idx in df_base.index[hit.to_numpy()]:
+                entry = result[digits.at[idx, col]].setdefault(ids.at[idx], {"posicoes": [], "segundoNivel": False})
+                if pos not in entry["posicoes"]:
+                    entry["posicoes"].append(pos)
+        second_col = cols.get("login_segundo")
+        if second_col and second_col in df_base.columns:
+            second = _digits_matrix(df_base, [second_col])[second_col]
+            hit = second.isin(wanted) & (ids != "")
+            for idx in df_base.index[hit.to_numpy()]:
+                entry = result[second.at[idx]].setdefault(ids.at[idx], {"posicoes": [], "segundoNivel": False})
+                entry["segundoNivel"] = True
+        for by_id in result.values():
+            for entry in by_id.values():
+                entry["posicoes"].sort()
+        return result
+
+    @staticmethod
+    def delete_structures(df_base: pd.DataFrame, ids: set[str], cols: dict[str, Any]) -> pd.DataFrame:
+        """Linhas das estruturas em `ids` com Operacao=DELETE. Não altera `df_base`."""
+        aprov_id_col = cols.get("aprovacao_id")
+        if not aprov_id_col or not ids:
+            return df_base.iloc[0:0].copy()
+        rows = df_base[df_base[aprov_id_col].astype(str).str.strip().isin(ids)].copy()
+        rows["Operacao"] = "DELETE"
+        return rows
 
     @staticmethod
     def check_new_approver_duplicates(

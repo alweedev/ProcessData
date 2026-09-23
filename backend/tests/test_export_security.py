@@ -94,3 +94,10 @@ def test_aprovacao_export_neutralizes_injection(client):
     cell = ws.cell(row=2, column=col)
     assert cell.data_type in _STRING_TYPES  # nunca "f" (fórmula)
     assert str(cell.value).startswith("+cmd")
+
+
+def test_dataframe_vazio_gera_xlsx_valido_com_o_cabecalho():
+    out = ExportService.to_excel_bytes(pd.DataFrame(columns=["Operacao", "AprovacaoId"]), sheet_name="S")
+    ws = load_workbook(io.BytesIO(out.getvalue()))["S"]
+    assert [c.value for c in ws[1]] == ["Operacao", "AprovacaoId"]
+    assert ws.max_row == 1

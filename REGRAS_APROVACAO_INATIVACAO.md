@@ -7,12 +7,9 @@ cadastrada na Argo (diferente do cadastro, que **cria** registros — ver
 | Aba | Código | Endpoints |
 |---|---|---|
 | Estruturas de Aprovação | `backend/services/approval_service.py` (`ApprovalService`) + `backend/api/aprovacao.py` | `/api/aprovacao/remover/{preview,export}`, `/api/aprovacao/substituir/{preview,export}` |
-| Inativação | `backend/services/inactivation_service.py` (`InactivationService`) + `backend/processor.py` (`processar_inativacao_from_paths`) + `backend/api/inativacao.py` | `/api/inativacao/buscar`, `/api/preview_inativacao`, `/api/process_inativacao` |
+| Inativação | `backend/services/inactivation_cascade_service.py` (`InactivationCascadeService`) + `InactivationService` + `processar_inativacao_from_paths` + `ApprovalService` + `backend/api/inativacao.py` | `/api/inativacao/analisar`, `/api/inativacao/executar` |
 
-> **As duas abas são independentes.** Inativar um usuário **não** remove os
-> aprovadores dele das estruturas de aprovação automaticamente — isso é uma
-> ação manual separada, feita depois na aba Estruturas (Remover Aprovador),
-> se necessário. Não existe hoje nenhuma chamada entre os dois módulos.
+> **Inativar um usuário atualiza as estruturas de aprovação.** A aba Inativação usa o `ApprovalService` para excluir a estrutura direta do viajante e compactar os aprovadores (§2). A aba Estruturas continua servindo para substituir/remover aprovadores sem inativar ninguém.
 
 ---
 
@@ -164,75 +161,102 @@ cadastro. Exemplo de resposta de preview (substituição):
 
 ---
 
-## 2. Inativação
+## 2. Inativação em cascata
 
 ### 2.1 Objetivo
 
-Buscar usuários na base do cliente (por CPF, e-mail ou nome completo) e
-gerar a ficha de inativação (`Operacao=DELETE`) pronta para carga na Argo.
-**Não** altera a base de origem nem mexe em estruturas de aprovação — só
-produz o arquivo de saída.
+Inativar usuários da base do cliente e manter as estruturas de aprovação da
+Argo consistentes: exclui a estrutura direta do viajante e remove o usuário de
+todas as demais estruturas em que ele aprova, compactando as alçadas. Em duas
+etapas: **análise** (`/api/inativacao/analisar`, sem efeito colateral) e
+**execução** (`/api/inativacao/executar`, só depois da confirmação do operador).
 
-### 2.2 Critérios de busca (`InactivationService.search_matches`)
+### 2.2 Entradas
 
-| Critério | Regra |
+| Entrada | Conteúdo |
 |---|---|
-| CPF | 11 dígitos após limpar pontuação; match exato |
-| Email | precisa casar `^[^@\s]+@[^@\s]+\.[^@\s]+$`; match case-insensitive |
-| Nome completo | mínimo 2 partes e 3 caracteres; match normalizado (maiúsculas, sem acento) |
+| Base de cadastro | usuários do cliente (CPF, nome, e-mail, status) |
+| Base de estruturas | `AprovacaoId`, `AprovacaoPor`, **CPF do viajante**, `LoginAprovador_1..100`, opcional `LoginAprovador_SEGUNDO_NIVEL` |
+| Lista | CPFs, nomes completos ou e-mails (até 500), colados, em planilha ou em JSON |
 
-A busca roda nas três frentes ao mesmo tempo sobre a lista de itens
-informada (colados como texto, um por linha, ou upload de planilha). CPFs
-repetidos na lista de entrada são reportados em `duplicates`.
+### 2.3 Situação de cada usuário
 
-Resposta de `/api/inativacao/buscar`:
-
-```jsonc
-{
-  "items": [
-    { "id": null, "nome": "João Silva", "cpf": "12345678900",
-      "email": "joao@empresa.com", "status_atual": "ATIVO", "found": true },
-    { "id": null, "nome": "", "cpf": "99876543210", "email": "",
-      "status_atual": "Não localizado", "found": false }
-  ],
-  "total": 2,
-  "duplicates": [],
-  "not_found": ["99876543210"]
-}
-```
-
-> `id` só vem preenchido se a base tiver uma coluna reconhecível como
-> `UserId` (ver `_detect_base_cols`) — na maioria das bases fica `null`.
-
-Resultados vêm ordenados: encontrados primeiro, depois por nome/CPF.
-
-### 2.3 Geração da ficha (`processar_inativacao_from_paths`)
-
-```
-[1] Filtra a base para Status = ATIVO (quando a coluna existe)
-[2] Casa a lista contra a base, nessa ordem de prioridade:
-    CPF (exato) → NomeCompleto (exato, normalizado) → Email (exato,
-    case-insensitive) — cada usuário conta uma vez só (a 1ª forma de match
-    que encontrar ele "ganha")
-[3] Monta a saída: Operacao="DELETE", campos copiados da base
-    (UserId, Login, Nome, SobreNome, Email, Cargo, Departamento, Nivel,
-    NomeEmpresa, CC, flags booleanas), EmpresaCCustoParaUsuario="S",
-    CodigoIntegracao="AUT"
-```
-
-`/api/preview_inativacao` roda o mesmo processamento e devolve uma amostra
-(10 linhas) e os registros completos (até 500) para conferência antes do
-download; `/api/process_inativacao` gera o `.xlsx` final para download.
-
-### 2.4 Casos de erro
-
-| Situação | Erro |
+| Situação | Regra |
 |---|---|
-| Sem base | `Envie a base (arquivo Excel)` |
-| Extensão inválida | `Extensão não permitida. Aceitos: .xlsx, .xls, .xltx` |
-| Sem lista (nem arquivo, nem texto colado) | `Envie a lista como arquivo ou cole nomes/CPFs no campo de texto` |
-| Texto colado sem CPF/nome/e-mail válido | `Texto de lista vazio ou sem CPF/Nome/E-mail válidos` |
-| Base sem coluna CPF/Nome/Email reconhecível | busca correspondente fica vazia para esse critério (sem erro explícito) |
+| `EXECUTAVEL` | encontrado, com CPF e ATIVO (ver abaixo) |
+| `SEM_CPF` | encontrado sem CPF: **não executável**. Alerta: "Não foi possível mapear a Estrutura de Aprovação: Usuário encontrado no cadastro, mas não possui CPF registrado." |
+| `JA_INATIVO` | cadastro com coluna de status e status diferente de ATIVO. Alerta: "Usuário não está ATIVO no cadastro (Status: '...')." |
+| `NAO_LOCALIZADO` | nenhum registro casou, ou o item digitado não é CPF (11 dígitos), e-mail nem nome completo (alerta próprio; nunca entra na cascata) |
+| `PENDENTE_SELECAO` | nome digitado que consta em mais de um registro do cadastro: o operador escolhe quem inativar |
+
+- **Status**: com coluna de status no cadastro, só `Status == "ATIVO"` é
+  executável; **qualquer outro valor, inclusive vazio**, é `JA_INATIVO`. Sem
+  coluna de status, os usuários encontrados são executáveis.
+- **Homônimos**: quando o nome digitado consta em mais de uma linha do cadastro,
+  os registros casados por nome exigem escolha explícita, mesmo que outro
+  homônimo tenha sido digitado por CPF ou e-mail (esse continua executável).
+  Sem escolha, nada é processado para os ambíguos. Na tela, o botão "Continuar"
+  fica bloqueado enquanto houver homônimo pendente; para deixar um de fora, o
+  operador remove o nome da lista.
+
+A busca é por CPF, e-mail e nome (`InactivationService.search_matches`) e o CPF
+do cadastro é a chave para as estruturas (com o zero à esquerda restaurado).
+
+### 2.4 Regras da cascata (ordem)
+
+```
+[1] Estrutura direta: linhas AprovacaoPor=VIAJANTE cujo CPF do viajante é o do
+    usuário. São EXCLUÍDAS (Operacao=DELETE) e saem do cálculo seguinte.
+[2] Compactação: nas demais estruturas, remove TODOS os CPFs da lista de
+    LoginAprovador_1..100 e do 2º nível, compactando à esquerda; se o 1º nível
+    esvazia e sobra um 2º nível que não está sendo removido, ele sobe.
+[3] Órfã: estrutura que, depois de remover TODOS os CPFs da lista, fica sem
+    nenhum aprovador. Estrutura excluída nunca conta como órfã.
+```
+
+Guarda da exclusão: `ApprovalService.delete_structures` leva **todas** as linhas de
+um `AprovacaoId`. Por isso, se algum id a excluir tiver uma linha que não seja
+VIAJANTE de um CPF executável (outro viajante, CCEMPRESA ou CPF em branco), a
+análise é recusada com `ESTRUTURA_COMPARTILHADA`, sem exclusão parcial. Várias
+linhas do mesmo viajante sob um id continuam permitidas.
+
+Impacto por estrutura: `COMPACTACAO` (sobram aprovadores) ou `ORFA` (nenhum).
+Estrutura órfã bloqueia a execução até o operador confirmar (`ignore_orphan_warning`).
+
+### 2.5 Análise e execução
+
+- `/analisar` devolve o diagnóstico e uma **impressão digital** (SHA-256 do
+  impacto: CPFs executáveis, estruturas excluídas, compactadas e órfãs).
+- `/executar` **recalcula** a análise a partir das planilhas e só prossegue se a
+  impressão digital for a mesma que o operador viu (senão `409 ANALISE_DIVERGENTE`).
+- Na aba, a confirmação do operador vale só para a análise em que foi dada
+  (amarrada à impressão digital): refazer a análise exige confirmar de novo. Se
+  houver estrutura órfã, é preciso uma **segunda confirmação**, específica.
+- Saída: ZIP `inativacao.zip` com `saida_inativacao.xlsx` (ficha `DELETE`) e
+  `estruturas_atualizadas.xlsx` (todas as linhas das estruturas afetadas;
+  `DELETE` nas excluídas, `UPDATE` nas alteradas). A base do cliente não é alterada.
+  Um CPF com várias linhas ATIVO no cadastro gera uma linha da ficha por linha.
+- Resumo da execução: `usuariosInativados` conta **usuários (CPFs)**, não linhas
+  da ficha; por isso pode ser menor que o número de linhas de `saida_inativacao.xlsx`.
+- Auditoria: `inativacao_analise` e `inativacao_execucao` registram só contagens,
+  a impressão digital, a `situacao` de cada usuário e **CPFs mascarados** (`***.456.789-**`, também os CPFs
+  duplicados na lista). Nunca gravam nome, e-mail nem CPF completo.
+
+### 2.6 Erros
+
+| HTTP | code | Quando |
+|---|---|---|
+| 400 | `BASE_AUSENTE` / `ARQUIVO_INVALIDO` / `BASE_SEM_COLUNA` | falta arquivo, arquivo ilegível ou coluna obrigatória ausente |
+| 400 | `LISTA_VAZIA` / `LISTA_GRANDE` | lista vazia ou acima de 500 itens |
+| 400 | `NADA_A_EXECUTAR` | nenhum CPF executável |
+| 400 | `ESTRUTURA_COMPARTILHADA` | um `AprovacaoId` a excluir reúne linhas de outros viajantes ou de outro tipo: corrigir a base e analisar de novo |
+| 400 | `ORFAS_SEM_CONFIRMACAO` | há estruturas órfãs e a confirmação não veio |
+| 409 | `ANALISE_DIVERGENTE` | a análise mudou desde a conferência |
+| 413 | `ARQUIVO_GRANDE` | acima do teto de upload da rota (32 MB) |
+| 500 | `ERRO_INTERNO` | erro inesperado (detalhe só no log) |
+
+As rotas antigas `/api/inativacao/buscar`, `/api/process_inativacao` e
+`/api/preview_inativacao` deixaram de existir.
 
 ---
 
@@ -240,9 +264,9 @@ download; `/api/process_inativacao` gera o `.xlsx` final para download.
 
 | Aspecto | Aprovação | Inativação |
 |---|---|---|
-| Ação | Substitui/remove aprovadores em estruturas existentes | Gera ficha de saída (DELETE) para usuários encontrados |
-| Entrada | Base de estruturas + base de usuários + CPF(s) | Base de usuários + lista (CPF/e-mail/nome) |
-| Chave de match | `AprovacaoId` / CPF do aprovador | CPF → Nome → Email (nessa prioridade) |
+| Ação | Substitui/remove aprovadores em estruturas existentes | Inativa usuários (ficha DELETE) e atualiza as estruturas de aprovação em cascata |
+| Entrada | Base de estruturas + base de usuários + CPF(s) | Base de cadastro + base de estruturas + lista |
+| Chave de match | `AprovacaoId` / CPF do aprovador | CPF do cadastro (a busca aceita CPF, e-mail ou nome; tudo é resolvido para o CPF do cadastro) |
 | Valida dígito verificador de CPF | Sim | Não (só comprimento) |
-| Saída | Base de estruturas atualizada (`Operacao=UPDATE` nas linhas alteradas) | Ficha de inativação (`Operacao=DELETE`) |
-| Efeito colateral automático no outro módulo | Nenhum | Nenhum |
+| Saída | Base de estruturas atualizada (`Operacao=UPDATE` nas linhas alteradas) | ZIP: ficha DELETE + estruturas atualizadas |
+| Efeito colateral automático no outro módulo | Nenhum | Atualiza estruturas (exclui a do viajante e compacta aprovadores) |

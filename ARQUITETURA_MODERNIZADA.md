@@ -13,8 +13,8 @@ quick start e visão geral.
 - `backend/domain`: regras e contratos (`MODEL_COLS`, `FICHA_MAP`,
   `REQUIRED_OUTPUT_COLS`) — **fonte única** desses dados.
 - `backend/services`: orquestração de casos de uso (`ProcessingService`,
-  `ValidationService`, `InactivationService`, `ApprovalService`,
-  `ExportService`, `AuditService`, `ReportService`).
+  `ValidationService`, `InactivationService`, `InactivationCascadeService`,
+  `ApprovalService`, `ExportService`, `AuditService`, `ReportService`).
 - `backend/shared`: utilitários compartilhados — `text_utils` (normalização),
   `cpf_utils` (limpeza, formatação, dígito verificador), `file_utils` (extensão,
   nome temporário), `upload_validation` (sniff de conteúdo).
@@ -48,9 +48,8 @@ quick start e visão geral.
 |---|---|---|
 | POST | `/api/process_cadastro` | gera a ficha de cadastro (xlsx) |
 | POST | `/api/analysis/summary` | relatório de qualidade + preview (JSON) |
-| POST | `/api/inativacao/buscar` | busca (encontrado/não encontrado) por CPF/nome/e-mail |
-| POST | `/api/preview_inativacao` | preview da ficha de inativação antes da geração |
-| POST | `/api/process_inativacao` | gera a ficha de inativação (xlsx) |
+| POST | `/api/inativacao/analisar` | análise de impacto da inativação (sem efeito colateral) |
+| POST | `/api/inativacao/executar` | executa em cascata e devolve o ZIP (ficha DELETE + estruturas atualizadas) |
 | POST | `/api/aprovacao/remover/preview` | impacto da remoção de um aprovador |
 | POST | `/api/aprovacao/remover/export` | base de aprovação atualizada (xlsx) |
 | POST | `/api/aprovacao/substituir/preview` | impacto da substituição de um aprovador por outro |
@@ -58,14 +57,13 @@ quick start e visão geral.
 | GET/DELETE | `/api/history` | trilha de auditoria (DELETE só localhost/token) |
 | GET | `/api/health` | health check |
 
-Removidos: `POST /api/inativacao/executar` (sucesso falso, sem consumidor) e
-`GET /health` (duplicava `/api/health`).
+Removidos: `POST /api/inativacao/buscar`, `/api/preview_inativacao` e `/api/process_inativacao` (substituídos pelo fluxo em duas etapas) e `GET /health` (duplicava `/api/health`). O antigo `POST /api/inativacao/executar` (sucesso falso, removido em 2026-09) foi reimplementado de verdade: lê as bases, gera os arquivos e audita.
 
 ## Segurança
 
 - **Formula injection**: `ExportService` grava como texto explícito qualquer
   célula que comece com `= + - @` / TAB / CR.
-- **XSS**: o preview de inativação escapa as células vindas da planilha.
+- **XSS**: a análise de inativação exibe como texto (sem HTML) as células vindas da planilha.
 - **Uploads**: além da extensão, `validar_conteudo_xlsx` verifica assinatura
   ZIP + estrutura OOXML (`.xls` fica a cargo do pandas/xlrd).
 - **Path traversal**: o servidor estático só entrega arquivos cujo caminho real
@@ -73,6 +71,7 @@ Removidos: `POST /api/inativacao/executar` (sucesso falso, sem consumidor) e
 - **CORS**: restrito à mesma origem por padrão; `CORS_ORIGINS` (env) libera
   origens específicas.
 - **Histórico**: `DELETE /api/history` exige localhost ou `X-Admin-Token`.
+- **Privacidade**: a auditoria de inativação grava só CPF mascarado; nunca nome, e-mail nem CPF completo.
 - **Auditoria**: JSONL rotacionado por tamanho (`HISTORY_MAX_BYTES`); leitura
   limitada à cauda.
 - **Logs/erros**: respostas 5xx genéricas ao cliente (detalhe só no log do
@@ -80,7 +79,7 @@ Removidos: `POST /api/inativacao/executar` (sucesso falso, sem consumidor) e
 
 ## Testes
 
-`python -m pytest -q --cov` (suíte em `backend/tests/`, 123/123, cobertura
+`python -m pytest -q --cov` (suíte em `backend/tests/`, 379/379, cobertura
 medida mas sem gate de threshold ainda). `npm --prefix frontend-react run
 test` (Vitest, funções puras dos hooks). Fluxos críticos ponta-a-ponta em
 `tests/e2e/` (Playwright, 19 specs).
@@ -88,7 +87,7 @@ test` (Vitest, funções puras dos hooks). Fluxos críticos ponta-a-ponta em
 ## Próxima fase
 
 - Sem migração de framework planejada no curto prazo: a stack atual (Flask +
-  services) está estável, testada (123/123 pytest, Vitest e Playwright
+  services) está estável, testada (379/379 pytest, Vitest e Playwright
   verdes) e sem sinal de dor de crescimento no código. Avaliar FastAPI +
   Pydantic v2 + SQLAlchemy 2 + Alembic + PostgreSQL fica registrado, mas
   parado até existir um driver concreto (ex: multi-tenant, autenticação,

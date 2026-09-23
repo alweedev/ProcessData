@@ -17,6 +17,14 @@ const pkg = JSON.parse(
 export default defineConfig({
   plugins: [react()],
   base: "/static/react/",
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:5000",
+        changeOrigin: true,
+      },
+    },
+  },
   // Build de biblioteca não aplica o `define` padrão de process.env.NODE_ENV
   // que o modo "app" do Vite faz automaticamente para libs como React/ReactDOM
   // (elas checam isso em runtime) — sem isso o bundle lança

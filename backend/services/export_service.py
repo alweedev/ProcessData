@@ -1,4 +1,5 @@
 import io
+import zipfile
 
 import pandas as pd
 
@@ -43,7 +44,9 @@ class ExportService:
 
                 for idx, col in enumerate(df.columns, 1):
                     series = df[col].astype(str).fillna("")
-                    max_len = max(series.map(len).max(), len(str(col))) + 2
+                    lengths = series.map(len)
+                    # DataFrame vazio: `.max()` é NaN e a largura NaN corrompe o xlsx (`<col width="">`).
+                    max_len = max(int(lengths.max()) if len(lengths) else 0, len(str(col))) + 2
                     max_len = min(max_len, 60)
                     ws.column_dimensions[get_column_letter(idx)].width = max_len
 
@@ -61,4 +64,14 @@ class ExportService:
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
                 _neutralize_worksheet(writer.sheets[sheet_name])
             output.seek(0)
+        return output
+
+    @staticmethod
+    def to_zip_bytes(files: dict[str, io.BytesIO]) -> io.BytesIO:
+        """Empacota arquivos já gerados (nome -> bytes) num ZIP em memória."""
+        output = io.BytesIO()
+        with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zf:
+            for name, data in files.items():
+                zf.writestr(name, data.getvalue())
+        output.seek(0)
         return output

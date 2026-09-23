@@ -30,12 +30,3 @@ def test_cadastro_cleans_temp_files(client):
     resp = client.post("/api/process_cadastro", data=data, content_type="multipart/form-data")
     assert resp.status_code == 200, resp.get_data(as_text=True)
     assert os.listdir(settings.UPLOAD_FOLDER) == []
-
-
-def test_process_inativacao_cleans_temp_files(client):
-    base = pd.DataFrame([{"CPF": valid_cpf(1), "NomeCompleto": "Ana Souza", "Email": "a@x.com", "Status": "ATIVO"}])
-    lista = pd.DataFrame([{"CPF": valid_cpf(1)}])
-    data = {"base": xlsx_upload(base, "base.xlsx"), "lista": xlsx_upload(lista, "lista.xlsx")}
-    resp = client.post("/api/process_inativacao", data=data, content_type="multipart/form-data")
-    assert resp.status_code == 200, resp.get_data(as_text=True)
-    assert os.listdir(settings.UPLOAD_FOLDER) == []

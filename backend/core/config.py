@@ -27,6 +27,9 @@ class Settings:
     HISTORY_LOG_FILE: str = _DEFAULT_HISTORY_LOG_FILE
     NAME_VOCAB_FILE: str = _DEFAULT_NAME_VOCAB_FILE  # env: NAME_VOCAB_FILE
     MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024
+    # Inativação em cascata: teto de upload próprio (duas planilhas na mesma requisição) e de itens na lista.
+    INATIVACAO_MAX_CONTENT_LENGTH: int = 32 * 1024 * 1024
+    MAX_INATIVACAO_ITENS: int = 500
 
     # Server (can be overridden by environment variables)
     DEBUG: bool = os.getenv("DEBUG", "false").lower() in ("1", "true", "yes")

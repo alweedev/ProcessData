@@ -25,9 +25,11 @@ diretório temporário do SO. Para rodar contra um servidor já no ar, exporte
 | Arquivo | Verifica |
 |---|---|
 | `cadastro-flow.spec.js` | upload + download `saida_cadastro.xlsx`, limpeza da seleção, guarda de 5 arquivos |
-| `inativacao-flow.spec.js` | buscar → gerar `saida_inativacao.xlsx`, limpeza da base, feedback de upload |
+| `inativacao-flow.spec.js` | fluxo em 3 etapas: analisar → conferir impacto → confirmar/executar → baixa `inativacao.zip` (com segunda confirmação para estrutura órfã) |
 | `preview-xss.spec.js` | célula maliciosa da planilha renderiza como texto (sem `alert`/execução) |
 
 Fixtures são geradas em memória por `fixtures.mjs` (SheetJS) — não há `.xlsx`
 versionado. Os seletores seguem os IDs de `frontend/index.html`; ajuste se a UI
-mudar.
+mudar. Todas as abas ficam montadas (as inativas só ficam escondidas por CSS) e
+algumas telas repetem componentes (por exemplo, o Stepper): escope os locators ao
+painel da aba (`page.locator("#cadastro").getByTestId(...)`), nunca à página inteira.
